@@ -1,0 +1,39 @@
+*.autosave
+CMakeLists.txt.user*
+
+# Object files, etc
+*.o
+*.a
+*.slo
+*.so
+*.la
+*.lai
+*.lo
+*.dll
+*.dylib
+
+# Generated MOC, resource, and UI files
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+
+# Debug and Release directories, generated under Windows
+Debug/
+Release/
+
+*.log
+
+# Build Windows .exe and linux binaries
+*.exe
+PROJECT
+
+# Qt-es
+/.qmake.cache
+/.qmake.stash
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+Makefile*
+*build-*/
