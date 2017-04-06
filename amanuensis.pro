@@ -18,4 +18,7 @@
 TEMPLATE = subdirs
 
 SUBDIRS += \
-    amanuensis-core
+    amanuensis-core \
+    app
+
+app.depends = amanuensis-core
