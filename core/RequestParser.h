@@ -28,11 +28,13 @@
 
 class QDebug;
 
+#include "global.h"
+
 #include "Headers.h"
 
 class Request;
 
-class RequestParser
+class A_EXPORT RequestParser
 {
 public:
     RequestParser();

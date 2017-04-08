@@ -19,7 +19,8 @@ TEMPLATE = subdirs
 
 SUBDIRS += \
     core \
-    app
+    app \
+    core-test
 
 INCLUDEPATH += "$$PWD/include"
 

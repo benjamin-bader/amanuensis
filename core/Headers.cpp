@@ -34,29 +34,28 @@ Headers::Headers(const std::vector<Header> &headers) : std::vector<Header>(heade
 
 Headers::const_iterator Headers::find_by_name(const std::string &name) const
 {
-    std::string needle;
-    needle.reserve(name.size());
-
-    std::transform(name.begin(), name.end(), needle.begin(), std::tolower);
-
-    return std::find_if(begin(), end(), [&needle](const Header &header) {
-        auto needleSize = needle.size();
-        auto headerName = header.name();
-        auto nameSize = headerName.size();
-
-        if (needleSize != nameSize)
+    auto iter = begin();
+    while (iter != end())
+    {
+        auto headerName = iter->name();
+        if (name.size() == headerName.size())
         {
-            return false;
-        }
-
-        for (auto i = 0; i < needleSize; ++i)
-        {
-            if (std::tolower(headerName[i]) != needle[i])
+            bool areEqual = true;
+            for (size_t i = 0; i < name.size(); ++i)
             {
-                return false;
+                if (std::tolower(name[i]) != std::tolower(headerName[i]))
+                {
+                    areEqual = false;
+                    break;
+                }
+            }
+
+            if (areEqual)
+            {
+                return iter;
             }
         }
-
-        return true;
-    });
+        ++iter;
+    }
+    return iter;
 }
