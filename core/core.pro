@@ -18,12 +18,12 @@
 QT       += network
 QT       -= gui
 
-TARGET = amanuensis-core
+TARGET = core
 TEMPLATE = lib
 
 CONFIG += c++14
 
-DEFINES += AMANUENSISCORE_LIBRARY
+DEFINES += CORE_LIBRARY
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked as deprecated (the exact warnings

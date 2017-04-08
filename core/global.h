@@ -15,15 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef AMANUENSISCORE_GLOBAL_H
-#define AMANUENSISCORE_GLOBAL_H
+#ifndef CORE_GLOBAL_H
+#define CORE_GLOBAL_H
 
 #include <QtCore/qglobal.h>
 
-#if defined(AMANUENSISCORE_LIBRARY)
+#if defined(CORE_LIBRARY)
 #  define A_EXPORT Q_DECL_EXPORT
 #else
 #  define A_EXPORT Q_DECL_IMPORT
 #endif
 
-#endif // AMANUENSISCORE_GLOBAL_H
+#endif // CORE_GLOBAL_H

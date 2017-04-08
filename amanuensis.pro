@@ -18,11 +18,11 @@
 TEMPLATE = subdirs
 
 SUBDIRS += \
-    amanuensis-core \
+    core \
     app
 
 INCLUDEPATH += "$$PWD/include"
 
-app.depends = amanuensis-core
+app.depends = core
 
 INCLUDEPATH += $$PWD/include
