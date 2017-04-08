@@ -38,14 +38,26 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 INCLUDEPATH += $$PWD/../include
 
-DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO
+DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
 SOURCES += Amanuensis.cpp \
-    Proxy.cpp
+    Proxy.cpp \
+    Server.cpp \
+    Connection.cpp \
+    Request.cpp \
+    Headers.cpp \
+    Response.cpp \
+    ConnectionManager.cpp
 
 HEADERS += Amanuensis.h \
     Proxy.h \
-    global.h
+    global.h \
+    Server.h \
+    Connection.h \
+    Request.h \
+    Headers.h \
+    Response.h \
+    ConnectionManager.h
 
 windows {
     SOURCES += \
