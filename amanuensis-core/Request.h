@@ -31,13 +31,17 @@
 class A_EXPORT Request
 {
 public:
+    friend class RequestParser;
+
     typedef std::vector<Header>::const_iterator const_iterator;
+
+    Request() {}
 
     Request(const std::string &method,
             const std::string &uri,
             const int major,
             const int minor,
-            const std::vector<Header> &headers,
+            const Headers &headers,
             const std::vector<uint8_t> &body);
 
     std::string method() const;

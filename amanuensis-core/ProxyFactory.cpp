@@ -15,47 +15,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADERS_H
-#define HEADERS_H
+#include "ProxyFactory.h"
 
-#include <string>
-#include <vector>
+#include "Proxy.h"
 
-#include "global.h"
+#if defined(Q_OS_WIN)
+#include "win/WindowsProxy.h"
+#endif
 
-class A_EXPORT Header
+ProxyFactory::ProxyFactory()
 {
-public:
-    Header() : name_(), value_() {}
 
-    Header(const std::string &name, const std::string &value)
-        : name_(name), value_(value)
-    {
-    }
+}
 
-    std::string name() const
-    {
-        return this->name_;
-    }
-
-    std::string value() const
-    {
-        return this->value_;
-    }
-
-private:
-    std::string name_;
-    std::string value_;
-};
-
-class A_EXPORT Headers : public std::vector<Header>
+std::unique_ptr<Proxy> ProxyFactory::create(const int port)
 {
-public:
-    Headers();
-    Headers(const Headers &headers);
-    Headers(const std::vector<Header> &headers);
-
-    const_iterator find_by_name(const std::string &name) const;
-};
-
-#endif // HEADERS_H
+#if defined(Q_OS_WIN)
+    return std::make_unique<WindowsProxy>(port);
+#else
+    #error Unsupported operating system :(
+#endif
+}

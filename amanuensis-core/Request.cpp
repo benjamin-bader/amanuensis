@@ -21,13 +21,13 @@ Request::Request(const std::string &method,
                  const std::string &uri,
                  const int major,
                  const int minor,
-                 const std::vector<Header> &headers,
+                 const Headers &headers,
                  const std::vector<uint8_t> &body) :
     method_(method),
     uri_(uri),
     major_version_(major),
     minor_version_(minor),
-    headers_({headers}),
+    headers_(headers),
     body_(body)
 {
     // nothing

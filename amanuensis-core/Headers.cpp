@@ -20,34 +20,16 @@
 #include <algorithm>
 #include <cctype>
 
-Headers::Headers(const std::vector<Header> &headers)
-    : headers_(headers)
+Headers::Headers() : std::vector<Header>()
 {
 }
 
-Headers::const_iterator Headers::begin() const
+Headers::Headers(const Headers &headers) : std::vector<Header>(static_cast<std::vector<Header>>(headers))
 {
-    return headers_.begin();
 }
 
-Headers::const_iterator Headers::end() const
+Headers::Headers(const std::vector<Header> &headers) : std::vector<Header>(headers)
 {
-    return headers_.end();
-}
-
-int Headers::size() const
-{
-    return headers_.size();
-}
-
-const Header& Headers::at(int index) const
-{
-    return headers_.at(index);
-}
-
-const Header& Headers::operator [](int index) const
-{
-    return headers_[index];
 }
 
 Headers::const_iterator Headers::find_by_name(const std::string &name) const

@@ -17,19 +17,65 @@
 
 #include "Connection.h"
 
+#include "Request.h"
+#include "Response.h"
+
+// doesn't exist yet
+//class ResponseBuilder {};
+
 Connection::Connection(asio::ip::tcp::socket socket) :
-    QObject(nullptr),
-    socket_(std::move(socket))
+    socket_(std::move(socket)),
+    buffer_(),
+    requestParser(),
+    request()
 {
 
 }
 
 void Connection::start()
 {
-
+    do_read_client_request();
 }
 
 void Connection::stop()
+{
+
+}
+
+void Connection::do_read_client_request()
+{
+    auto self(shared_from_this());
+    socket_.async_read_some(asio::buffer(buffer_), [this, self](asio::error_code ec, size_t bytes_read) {
+        auto begin = buffer_.begin();
+        auto end = begin + bytes_read;
+        auto parserState = requestParser.parse(request, begin, end);
+
+        if (parserState == RequestParser::State::Incomplete)
+        {
+            do_read_client_request();
+        }
+        else if (parserState == RequestParser::State::Invalid)
+        {
+            // d'oh, handle the error somehow
+        }
+        else
+        {
+            do_write_client_request();
+        }
+    });
+}
+
+void Connection::do_write_client_request()
+{
+    //socket_.async_send()
+}
+
+void Connection::do_read_server_response()
+{
+
+}
+
+void Connection::do_write_server_response()
 {
 
 }

@@ -17,12 +17,30 @@
 
 #include "MainWindow.h"
 #include <QApplication>
+#include <QDebug>
+#include <QThread>
+
+#include <exception>
+
+#include "Proxy.h"
+#include "ProxyFactory.h"
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    MainWindow w;
-    w.show();
+    try
+    {
+        ProxyFactory factory;
 
-    return a.exec();
+        auto proxy = factory.create(9999);
+
+        QApplication a(argc, argv);
+        MainWindow w;
+        w.show();
+
+        return a.exec();
+    }
+    catch (std::domain_error &error)
+    {
+        qCritical() << error.what();
+    }
 }

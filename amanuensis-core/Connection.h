@@ -25,12 +25,11 @@
 
 #include <asio/ip/tcp.hpp>
 
-class Connection :
-        public QObject,
-        public std::enable_shared_from_this<Connection>
-{
-    Q_OBJECT
+#include "Request.h"
+#include "RequestParser.h"
 
+class Connection : public std::enable_shared_from_this<Connection>
+{
 public:
     explicit Connection(asio::ip::tcp::socket socket);
 
@@ -39,9 +38,17 @@ public:
     void stop();
 
 private:
+    void do_read_client_request();   // client -> proxy
+    void do_write_client_request();  // proxy -> server
+    void do_read_server_response();  // server -> proxy
+    void do_write_server_response(); // proxy -> client
+
     asio::ip::tcp::socket socket_;
 
     std::array<char, 8192> buffer_;
+
+    RequestParser requestParser;
+    Request request;
 };
 
 #endif // CONNECTION_H

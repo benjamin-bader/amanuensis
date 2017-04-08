@@ -25,6 +25,11 @@ WindowsProxy::WindowsProxy(int port) :
 {    
     DWORD optionListSize = sizeof(INTERNET_PER_CONN_OPTION_LIST);
 
+    if (1)
+    {
+        return;
+    }
+
     // First, query the system's current proxy settings and save them
     originalOptions[0].dwOption = INTERNET_PER_CONN_AUTOCONFIG_URL;
     originalOptions[1].dwOption = INTERNET_PER_CONN_AUTODISCOVERY_FLAGS;
@@ -48,11 +53,12 @@ WindowsProxy::WindowsProxy(int port) :
 
     // Next, apply our new settings
     std::wstringstream ss;
-    ss << "http=[[::1]:" << this->port() << "]";
+    ss << L"http=[[::1]:" << this->port() << L"]";
 
     std::wstring wstr = ss.str();
 
-    LPWSTR proxyName = const_cast<LPWSTR>(wstr.c_str());
+    const wchar_t proxyName[] = L"127.0.0.1:9999";
+    LPWSTR proxyNameTwo = const_cast<LPWSTR>(wstr.c_str());
 
     INTERNET_PER_CONN_OPTION_LIST optionList;
     INTERNET_PER_CONN_OPTION options[4];
@@ -62,8 +68,8 @@ WindowsProxy::WindowsProxy(int port) :
     options[2].dwOption = INTERNET_PER_CONN_FLAGS;
     options[3].dwOption = INTERNET_PER_CONN_PROXY_BYPASS;
 
-    options[0].Value.pszValue = (LPWSTR) L"";
-    options[1].Value.pszValue = proxyName;
+    options[0].Value.pszValue = NULL;
+    options[1].Value.pszValue = (LPWSTR) proxyName;
     options[2].Value.dwValue  = PROXY_TYPE_PROXY;
     options[3].Value.pszValue = (LPWSTR) L"";
 
@@ -75,7 +81,19 @@ WindowsProxy::WindowsProxy(int port) :
 
     if (! InternetSetOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION, &optionList, sizeof(INTERNET_PER_CONN_OPTION_LIST)))
     {
-        throw std::domain_error("Could not set proxy options");
+        DWORD lastError = GetLastError();
+        char buffer[256];
+        FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM,
+                       NULL,
+                       lastError,
+                       MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                       buffer,
+                       255,
+                       NULL);
+        std::stringstream err_ss("Could not set proxy options: ");
+        std::string msg(buffer);
+        err_ss << msg;
+        throw std::domain_error(err_ss.str());
     }
 
     InternetSetOption(NULL, INTERNET_OPTION_PROXY_SETTINGS_CHANGED, NULL, 0);

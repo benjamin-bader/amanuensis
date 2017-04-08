@@ -24,7 +24,7 @@
 
 #include <memory>
 
-#include <asio.hpp>
+#include "asio.hpp"
 
 class A_EXPORT Proxy : public QObject
 {
@@ -48,6 +48,8 @@ private:
     asio::signal_set signals_;
     asio::ip::tcp::acceptor acceptor_;
     asio::ip::tcp::socket socket_;
+
+    asio::thread acceptorThread_;
 };
 
 #endif // PROXY_H

@@ -15,47 +15,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADERS_H
-#define HEADERS_H
+#ifndef PROXYFACTORY_H
+#define PROXYFACTORY_H
 
-#include <string>
-#include <vector>
+#include <memory>
 
 #include "global.h"
 
-class A_EXPORT Header
-{
+class Proxy;
+
+class A_EXPORT ProxyFactory
+{   
 public:
-    Header() : name_(), value_() {}
+    ProxyFactory();
 
-    Header(const std::string &name, const std::string &value)
-        : name_(name), value_(value)
-    {
-    }
-
-    std::string name() const
-    {
-        return this->name_;
-    }
-
-    std::string value() const
-    {
-        return this->value_;
-    }
-
-private:
-    std::string name_;
-    std::string value_;
+    std::unique_ptr<Proxy> create(const int port);
 };
 
-class A_EXPORT Headers : public std::vector<Header>
-{
-public:
-    Headers();
-    Headers(const Headers &headers);
-    Headers(const std::vector<Header> &headers);
-
-    const_iterator find_by_name(const std::string &name) const;
-};
-
-#endif // HEADERS_H
+#endif // PROXYFACTORY_H

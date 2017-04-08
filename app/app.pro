@@ -50,3 +50,4 @@ else:unix: LIBS += -L$$OUT_PWD/../amanuensis-core/ -lamanuensis-core
 INCLUDEPATH += $$PWD/../amanuensis-core $$PWD/../include
 DEPENDPATH += $$PWS/../amanuensis-core
 
+DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO

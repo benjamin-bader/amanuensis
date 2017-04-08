@@ -20,11 +20,17 @@
 #include <algorithm>
 #include <thread>
 
+#include <QDebug>
+
+#include "Connection.h"
+#include "ConnectionManager.h"
+
 Server::Server(const int port) :
     port_(port),
     io_service_(),
     signals_(io_service_),
     acceptor_(io_service_),
+    socket_(io_service_),
     workers_()
 {
     signals_.add(SIGINT);
@@ -69,16 +75,22 @@ Server::~Server()
 
 void Server::do_accept()
 {
-    auto socketPtr = std::make_shared<asio::ip::tcp::socket>(io_service_);
+    acceptor_.async_accept(socket_, [this] (asio::error_code ec) {
+        if (!acceptor_.is_open())
+        {
+            qDebug() << "Acceptor has closed, abandoning accept";
+        }
 
-    acceptor_.async_accept(*socketPtr, [this, socketPtr] (asio::error_code ec) {
         if (!ec)
         {
+            qDebug() << "Accepted a client connection, processing it";
+            connectionManager_->start(std::make_shared<Connection>(std::move(socket_)));
 
+            do_accept();
         }
         else
         {
-
+            qWarning() << "Awww!  " << QString(ec.message().c_str());
         }
     });
 }

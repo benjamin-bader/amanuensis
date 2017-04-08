@@ -21,6 +21,8 @@ SUBDIRS += \
     amanuensis-core \
     app
 
+INCLUDEPATH += "$$PWD/include"
+
 app.depends = amanuensis-core
 
 INCLUDEPATH += $$PWD/include

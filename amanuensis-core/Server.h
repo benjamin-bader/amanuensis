@@ -28,6 +28,8 @@
 
 #include "global.h"
 
+class ConnectionManager;
+
 class A_EXPORT Server : public std::enable_shared_from_this<Server>
 {
 public:
@@ -41,8 +43,11 @@ private:
     asio::io_service io_service_;
     asio::signal_set signals_;
     asio::ip::tcp::acceptor acceptor_;
+    asio::ip::tcp::socket socket_;
 
     std::vector<std::thread> workers_;
+
+    std::unique_ptr<ConnectionManager> connectionManager_;
 };
 
 #endif // SERVER_H
