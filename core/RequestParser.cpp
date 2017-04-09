@@ -17,15 +17,61 @@
 
 #include "RequestParser.h"
 
+#include <cctype>
+#include <cerrno>
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
+
 #include <QDebug>
 
+#include "Headers.h"
 #include "Request.h"
 #include "Response.h"
 
 class ResponseBuilder {};
 
+#if defined(Q_OS_WIN)
+#define Q_STRTOULL _strtoui64
+#else
+#define Q_STRTOULL strtoull
+#endif
+
 namespace
 {
+    bool parse_uint64_t(const std::string &str, uint64_t &result, int base = 10)
+    {
+        char *end;
+        auto parsed = Q_STRTOULL(str.c_str(), &end, base);
+
+        auto parse_error = errno;
+        if (parsed == 0 && (parse_error == ERANGE || parse_error == EINVAL))
+        {
+            return false;
+        }
+
+        result = parsed;
+        return true;
+    }
+
+    bool ci_equal(const std::string &lhs, const std::string &rhs)
+    {
+        if (lhs.size() != rhs.size())
+        {
+            return false;
+        }
+
+        for (size_t i = 0; i < lhs.size(); ++i)
+        {
+            if (std::tolower(lhs[i]) != std::tolower(rhs[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     inline bool is_char(int input)
     {
         return input >= 0 && input <= 127;
@@ -69,19 +115,75 @@ namespace
     {
         return input >= '0' && input <= '9';
     }
+
+    inline bool is_hex(int input)
+    {
+        return is_digit(input)
+                || (input >= 'a' && input <= 'f')
+                || (input >= 'A' && input <= 'F');
+    }
+
+    inline int hex_value(char c)
+    {
+        if (is_digit(c))
+        {
+            return c - '0';
+        }
+        else if (c >= 'a' && c <= 'f')
+        {
+            return c - 'a' + 10;
+        }
+        else if (c >= 'A' && c <= 'F')
+        {
+            return c - 'A' + 10;
+        }
+        else
+        {
+            qFatal("Not a hex digit: %c", c);
+            return -1;
+        }
+    }
 }
 
-RequestParser::RequestParser()
+RequestParser::RequestParser() :
+    state_(method_start),
+    method_(),
+    uri_(),
+    major_version_(0),
+    minor_version_(0),
+    headers_(),
+    remaining_(0),
+    buffer_(),
+    value_buffer_()
 {
-    Request request;
     buffer_.reserve(64);
     value_buffer_.reserve(64);
 }
 
+RequestParser::~RequestParser()
+{
+    // here to satisfy my wonky build setup
+}
+
 void RequestParser::reset()
 {
+    state_ = method_start;
+    method_.clear();
+    uri_.clear();
+    major_version_ = 0;
+    minor_version_ = 0;
+    headers_.clear();
+    remaining_ = 0;
     buffer_.clear();
     value_buffer_.clear();
+}
+
+void RequestParser::transition_to_state(ParserState newState)
+{
+#if defined(DEBUG_PARSER_TRANSITIONS)
+    qDebug() << "transition: " << state_ << " -> " << newState;
+#endif
+    state_ = newState;
 }
 
 RequestParser::State RequestParser::consume(Request &request, char input)
@@ -94,14 +196,14 @@ RequestParser::State RequestParser::consume(Request &request, char input)
             return Invalid;
         }
 
-        state_ = method;
+        transition_to_state(method);
         request.method_.push_back(input);
         return Incomplete;
 
     case method:
         if (input == ' ')
         {
-            state_ = uri;
+            transition_to_state(uri);
             return Incomplete;
         }
         else if (!is_char(input) || is_ctl(input) || is_tspecial(input))
@@ -117,7 +219,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case uri:
         if (input == ' ')
         {
-            state_ = http_version_h;
+            transition_to_state(http_version_h);
             return Incomplete;
         }
         else if (is_ctl(input))
@@ -132,76 +234,58 @@ RequestParser::State RequestParser::consume(Request &request, char input)
 
     case http_version_h:
         if (input == 'H'){
-            state_ = http_version_t1;
+            transition_to_state(http_version_t1);
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case http_version_t1:
         if (input == 'T')
         {
-            state_ = http_version_t2;
+            transition_to_state(http_version_t2);
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case http_version_t2:
         if (input == 'T')
         {
-            state_ = http_version_p;
+            transition_to_state(http_version_p);
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case http_version_p:
         if (input == 'P')
         {
-            state_ = http_version_slash;
+            transition_to_state(http_version_slash);
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case http_version_slash:
         if (input == '/')
         {
+            transition_to_state(http_version_major_start);
             request.major_version_ = 0;
             request.minor_version_ = 0;
-            state_ = http_version_major_start;
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case http_version_major_start:
         if (is_digit(input))
         {
+            transition_to_state(http_version_major);
             request.major_version_ = input - '0';
-            state_ = http_version_major;
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case http_version_major:
         if (input == '.')
         {
-            state_ = http_version_minor_start;
+            transition_to_state(http_version_minor_start);
             return Incomplete;
         }
         else if (is_digit(input))
@@ -210,27 +294,21 @@ RequestParser::State RequestParser::consume(Request &request, char input)
             request.major_version_ += input - '0';
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case http_version_minor_start:
         if (is_digit(input))
         {
+            transition_to_state(http_version_minor);
             request.minor_version_ = input - '0';
-            state_ = http_version_minor;
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case http_version_minor:
         if (input == '\r')
         {
-            state_ = newline_1;
+            transition_to_state(newline_1);
             return Incomplete;
         }
         else if (is_digit(input))
@@ -239,31 +317,25 @@ RequestParser::State RequestParser::consume(Request &request, char input)
             request.minor_version_ += input - '0';
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case newline_1:
         if (input == '\n')
         {
-            state_ = header_line_start;
+            transition_to_state(header_line_start);
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case header_line_start:
         if (input == '\r')
         {
-            state_ = newline_3;
+            transition_to_state(newline_3);
             return Incomplete;
         }
         else if (!request.headers_.empty() && (input == ' ' || input == '\t'))
         {
-            state_ = header_lws;
+            transition_to_state(header_lws);
             return Incomplete;
         }
         else if (!is_char(input) || is_ctl(input) || is_tspecial(input))
@@ -272,16 +344,16 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
         else
         {
+            transition_to_state(header_name);
             buffer_.clear();
             buffer_.push_back(input);
-            state_ = header_name;
             return Incomplete;
         }
 
     case header_lws:
         if (input == '\r')
         {
-            state_ = newline_2;
+            transition_to_state(newline_2);
             return Incomplete;
         }
         else if (input == ' ' || input == '\t')
@@ -294,14 +366,14 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
         else
         {
-            state_ = header_value;
+            transition_to_state(header_value);
             return Incomplete;
         }
 
     case header_name:
         if (input == ':')
         {
-            state_ = header_space;
+            transition_to_state(header_space);
             return Incomplete;
         }
         else if (!is_char(input) || is_ctl(input) || is_tspecial(input))
@@ -317,54 +389,192 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case header_space:
         if (input == ' ')
         {
+            transition_to_state(header_value);
             value_buffer_.clear();
-            state_ = header_value;
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case header_value:
         if (input == '\r')
         {
+            transition_to_state(newline_2);
             request.headers_.push_back(Header(std::move(buffer_), std::move(value_buffer_)));
-            state_ = newline_2;
             return Incomplete;
         }
-        else if (is_ctl(input))
-        {
-            return Invalid;
-        }
-        else
+        else if (! is_ctl(input))
         {
             value_buffer_.push_back(input);
             return Incomplete;
         }
+        return Invalid;
 
     case newline_2:
         if (input == '\n')
         {
-            state_ = header_line_start;
+            transition_to_state(header_line_start);
             return Incomplete;
         }
-        else
-        {
-            return Invalid;
-        }
+        return Invalid;
 
     case newline_3:
         if (input == '\n')
+        {
+            auto iter = request.headers_.find_by_name("Transfer-Encoding");
+            if (iter != request.headers_.end())
+            {
+                // TODO(ben): This doesn't account for more than one value,
+                // which is explicitly allowed in the 1.1 spec.
+
+                if (ci_equal(iter->value(), "chunked"))
+                {
+                    transition_to_state(chunk_length_start);
+                    request.body_.clear();
+                    return Incomplete;
+                }
+                else if (! ci_equal(iter->value(), "identity"))
+                {
+                    qFatal("Unsupported chunk encoding: %s", iter->value());
+
+                    // qFatal aborts the program, but just in case
+                    return Invalid;
+                }
+
+                // fall through, check for content length
+            }
+
+            iter = request.headers_.find_by_name("Content-Length");
+            if (iter != request.headers_.end())
+            {
+                uint64_t length;
+                if (! parse_uint64_t(iter->value(), length))
+                {
+                    return Invalid;
+                }
+
+                transition_to_state(fixed_length_entity);
+                remaining_ = length;
+                request.body_.clear();
+                request.body_.reserve(static_cast<size_t>(length));
+                return Incomplete;
+            }
+
+            // No entity expected, we're done!
+            return Valid;
+        }
+        return Invalid;
+
+    case chunk_length_start:
+        if (input == '0')
+        {
+            transition_to_state(chunk_sequence_terminating_cr);
+            return Incomplete;
+        }
+        else if (is_hex(input))
+        {
+            transition_to_state(chunk_length);
+            remaining_ = hex_value(input);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case chunk_length:
+        if (input == '\r')
+        {
+            transition_to_state(chunk_length_newline);
+            return Incomplete;
+        }
+        else if (is_hex(input))
+        {
+            remaining_ = (remaining_ * 16) + hex_value(input);
+            return Incomplete;
+        }
+        else if (input == ';')
+        {
+            qFatal("extensions not implemented");
+        }
+        return Invalid;
+
+    case chunk_length_newline:
+        if (input == '\n')
+        {
+            transition_to_state(chunk);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case chunk:
+        if (remaining_ == 0)
+        {
+            if (input == '\r')
+            {
+                transition_to_state(chunk_trailing_newline);
+                return Incomplete;
+            }
+            return Invalid;
+        }
+        else
+        {
+            request.body_.push_back(input);
+            remaining_--;
+            return Incomplete;
+        }
+
+    case chunk_trailing_newline:
+        if (input == '\n')
+        {
+            transition_to_state(chunk_length_start);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case chunk_sequence_terminating_cr:
+        if (input == '\r')
+        {
+            transition_to_state(chunk_sequence_terminating_lf);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case chunk_sequence_terminating_lf:
+        if (input == '\n')
+        {
+            transition_to_state(chunk_trailing_header_line_start);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case chunk_trailing_header_line_start:
+        if (input == '\r')
+        {
+            transition_to_state(chunk_terminating_newline);
+            return Incomplete;
+        }
+        qFatal("Trailing headers not implemented");
+        return Invalid;
+
+    case chunk_terminating_newline:
+        if (input == '\n')
+        {
+            return Valid;
+        }
+        return Invalid;
+
+    case fixed_length_entity:
+        request.body_.push_back(static_cast<uint8_t>(input));
+        --remaining_;
+
+        if (remaining_ == 0)
         {
             return Valid;
         }
         else
         {
-            return Invalid;
+            return Incomplete;
         }
 
     default:
+        qFatal("Unimplemented state: %d", state_);
         return Invalid;
     }
 

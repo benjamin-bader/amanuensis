@@ -66,3 +66,68 @@ void RequestParserTests::simpleGet()
     QCOMPARE(header.value(), std::string("application/html"));
 }
 
+void RequestParserTests::fixedLengthSimplePost()
+{
+    std::stringstream requestText;
+    requestText << "POST /foo/bar HTTP/1.1\r\n";
+    requestText << "Accept: application/html\r\n";
+    requestText << "Content-Type: text/plain\r\n";
+    requestText << "Content-Length: 12\r\n";
+    requestText << "Transfer-Encoding: identity\r\n"; // tricky!
+    requestText << "\r\n";
+    requestText << "abcdefghijkl\r\n";
+
+    Request request;
+    RequestParser parser;
+
+    auto content = requestText.str();
+    auto begin = content.begin();
+    auto end = content.end();
+
+    auto state = parser.parse(request, begin, end);
+
+    QCOMPARE(state, RequestParser::State::Valid);
+
+    std::string expected("abcdefghijkl");
+    std::string actual = request.body_as_string();
+    QCOMPARE(actual, expected);
+}
+
+void RequestParserTests::chunkedSimplePost()
+{
+    std::stringstream requestText;
+    requestText << "POST /foo/bar HTTP/1.1\r\n";
+    requestText << "Accept: application/html\r\n";
+    requestText << "Content-Type: text/plain\r\n";
+    requestText << "Transfer-Encoding: chunked\r\n"; // tricky!
+    requestText << "\r\n";
+    requestText << "5\r\n";
+    requestText << "abcde\r\n";
+    requestText << "9\r\n";
+    requestText << "fghijklmn\r\n";
+    requestText << "A\r\n";
+    requestText << "opqrstuvwx\r\n";
+    requestText << "c\r\n";
+    requestText << "yz0123456789\r\n";
+    requestText << "0\r\n";
+    requestText << "\r\n";
+
+    Request request;
+    RequestParser parser;
+
+    auto content = requestText.str();
+    auto original_begin = content.begin();
+    auto begin = content.begin();
+    auto end = content.end();
+
+    auto state = parser.parse(request, begin, end);
+
+    auto diff = begin - original_begin;
+
+    QCOMPARE(state, RequestParser::State::Valid);
+
+    std::string expected("abcdefghijklmnopqrstuvwxyz0123456789");
+    std::string actual = request.body_as_string();
+    QCOMPARE(actual, expected);
+}
+

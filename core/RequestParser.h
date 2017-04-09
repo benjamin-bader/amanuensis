@@ -26,6 +26,10 @@
 #include <tuple>
 #include <vector>
 
+#ifdef DEBUG_PARSER_TRANSITIONS
+#include <QObject>
+#endif
+
 class QDebug;
 
 #include "global.h"
@@ -35,9 +39,17 @@ class QDebug;
 class Request;
 
 class A_EXPORT RequestParser
+#ifdef DEBUG_PARSER_TRANSITIONS
+        : public QObject
+#endif
 {
+#ifdef DEBUG_PARSER_TRANSITIONS
+    Q_OBJECT
+#endif
+
 public:
     RequestParser();
+    ~RequestParser();
 
     enum State {
         Incomplete = 0,
@@ -67,28 +79,70 @@ private:
 
     State consume(Request &request, char input);
 
+#ifdef DEBUG_PARSER_TRANSITIONS
+public:
+#endif
     enum ParserState {
-        method_start,
-        method,
-        uri,
-        http_version_h,
-        http_version_t1,
-        http_version_t2,
-        http_version_p,
-        http_version_slash,
-        http_version_major_start,
-        http_version_major,
-        http_version_minor_start,
-        http_version_minor,
-        newline_1,
-        header_line_start,
-        header_lws,
-        header_name,
-        header_space,
-        header_value,
-        newline_2,
-        newline_3,
+        // Status line
+        //
+
+        method_start                     =  0,
+        method                           =  1,
+        uri                              =  2,
+        http_version_h                   =  3,
+        http_version_t1                  =  4,
+        http_version_t2                  =  5,
+        http_version_p                   =  6,
+        http_version_slash               =  7,
+        http_version_major_start         =  8,
+        http_version_major               =  9,
+        http_version_minor_start         = 10,
+        http_version_minor               = 11,
+        newline_1                        = 12,
+
+        // Headers
+        //
+
+        header_line_start                = 13,
+        header_lws                       = 14,
+        header_name                      = 15,
+        header_space                     = 16,
+        header_value                     = 17,
+        newline_2                        = 18,
+        newline_3                        = 19,
+
+        // Entities
+        //
+
+        // Chunked entities
+        chunk_length_start               = 20,
+        chunk_length                     = 21,
+        chunk_extension                  = 22, // unsure of the format, TODO
+        chunk_length_newline             = 23,
+
+        chunk                            = 24,
+        chunk_trailing_newline           = 25,
+        chunk_sequence_terminating_cr    = 26,
+        chunk_sequence_terminating_lf    = 27,
+        chunk_sequence_terminating_cr_2  = 28,
+        chunk_sequence_terminating_lf_2  = 29,
+        chunk_trailing_header_line_start = 30,
+        chunk_trailing_header_lws        = 31,
+        chunk_trailing_header_name       = 32,
+        chunk_trailing_header_space      = 33,
+        chunk_trailing_header_value      = 34,
+        chunk_terminating_newline        = 35,
+
+        // Non-chunked entities
+        fixed_length_entity              = 40,
     } state_;
+
+#ifdef DEBUG_PARSER_TRANSITIONS
+    Q_ENUM(ParserState)
+private:
+#endif
+
+    void transition_to_state(ParserState newState);
 
     std::string method_;
     std::string uri_;
@@ -96,7 +150,16 @@ private:
     int minor_version_;
     std::vector<Header> headers_;
 
+    // A counter of how many bytes in a fixed-length range
+    // remain to be read; this is used both for individual
+    // chunks as well as fixed-length entities.
+    uint64_t remaining_;
+
+    // A general-purpose string buffer, used for header names.
     std::string buffer_;
+
+    // A special string buffer used for header values, so that
+    // we keep the current header name at the same time.
     std::string value_buffer_;
 };
 

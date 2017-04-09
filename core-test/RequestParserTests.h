@@ -29,6 +29,8 @@ public:
 
 private Q_SLOTS:
     void simpleGet();
+    void fixedLengthSimplePost();
+    void chunkedSimplePost();
 };
 
 #endif

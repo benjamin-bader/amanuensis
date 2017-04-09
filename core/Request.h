@@ -52,7 +52,11 @@ public:
 
     const Headers headers() const;
 
-    const std::vector<uint8_t> body() const;
+    const std::vector<uint8_t>& body() const;
+
+    // Return the body as a string, using any specified Content-Encoding
+    // if present.
+    const std::string body_as_string() const;
 
 private:
     std::string method_;

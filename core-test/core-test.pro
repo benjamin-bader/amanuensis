@@ -6,7 +6,7 @@
 
 QT       += core gui widgets testlib
 
-TARGET = RequestParserTests
+TARGET = core-test
 CONFIG   += console
 CONFIG   -= app_bundle
 

@@ -17,13 +17,12 @@
 
 TEMPLATE = subdirs
 
+INCLUDEPATH += $$PWD/include
+
 SUBDIRS += \
     core \
     app \
     core-test
 
-INCLUDEPATH += "$$PWD/include"
-
 app.depends = core
-
-INCLUDEPATH += $$PWD/include
+core-test.depends = core

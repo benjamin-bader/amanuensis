@@ -58,7 +58,12 @@ const Headers Request::headers() const
     return headers_;
 }
 
-const std::vector<uint8_t> Request::body() const
+const std::vector<uint8_t>& Request::body() const
 {
     return body_;
+}
+
+const std::string Request::body_as_string() const
+{
+    return std::string(body_.begin(), body_.end());
 }
