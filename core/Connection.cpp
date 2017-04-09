@@ -19,6 +19,8 @@
 
 #include <QDebug>
 
+#include <asio.hpp>
+
 #include "Headers.h"
 #include "Request.h"
 #include "Response.h"
@@ -48,7 +50,9 @@ Connection::Connection(asio::ip::tcp::socket socket) :
     socket_(std::move(socket)),
     buffer_(),
     requestParser(),
-    request()
+    request(),
+    resolver_(socket_.get_io_service()),
+    remote_socket_(socket.get_io_service())
 {
 
 }
@@ -60,7 +64,10 @@ void Connection::start()
 
 void Connection::stop()
 {
-
+    asio::error_code ec;
+    socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+    remote_socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+    resolver_.cancel();
 }
 
 void Connection::do_read_client_request()
@@ -82,8 +89,64 @@ void Connection::do_read_client_request()
         else
         {
             dump_request(request);
-            do_write_client_request();
+
+            lookup_host();
         }
+    });
+}
+
+void Connection::lookup_host()
+{
+    auto iter = request.headers().find_by_name("Host");
+    if (iter == request.headers().end())
+    {
+        qWarning() << "Malformed request - no 'Host' header found!";
+        stop();
+        return;
+    }
+
+    std::string host = iter->value();
+    std::string port = "80";
+
+    size_t separator = host.find(':');
+    if (separator != std::string::npos)
+    {
+        try
+        {
+            port = host.substr(separator + 1);
+            host = host.substr(0, separator);
+        }
+        catch (std::out_of_range)
+        {
+            qWarning() << "Malformed request - assuming port 80";
+        }
+        catch (std::invalid_argument)
+        {
+            qWarning() << "Malformed request - assuming port 80";
+        }
+    }
+
+    asio::ip::tcp::resolver::query q(host, port);
+
+    auto self = shared_from_this();
+    resolver_.async_resolve(q, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator result) {
+        if (ec)
+        {
+            // Something happened - couldn't connect to the remote endpoint?
+            // TODO(ben): Propagate the failure!
+
+            qWarning() << "Failed to connect to the remote endpoint: " << ec.message();
+            stop();
+            return;
+        }
+
+        asio::async_connect(remote_socket_, result, [this, self](asio::error_code ec2, asio::ip::tcp::resolver::iterator i) {
+            // here
+            qInfo() << "Connected to the remote server at " << (*i).host_name() << i->service_name();
+
+            stop();
+            return;
+        });
     });
 }
 

@@ -50,7 +50,7 @@ public:
     int major_version() const;
     int minor_version() const;
 
-    const Headers headers() const;
+    const Headers& headers() const;
 
     const std::vector<uint8_t>& body() const;
 

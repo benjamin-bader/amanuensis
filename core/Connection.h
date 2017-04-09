@@ -39,11 +39,15 @@ public:
 
 private:
     void do_read_client_request();   // client -> proxy
+    void lookup_host();              // proxy -> DNS
     void do_write_client_request();  // proxy -> server
     void do_read_server_response();  // server -> proxy
     void do_write_server_response(); // proxy -> client
 
     asio::ip::tcp::socket socket_;
+
+    asio::ip::tcp::resolver resolver_;
+    asio::ip::tcp::socket remote_socket_;
 
     std::array<char, 8192> buffer_;
 

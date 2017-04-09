@@ -53,7 +53,7 @@ int Request::minor_version() const
     return minor_version_;
 }
 
-const Headers Request::headers() const
+const Headers& Request::headers() const
 {
     return headers_;
 }
