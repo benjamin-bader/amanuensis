@@ -31,7 +31,8 @@ Server::Server(const int port) :
     signals_(io_service_),
     acceptor_(io_service_),
     socket_(io_service_),
-    workers_()
+    workers_(),
+    connectionManager_(std::make_unique<ConnectionManager>())
 {
     signals_.add(SIGINT);
     signals_.add(SIGTERM);
@@ -64,6 +65,8 @@ Server::~Server()
     acceptor_.close();
     signals_.clear();
     io_service_.stop();
+
+    connectionManager_->stop_all();
 
     std::for_each(workers_.begin(), workers_.end(), [](std::thread &t) {
         if (t.joinable())

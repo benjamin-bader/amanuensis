@@ -99,7 +99,7 @@ void RequestParserTests::chunkedSimplePost()
     requestText << "POST /foo/bar HTTP/1.1\r\n";
     requestText << "Accept: application/html\r\n";
     requestText << "Content-Type: text/plain\r\n";
-    requestText << "Transfer-Encoding: chunked\r\n"; // tricky!
+    requestText << "Transfer-Encoding: chunked\r\n";
     requestText << "\r\n";
     requestText << "5\r\n";
     requestText << "abcde\r\n";
@@ -116,18 +116,24 @@ void RequestParserTests::chunkedSimplePost()
     RequestParser parser;
 
     auto content = requestText.str();
-    auto original_begin = content.begin();
     auto begin = content.begin();
     auto end = content.end();
 
     auto state = parser.parse(request, begin, end);
-
-    auto diff = begin - original_begin;
 
     QCOMPARE(state, RequestParser::State::Valid);
 
     std::string expected("abcdefghijklmnopqrstuvwxyz0123456789");
     std::string actual = request.body_as_string();
     QCOMPARE(actual, expected);
+
+    QCOMPARE(request.method(), {"POST"});
+    QCOMPARE(request.uri(), {"/foo/bar"});
+    QCOMPARE(request.headers()[0].name(), {"Accept"});
+    QCOMPARE(request.headers()[0].value(), {"application/html"});
+    QCOMPARE(request.headers()[1].name(), {"Content-Type"});
+    QCOMPARE(request.headers()[1].value(), {"text/plain"});
+    QCOMPARE(request.headers()[2].name(), {"Transfer-Encoding"});
+    QCOMPARE(request.headers()[2].value(), {"chunked"});
 }
 

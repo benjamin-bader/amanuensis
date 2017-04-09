@@ -19,7 +19,7 @@
 #define CONNECTIONMANAGER_H
 
 #include <memory>
-#include <unordered_set>
+#include <set>
 
 #include "Connection.h"
 
@@ -38,7 +38,7 @@ private:
     ConnectionManager(const ConnectionManager &) = delete;
     ConnectionManager& operator =(const ConnectionManager &) = delete;
 
-    std::unordered_set<std::shared_ptr<Connection>> connections_;
+    std::set<std::shared_ptr<Connection>> connections_;
 };
 
 #endif // CONNECTIONMANAGER_H

@@ -17,11 +17,32 @@
 
 #include "Connection.h"
 
+#include <QDebug>
+
+#include "Headers.h"
 #include "Request.h"
 #include "Response.h"
 
 // doesn't exist yet
 //class ResponseBuilder {};
+
+namespace {
+    QDebug operator<<(QDebug d, const std::string &str)
+    {
+        d << QString(str.c_str());
+        return d;
+    }
+
+    void dump_request(const Request &req)
+    {
+        qDebug() << req.method() << req.uri() << " " << req.major_version() << "/" << req.minor_version();
+
+        for (const Header& header : req.headers())
+        {
+            qDebug() << header.name() << ": " << header.value();
+        }
+    }
+}
 
 Connection::Connection(asio::ip::tcp::socket socket) :
     socket_(std::move(socket)),
@@ -60,6 +81,7 @@ void Connection::do_read_client_request()
         }
         else
         {
+            dump_request(request);
             do_write_client_request();
         }
     });

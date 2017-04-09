@@ -26,26 +26,15 @@
 #include <tuple>
 #include <vector>
 
-#ifdef DEBUG_PARSER_TRANSITIONS
-#include <QObject>
-#endif
-
-class QDebug;
-
 #include "global.h"
 
 #include "Headers.h"
 
+class QDebug;
 class Request;
 
 class A_EXPORT RequestParser
-#ifdef DEBUG_PARSER_TRANSITIONS
-        : public QObject
-#endif
 {
-#ifdef DEBUG_PARSER_TRANSITIONS
-    Q_OBJECT
-#endif
 
 public:
     RequestParser();
@@ -79,9 +68,6 @@ private:
 
     State consume(Request &request, char input);
 
-#ifdef DEBUG_PARSER_TRANSITIONS
-public:
-#endif
     enum ParserState {
         // Status line
         //
@@ -136,11 +122,6 @@ public:
         // Non-chunked entities
         fixed_length_entity              = 40,
     } state_;
-
-#ifdef DEBUG_PARSER_TRANSITIONS
-    Q_ENUM(ParserState)
-private:
-#endif
 
     void transition_to_state(ParserState newState);
 

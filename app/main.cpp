@@ -24,14 +24,13 @@
 
 #include "Proxy.h"
 #include "ProxyFactory.h"
+#include "Server.h"
 
 int main(int argc, char *argv[])
 {
     try
     {
-        ProxyFactory factory;
-
-        auto proxy = factory.create(9999);
+        Server server(9999);
 
         QApplication a(argc, argv);
         MainWindow w;

@@ -180,14 +180,20 @@ void RequestParser::reset()
 
 void RequestParser::transition_to_state(ParserState newState)
 {
-#if defined(DEBUG_PARSER_TRANSITIONS)
-    qDebug() << "transition: " << state_ << " -> " << newState;
-#endif
     state_ = newState;
 }
 
 RequestParser::State RequestParser::consume(Request &request, char input)
 {
+#if defined(DEBUG_PARSER_TRANSITIONS)
+#define TRANSIT(x) do { \
+    qDebug() << state_ << "->" << (x) << "(" #x ")"; \
+    transition_to_state((x)); \
+} while (false)
+#else
+#define TRANSIT(x) transition_to_state((x))
+#endif
+
     switch (state_)
     {
     case method_start:
@@ -196,14 +202,14 @@ RequestParser::State RequestParser::consume(Request &request, char input)
             return Invalid;
         }
 
-        transition_to_state(method);
+        TRANSIT(method);
         request.method_.push_back(input);
         return Incomplete;
 
     case method:
         if (input == ' ')
         {
-            transition_to_state(uri);
+            TRANSIT(uri);
             return Incomplete;
         }
         else if (!is_char(input) || is_ctl(input) || is_tspecial(input))
@@ -219,7 +225,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case uri:
         if (input == ' ')
         {
-            transition_to_state(http_version_h);
+            TRANSIT(http_version_h);
             return Incomplete;
         }
         else if (is_ctl(input))
@@ -234,7 +240,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
 
     case http_version_h:
         if (input == 'H'){
-            transition_to_state(http_version_t1);
+            TRANSIT(http_version_t1);
             return Incomplete;
         }
         return Invalid;
@@ -242,7 +248,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case http_version_t1:
         if (input == 'T')
         {
-            transition_to_state(http_version_t2);
+            TRANSIT(http_version_t2);
             return Incomplete;
         }
         return Invalid;
@@ -250,7 +256,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case http_version_t2:
         if (input == 'T')
         {
-            transition_to_state(http_version_p);
+            TRANSIT(http_version_p);
             return Incomplete;
         }
         return Invalid;
@@ -258,7 +264,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case http_version_p:
         if (input == 'P')
         {
-            transition_to_state(http_version_slash);
+            TRANSIT(http_version_slash);
             return Incomplete;
         }
         return Invalid;
@@ -266,7 +272,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case http_version_slash:
         if (input == '/')
         {
-            transition_to_state(http_version_major_start);
+            TRANSIT(http_version_major_start);
             request.major_version_ = 0;
             request.minor_version_ = 0;
             return Incomplete;
@@ -276,7 +282,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case http_version_major_start:
         if (is_digit(input))
         {
-            transition_to_state(http_version_major);
+            TRANSIT(http_version_major);
             request.major_version_ = input - '0';
             return Incomplete;
         }
@@ -285,7 +291,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case http_version_major:
         if (input == '.')
         {
-            transition_to_state(http_version_minor_start);
+            TRANSIT(http_version_minor_start);
             return Incomplete;
         }
         else if (is_digit(input))
@@ -299,7 +305,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case http_version_minor_start:
         if (is_digit(input))
         {
-            transition_to_state(http_version_minor);
+            TRANSIT(http_version_minor);
             request.minor_version_ = input - '0';
             return Incomplete;
         }
@@ -308,7 +314,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case http_version_minor:
         if (input == '\r')
         {
-            transition_to_state(newline_1);
+            TRANSIT(newline_1);
             return Incomplete;
         }
         else if (is_digit(input))
@@ -322,7 +328,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case newline_1:
         if (input == '\n')
         {
-            transition_to_state(header_line_start);
+            TRANSIT(header_line_start);
             return Incomplete;
         }
         return Invalid;
@@ -330,12 +336,12 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case header_line_start:
         if (input == '\r')
         {
-            transition_to_state(newline_3);
+            TRANSIT(newline_3);
             return Incomplete;
         }
         else if (!request.headers_.empty() && (input == ' ' || input == '\t'))
         {
-            transition_to_state(header_lws);
+            TRANSIT(header_lws);
             return Incomplete;
         }
         else if (!is_char(input) || is_ctl(input) || is_tspecial(input))
@@ -344,7 +350,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
         else
         {
-            transition_to_state(header_name);
+            TRANSIT(header_name);
             buffer_.clear();
             buffer_.push_back(input);
             return Incomplete;
@@ -353,7 +359,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case header_lws:
         if (input == '\r')
         {
-            transition_to_state(newline_2);
+            TRANSIT(newline_2);
             return Incomplete;
         }
         else if (input == ' ' || input == '\t')
@@ -366,14 +372,14 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
         else
         {
-            transition_to_state(header_value);
+            TRANSIT(header_value);
             return Incomplete;
         }
 
     case header_name:
         if (input == ':')
         {
-            transition_to_state(header_space);
+            TRANSIT(header_space);
             return Incomplete;
         }
         else if (!is_char(input) || is_ctl(input) || is_tspecial(input))
@@ -389,7 +395,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case header_space:
         if (input == ' ')
         {
-            transition_to_state(header_value);
+            TRANSIT(header_value);
             value_buffer_.clear();
             return Incomplete;
         }
@@ -398,7 +404,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case header_value:
         if (input == '\r')
         {
-            transition_to_state(newline_2);
+            TRANSIT(newline_2);
             request.headers_.push_back(Header(std::move(buffer_), std::move(value_buffer_)));
             return Incomplete;
         }
@@ -412,7 +418,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case newline_2:
         if (input == '\n')
         {
-            transition_to_state(header_line_start);
+            TRANSIT(header_line_start);
             return Incomplete;
         }
         return Invalid;
@@ -428,7 +434,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
 
                 if (ci_equal(iter->value(), "chunked"))
                 {
-                    transition_to_state(chunk_length_start);
+                    TRANSIT(chunk_length_start);
                     request.body_.clear();
                     return Incomplete;
                 }
@@ -452,7 +458,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
                     return Invalid;
                 }
 
-                transition_to_state(fixed_length_entity);
+                TRANSIT(fixed_length_entity);
                 remaining_ = length;
                 request.body_.clear();
                 request.body_.reserve(static_cast<size_t>(length));
@@ -467,12 +473,12 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case chunk_length_start:
         if (input == '0')
         {
-            transition_to_state(chunk_sequence_terminating_cr);
+            TRANSIT(chunk_sequence_terminating_cr);
             return Incomplete;
         }
         else if (is_hex(input))
         {
-            transition_to_state(chunk_length);
+            TRANSIT(chunk_length);
             remaining_ = hex_value(input);
             return Incomplete;
         }
@@ -481,7 +487,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case chunk_length:
         if (input == '\r')
         {
-            transition_to_state(chunk_length_newline);
+            TRANSIT(chunk_length_newline);
             return Incomplete;
         }
         else if (is_hex(input))
@@ -498,7 +504,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case chunk_length_newline:
         if (input == '\n')
         {
-            transition_to_state(chunk);
+            TRANSIT(chunk);
             return Incomplete;
         }
         return Invalid;
@@ -508,7 +514,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         {
             if (input == '\r')
             {
-                transition_to_state(chunk_trailing_newline);
+                TRANSIT(chunk_trailing_newline);
                 return Incomplete;
             }
             return Invalid;
@@ -523,7 +529,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case chunk_trailing_newline:
         if (input == '\n')
         {
-            transition_to_state(chunk_length_start);
+            TRANSIT(chunk_length_start);
             return Incomplete;
         }
         return Invalid;
@@ -531,7 +537,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case chunk_sequence_terminating_cr:
         if (input == '\r')
         {
-            transition_to_state(chunk_sequence_terminating_lf);
+            TRANSIT(chunk_sequence_terminating_lf);
             return Incomplete;
         }
         return Invalid;
@@ -539,7 +545,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case chunk_sequence_terminating_lf:
         if (input == '\n')
         {
-            transition_to_state(chunk_trailing_header_line_start);
+            TRANSIT(chunk_trailing_header_line_start);
             return Incomplete;
         }
         return Invalid;
@@ -547,7 +553,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case chunk_trailing_header_line_start:
         if (input == '\r')
         {
-            transition_to_state(chunk_terminating_newline);
+            TRANSIT(chunk_terminating_newline);
             return Incomplete;
         }
         qFatal("Trailing headers not implemented");

@@ -17,7 +17,8 @@
 
 #include "ConnectionManager.h"
 
-ConnectionManager::ConnectionManager()
+ConnectionManager::ConnectionManager() :
+    connections_()
 {
 
 }
