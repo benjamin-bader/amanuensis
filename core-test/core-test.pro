@@ -7,7 +7,7 @@
 QT       += core gui widgets testlib
 
 TARGET = core-test
-CONFIG   += console
+CONFIG   += console testcase
 CONFIG   -= app_bundle
 
 TEMPLATE = app
