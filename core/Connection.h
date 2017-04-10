@@ -19,7 +19,10 @@
 #define CONNECTION_H
 
 #include <array>
+#include <cstdint>
 #include <memory>
+#include <mutex>
+#include <queue>
 
 #include <QObject>
 
@@ -28,10 +31,15 @@
 #include "Request.h"
 #include "RequestParser.h"
 
+class ConnectionManager;
+
 class Connection : public std::enable_shared_from_this<Connection>
 {
 public:
-    explicit Connection(asio::ip::tcp::socket socket);
+    Connection() = delete;
+    Connection& operator=(const Connection&) = delete;
+
+    explicit Connection(asio::ip::tcp::socket socket, std::shared_ptr<ConnectionManager> connectionManager);
 
     void start();
 
@@ -39,17 +47,21 @@ public:
 
 private:
     void do_read_client_request();   // client -> proxy
-    void lookup_host();              // proxy -> DNS
+    void lookup_remote_host();       // proxy -> DNS
+    void connect_to_remote_server(asio::ip::tcp::resolver::iterator result);
     void do_write_client_request();  // proxy -> server
     void do_read_server_response();  // server -> proxy
     void do_write_server_response(); // proxy -> client
 
     asio::ip::tcp::socket socket_;
+    asio::ip::tcp::socket remoteSocket_;
 
-    asio::ip::tcp::resolver resolver_;
-    asio::ip::tcp::socket remote_socket_;
+    std::shared_ptr<ConnectionManager> connectionManager_;
 
     std::array<char, 8192> buffer_;
+
+    std::mutex outboxMutex_;
+    std::queue<std::shared_ptr<std::vector<uint8_t>>> outbox_;
 
     RequestParser requestParser;
     Request request;

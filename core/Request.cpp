@@ -17,6 +17,20 @@
 
 #include "Request.h"
 
+#include <cctype>
+#include <sstream>
+
+Request::Request() :
+    method_(),
+    uri_(),
+    major_version_(0),
+    minor_version_(0),
+    headers_(),
+    body_()
+{
+
+}
+
 Request::Request(const std::string &method,
                  const std::string &uri,
                  const int major,
@@ -33,12 +47,12 @@ Request::Request(const std::string &method,
     // nothing
 }
 
-std::string Request::method() const
+const std::string& Request::method() const
 {
     return method_;
 }
 
-std::string Request::uri() const
+const std::string& Request::uri() const
 {
     return uri_;
 }
@@ -66,4 +80,23 @@ const std::vector<uint8_t>& Request::body() const
 const std::string Request::body_as_string() const
 {
     return std::string(body_.begin(), body_.end());
+}
+
+const std::vector<uint8_t> Request::make_buffer() const
+{
+    std::stringstream ss;
+    std::for_each(method_.begin(), method_.end(), [&ss](char c) { ss << std::toupper(c); });
+    ss << " " << uri_ << " HTTP/" << major_version_ << "/" << minor_version_ << "\r\n";
+
+    for (auto &header : headers_)
+    {
+        ss << header.name() << ": " << header.value() << "\r\n";
+    }
+
+    ss << "\r\n";
+
+    auto str = ss.str();
+    std::vector<uint8_t> result(str.begin(), str.end());
+
+    return result;
 }

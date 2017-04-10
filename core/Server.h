@@ -47,7 +47,7 @@ private:
 
     std::vector<std::thread> workers_;
 
-    std::unique_ptr<ConnectionManager> connectionManager_;
+    std::shared_ptr<ConnectionManager> connectionManager_;
 };
 
 #endif // SERVER_H

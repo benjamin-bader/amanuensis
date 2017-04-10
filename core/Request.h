@@ -33,9 +33,7 @@ class A_EXPORT Request
 public:
     friend class RequestParser;
 
-    typedef std::vector<Header>::const_iterator const_iterator;
-
-    Request() {}
+    Request();
 
     Request(const std::string &method,
             const std::string &uri,
@@ -44,8 +42,8 @@ public:
             const Headers &headers,
             const std::vector<uint8_t> &body);
 
-    std::string method() const;
-    std::string uri() const;
+    const std::string& method() const;
+    const std::string& uri() const;
 
     int major_version() const;
     int minor_version() const;
@@ -57,6 +55,10 @@ public:
     // Return the body as a string, using any specified Content-Encoding
     // if present.
     const std::string body_as_string() const;
+
+    // Format the request as a series of bytes, suitable for transmitting
+    // in an asio buffer.
+    const std::vector<uint8_t> make_buffer() const;
 
 private:
     std::string method_;

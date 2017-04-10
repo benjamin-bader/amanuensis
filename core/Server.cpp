@@ -32,7 +32,7 @@ Server::Server(const int port) :
     acceptor_(io_service_),
     socket_(io_service_),
     workers_(),
-    connectionManager_(std::make_unique<ConnectionManager>())
+    connectionManager_(std::make_shared<ConnectionManager>(io_service_))
 {
     signals_.add(SIGINT);
     signals_.add(SIGTERM);
@@ -87,7 +87,7 @@ void Server::do_accept()
         if (!ec)
         {
             qDebug() << "Accepted a client connection, processing it";
-            connectionManager_->start(std::make_shared<Connection>(std::move(socket_)));
+            connectionManager_->start(std::make_shared<Connection>(std::move(socket_), connectionManager_));
 
             do_accept();
         }

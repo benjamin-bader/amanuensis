@@ -17,10 +17,24 @@
 
 #include "ConnectionManager.h"
 
-ConnectionManager::ConnectionManager() :
-    connections_()
+#include <asio.hpp>
+
+ConnectionManager::ConnectionManager(asio::io_service &io_service) :
+    connections_(),
+    resolver_(io_service)
 {
 
+}
+
+ConnectionManager::~ConnectionManager()
+{
+    stop_all();
+    resolver_.cancel();
+}
+
+asio::ip::tcp::resolver& ConnectionManager::resolver()
+{
+    return resolver_;
 }
 
 void ConnectionManager::start(std::shared_ptr<Connection> connection)
@@ -43,3 +57,4 @@ void ConnectionManager::stop_all()
     }
     connections_.clear();
 }
+

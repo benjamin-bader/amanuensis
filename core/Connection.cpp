@@ -21,6 +21,8 @@
 
 #include <asio.hpp>
 
+#include "ConnectionManager.h"
+
 #include "Headers.h"
 #include "Request.h"
 #include "Response.h"
@@ -46,13 +48,13 @@ namespace {
     }
 }
 
-Connection::Connection(asio::ip::tcp::socket socket) :
+Connection::Connection(asio::ip::tcp::socket socket, std::shared_ptr<ConnectionManager> connectionManager) :
     socket_(std::move(socket)),
+    remoteSocket_(socket_.get_io_service()),
+    connectionManager_(connectionManager),
     buffer_(),
     requestParser(),
-    request(),
-    resolver_(socket_.get_io_service()),
-    remote_socket_(socket.get_io_service())
+    request()
 {
 
 }
@@ -66,8 +68,7 @@ void Connection::stop()
 {
     asio::error_code ec;
     socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-    remote_socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-    resolver_.cancel();
+    remoteSocket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
 }
 
 void Connection::do_read_client_request()
@@ -90,18 +91,18 @@ void Connection::do_read_client_request()
         {
             dump_request(request);
 
-            lookup_host();
+            lookup_remote_host();
         }
     });
 }
 
-void Connection::lookup_host()
+void Connection::lookup_remote_host()
 {
     auto iter = request.headers().find_by_name("Host");
     if (iter == request.headers().end())
     {
         qWarning() << "Malformed request - no 'Host' header found!";
-        stop();
+        connectionManager_->stop(shared_from_this());
         return;
     }
 
@@ -126,38 +127,93 @@ void Connection::lookup_host()
         }
     }
 
-    asio::ip::tcp::resolver::query q(host, port);
+    asio::ip::tcp::resolver::query query(host, port);
 
     auto self = shared_from_this();
-    resolver_.async_resolve(q, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator result) {
+    connectionManager_->resolver().async_resolve(query, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator result) {
         if (ec)
         {
             // Something happened - couldn't connect to the remote endpoint?
             // TODO(ben): Propagate the failure!
 
             qWarning() << "Failed to connect to the remote endpoint: " << ec.message();
-            stop();
+            connectionManager_->stop(self);
             return;
         }
 
-        asio::async_connect(remote_socket_, result, [this, self](asio::error_code ec2, asio::ip::tcp::resolver::iterator i) {
-            // here
-            qInfo() << "Connected to the remote server at " << (*i).host_name() << i->service_name();
+        qInfo() << "DNS lookup complete, connecting to remote host";
+        connect_to_remote_server(result);
+    });
+}
 
-            stop();
+void Connection::connect_to_remote_server(asio::ip::tcp::resolver::iterator result)
+{
+    auto self = shared_from_this();
+    asio::async_connect(remoteSocket_, result, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator i) {
+        if (ec)
+        {
+            qWarning() << "Failed to connect to remote host: " << ec.message();
+            connectionManager_->stop(self);
             return;
-        });
+        }
+
+        qInfo() << "Connected to remote host " << i->host_name() << " at " << i->endpoint().address().to_string();
+
+        {
+            std::lock_guard<std::mutex> lock(outboxMutex_);
+            outbox_.push(std::make_shared<std::vector<uint8_t>>(request.make_buffer()));
+            if (! request.body().empty())
+            {
+                outbox_.push(std::make_shared<std::vector<uint8_t>>(request.body()));
+            }
+        }
+        do_write_client_request();
     });
 }
 
 void Connection::do_write_client_request()
 {
-    //socket_.async_send()
+    std::shared_ptr<std::vector<uint8_t>> sharedBuffer;
+
+    {
+        std::lock_guard<std::mutex> lock(outboxMutex_);
+        if (outbox_.empty())
+        {
+            return;
+        }
+
+        sharedBuffer = outbox_.front();
+    }
+
+    auto self = shared_from_this();
+    asio::async_write(remoteSocket_,
+                      asio::buffer(sharedBuffer->data(), sharedBuffer->size()),
+                      [this, self, sharedBuffer](asio::error_code ec, size_t bytesWritten) {
+        if (ec)
+        {
+            // boo
+            qWarning() << "Error sending client request to server: " << ec.message();
+            connectionManager_->stop(self);
+            return;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(outboxMutex_);
+            outbox_.pop();
+        }
+
+        do_write_client_request();
+        do_read_server_response();
+    });
 }
 
 void Connection::do_read_server_response()
 {
-
+    auto self = shared_from_this();
+    remoteSocket_.async_read_some(asio::buffer(buffer_), [this, self](asio::error_code ec, size_t bytesRead) {
+        std::string str(buffer_.data(), bytesRead);
+        qDebug() << "Response: \n" << str;
+    });
 }
 
 void Connection::do_write_server_response()

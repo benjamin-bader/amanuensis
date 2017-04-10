@@ -20,13 +20,18 @@
 
 #include <memory>
 #include <set>
+#include <string>
+
+#include <asio/io_service.hpp>
+#include <asio/ip/tcp.hpp>
 
 #include "Connection.h"
 
 class ConnectionManager
 {
 public:
-    ConnectionManager();
+    ConnectionManager(asio::io_service &io_service);
+    ~ConnectionManager();
 
     void start(std::shared_ptr<Connection> connection);
 
@@ -34,11 +39,15 @@ public:
 
     void stop_all();
 
+    asio::ip::tcp::resolver& resolver();
+
 private:
     ConnectionManager(const ConnectionManager &) = delete;
     ConnectionManager& operator =(const ConnectionManager &) = delete;
 
     std::set<std::shared_ptr<Connection>> connections_;
+
+    asio::ip::tcp::resolver resolver_;
 };
 
 #endif // CONNECTIONMANAGER_H
