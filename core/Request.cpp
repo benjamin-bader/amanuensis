@@ -85,8 +85,8 @@ const std::string Request::body_as_string() const
 const std::vector<uint8_t> Request::make_buffer() const
 {
     std::stringstream ss;
-    std::for_each(method_.begin(), method_.end(), [&ss](char c) { ss << std::toupper(c); });
-    ss << " " << uri_ << " HTTP/" << major_version_ << "/" << minor_version_ << "\r\n";
+    ss << method_;
+    ss << " " << uri_ << " HTTP/" << major_version_ << "." << minor_version_ << "\r\n";
 
     for (auto &header : headers_)
     {

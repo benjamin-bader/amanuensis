@@ -440,7 +440,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
                 }
                 else if (! ci_equal(iter->value(), "identity"))
                 {
-                    qFatal("Unsupported chunk encoding: %s", iter->value());
+                    qFatal("Unsupported chunk encoding: %s", iter->value().c_str());
 
                     // qFatal aborts the program, but just in case
                     return Invalid;
