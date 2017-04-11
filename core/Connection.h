@@ -72,6 +72,7 @@ private:
 
     HttpMessageParser requestParser;
     HttpMessage request;
+    HttpMessage response;
 };
 
 #endif // CONNECTION_H

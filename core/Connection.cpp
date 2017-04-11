@@ -221,6 +221,7 @@ void Connection::do_write_client_request()
 
         if (finishedWriting)
         {
+            requestParser.resetForResponse();
             do_read_server_response();
         }
         else
@@ -257,7 +258,23 @@ void Connection::do_read_server_response()
             serverToClientOutbox_.push(payload);
         }
 
-        do_read_server_response();
+        auto begin = buffer->begin();
+        auto end = begin + bytesRead;
+        auto state = requestParser.parse(response, begin, end);
+
+        if (state == HttpMessageParser::State::Incomplete)
+        {
+            do_read_server_response();
+        }
+        else if (state == HttpMessageParser::State::Valid)
+        {
+            do_write_server_response();
+        }
+        else
+        {
+            qWarning() << "Couldn't understand server response, just pass the data through";
+            do_read_server_response();
+        }
     });
 }
 
