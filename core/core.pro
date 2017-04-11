@@ -46,25 +46,25 @@ SOURCES += Amanuensis.cpp \
     Proxy.cpp \
     Server.cpp \
     Connection.cpp \
-    Request.cpp \
     Headers.cpp \
     Response.cpp \
     ConnectionManager.cpp \
     ProxyFactory.cpp \
-    RequestParser.cpp
+    HttpMessage.cpp \
+    HttpMessageParser.cpp
 
 HEADERS += Amanuensis.h \
     Proxy.h \
     global.h \
     Server.h \
     Connection.h \
-    Request.h \
     Headers.h \
     Response.h \
     ConnectionManager.h \
     ProxyFactory.h \
-    RequestParser.h \
-    ObjectPool.h
+    ObjectPool.h \
+    HttpMessage.h \
+    HttpMessageParser.h
 
 windows {
     SOURCES += \

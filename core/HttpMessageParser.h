@@ -17,8 +17,8 @@
 
 // Copyright (C)
 
-#ifndef REQUESTPARSER_H
-#define REQUESTPARSER_H
+#ifndef HTTPMESSAGEPARSER_H
+#define HTTPMESSAGEPARSER_H
 
 #include <cstdint>
 #include <string>
@@ -31,14 +31,14 @@
 #include "Headers.h"
 
 class QDebug;
-class Request;
+class HttpMessage;
 
-class A_EXPORT RequestParser
+class A_EXPORT HttpMessageParser
 {
 
 public:
-    RequestParser();
-    ~RequestParser();
+    HttpMessageParser();
+    ~HttpMessageParser();
 
     enum State {
         Incomplete = 0,
@@ -50,11 +50,11 @@ public:
     void resetForResponse();
 
     template <typename InputIterator>
-    State parse(Request &request, InputIterator &begin, InputIterator end)
+    State parse(HttpMessage &message, InputIterator &begin, InputIterator end)
     {
         while (begin != end)
         {
-            auto state = consume(request, *begin++);
+            auto state = consume(message, *begin++);
             if (state != State::Incomplete)
             {
                 return state;
@@ -65,9 +65,9 @@ public:
     }
 
 private:
-    friend QDebug operator<<(QDebug, const RequestParser &parser);
+    friend QDebug operator<<(QDebug, const HttpMessageParser &parser);
 
-    State consume(Request &request, char input);
+    State consume(HttpMessage &message, char input);
 
     enum ParserState {
         // Request status line
@@ -94,15 +94,18 @@ private:
         response_http_t1                 = 51,
         response_http_t2                 = 52,
         response_http_p                  = 53,
-        response_http_space              = 54,
+        response_http_slash              = 54,
+        response_major_version_start     = 55,
+        response_major_version           = 56,
+        response_minor_version_start     = 57,
+        response_minor_version           = 58,
 
-        response_status_code_start       = 55,
-        response_status_code             = 56,
+        response_status_code_start       = 59,
+        response_status_code             = 60,
 
-        response_status_message_start    = 57,
-        response_status_message          = 58,
-        response_newline                 = 59,
-
+        response_status_message_start    = 61,
+        response_status_message          = 62,
+        response_newline                 = 63,
 
         // Headers
         //
@@ -143,12 +146,6 @@ private:
 
     void transition_to_state(ParserState newState);
 
-    std::string method_;
-    std::string uri_;
-    int major_version_;
-    int minor_version_;
-    std::vector<Header> headers_;
-
     // A counter of how many bytes in a fixed-length range
     // remain to be read; this is used both for individual
     // chunks as well as fixed-length entities.
@@ -162,6 +159,6 @@ private:
     std::string value_buffer_;
 };
 
-QDebug operator<<(QDebug d, const RequestParser &parser);
+QDebug operator<<(QDebug d, const HttpMessageParser &parser);
 
-#endif // REQUESTPARSER_H
+#endif // HTTPMESSAGEPARSER_H

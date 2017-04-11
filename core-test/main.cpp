@@ -22,7 +22,7 @@
 #include <QApplication>
 #include <QtTest>
 
-#include "RequestParserTests.h"
+#include "HttpMessageParserTests.h"
 
 int main(int argc, char **argv)
 {
@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     QStringList arguments = QCoreApplication::arguments();
 
     std::unordered_map<std::string, std::unique_ptr<QObject>> tests;
-    tests.emplace("RequestParser", std::make_unique<RequestParserTests>());
+    tests.emplace("RequestParser", std::make_unique<HttpMessageParserTests>());
 
     int status = 0;
     for (auto& kvp : tests)

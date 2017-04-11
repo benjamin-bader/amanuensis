@@ -15,22 +15,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef REQUESTPARSERTESTS_H
-#define REQUESTPARSERTESTS_H
+#ifndef HTTPMESSAGEPARSERTESTS_H
+#define HTTPMESSAGEPARSERTESTS_H
 
 #include <QObject>
 
-class RequestParserTests : public QObject
+class HttpMessageParserTests : public QObject
 {
     Q_OBJECT
 
 public:
-    RequestParserTests();
+    HttpMessageParserTests();
 
 private Q_SLOTS:
     void simpleGet();
     void fixedLengthSimplePost();
     void chunkedSimplePost();
+
+    void simpleOkResponse();
 };
 
 #endif

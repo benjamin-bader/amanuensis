@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef REQUEST_H
-#define REQUEST_H
+#ifndef HTTPMESSAGE_H
+#define HTTPMESSAGE_H
 
 #include <cstdint>
 #include <string>
@@ -28,22 +28,18 @@
 
 #include "global.h"
 
-class A_EXPORT Request
+class A_EXPORT HttpMessage
 {
 public:
-    friend class RequestParser;
+    friend class HttpMessageParser;
 
-    Request();
-
-    Request(const std::string &method,
-            const std::string &uri,
-            const int major,
-            const int minor,
-            const Headers &headers,
-            const std::vector<uint8_t> &body);
+    HttpMessage();
 
     const std::string& method() const;
     const std::string& uri() const;
+
+    const int status_code() const;
+    const std::string& status_message() const;
 
     int major_version() const;
     int minor_version() const;
@@ -51,6 +47,14 @@ public:
     const Headers& headers() const;
 
     const std::vector<uint8_t>& body() const;
+
+    void set_method(const std::string &method);
+    void set_uri(const std::string &uri);
+    void set_major_version(int major_version);
+    void set_minor_version(int minor_version);
+    void set_body(const std::vector<uint8_t> &body);
+
+    void add_header(const std::string &name, const std::string &value);
 
     // Return the body as a string, using any specified Content-Encoding
     // if present.
@@ -61,8 +65,14 @@ public:
     const std::vector<uint8_t> make_buffer() const;
 
 private:
+    // Request-specific data
     std::string method_;
     std::string uri_;
+
+    // Response-specific data
+    int status_code_;
+    std::string status_message_;
+
     int major_version_;
     int minor_version_;
 
@@ -71,4 +81,4 @@ private:
     std::vector<uint8_t> body_;
 };
 
-#endif // REQUEST_H
+#endif // HTTPMESSAGE_H

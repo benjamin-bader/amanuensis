@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "RequestParser.h"
+#include "HttpMessageParser.h"
 
 #include <cctype>
 #include <cerrno>
@@ -26,7 +26,7 @@
 #include <QDebug>
 
 #include "Headers.h"
-#include "Request.h"
+#include "HttpMessage.h"
 #include "Response.h"
 
 class ResponseBuilder {};
@@ -145,13 +145,8 @@ namespace
     }
 }
 
-RequestParser::RequestParser() :
+HttpMessageParser::HttpMessageParser() :
     state_(method_start),
-    method_(),
-    uri_(),
-    major_version_(0),
-    minor_version_(0),
-    headers_(),
     remaining_(0),
     buffer_(),
     value_buffer_()
@@ -160,43 +155,33 @@ RequestParser::RequestParser() :
     value_buffer_.reserve(64);
 }
 
-RequestParser::~RequestParser()
+HttpMessageParser::~HttpMessageParser()
 {
     // here to satisfy my wonky build setup
 }
 
-void RequestParser::resetForRequest()
+void HttpMessageParser::resetForRequest()
 {
     state_ = method_start;
-    method_.clear();
-    uri_.clear();
-    major_version_ = 0;
-    minor_version_ = 0;
-    headers_.clear();
     remaining_ = 0;
     buffer_.clear();
     value_buffer_.clear();
 }
 
-void RequestParser::resetForResponse()
+void HttpMessageParser::resetForResponse()
 {
-    state_ = method_start;
-    method_.clear();
-    uri_.clear();
-    major_version_ = 0;
-    minor_version_ = 0;
-    headers_.clear();
+    state_ = response_start;
     remaining_ = 0;
     buffer_.clear();
     value_buffer_.clear();
 }
 
-void RequestParser::transition_to_state(ParserState newState)
+void HttpMessageParser::transition_to_state(ParserState newState)
 {
     state_ = newState;
 }
 
-RequestParser::State RequestParser::consume(Request &request, char input)
+HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char input)
 {
 #if defined(DEBUG_PARSER_TRANSITIONS)
 #define TRANSIT(x) do { \
@@ -216,7 +201,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
 
         TRANSIT(method);
-        request.method_.push_back(input);
+        message.method_.push_back(input);
         return Incomplete;
 
     case method:
@@ -231,7 +216,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
         else
         {
-            request.method_.push_back(input);
+            message.method_.push_back(input);
             return Incomplete;
         }
 
@@ -247,7 +232,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
         else
         {
-            request.uri_.push_back(input);
+            message.uri_.push_back(input);
             return Incomplete;
         }
 
@@ -286,8 +271,8 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         if (input == '/')
         {
             TRANSIT(http_version_major_start);
-            request.major_version_ = 0;
-            request.minor_version_ = 0;
+            message.major_version_ = 0;
+            message.minor_version_ = 0;
             return Incomplete;
         }
         return Invalid;
@@ -296,7 +281,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         if (is_digit(input))
         {
             TRANSIT(http_version_major);
-            request.major_version_ = input - '0';
+            message.major_version_ = input - '0';
             return Incomplete;
         }
         return Invalid;
@@ -309,8 +294,8 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
         else if (is_digit(input))
         {
-            request.major_version_ *= 10;
-            request.major_version_ += input - '0';
+            message.major_version_ *= 10;
+            message.major_version_ += input - '0';
             return Incomplete;
         }
         return Invalid;
@@ -319,7 +304,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         if (is_digit(input))
         {
             TRANSIT(http_version_minor);
-            request.minor_version_ = input - '0';
+            message.minor_version_ = input - '0';
             return Incomplete;
         }
         return Invalid;
@@ -332,8 +317,8 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
         else if (is_digit(input))
         {
-            request.minor_version_ *= 10;
-            request.minor_version_ += input - '0';
+            message.minor_version_ *= 10;
+            message.minor_version_ += input - '0';
             return Incomplete;
         }
         return Invalid;
@@ -346,13 +331,154 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
         return Invalid;
 
+    case response_start:
+        if (input == 'H')
+        {
+            TRANSIT(response_http_t1);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_http_t1:
+        if (input == 'T')
+        {
+            TRANSIT(response_http_t2);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_http_t2:
+        if (input == 'T')
+        {
+            TRANSIT(response_http_p);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_http_p:
+        if (input == 'P')
+        {
+            TRANSIT(response_http_slash);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_http_slash:
+        if (input == '/')
+        {
+            TRANSIT(response_major_version_start);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_major_version_start:
+        if (is_digit(input))
+        {
+            TRANSIT(response_major_version);
+            message.major_version_ = input - '0';
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_major_version:
+        if (input == '.')
+        {
+            TRANSIT(response_minor_version_start);
+            return Incomplete;
+        }
+        else if (is_digit(input))
+        {
+            message.major_version_ *= 10 + (input - '0');
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_minor_version_start:
+        if (is_digit(input))
+        {
+            TRANSIT(response_minor_version);
+            message.minor_version_ = input - '0';
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_minor_version:
+        if (input == ' ')
+        {
+            TRANSIT(response_status_code_start);
+            return Incomplete;
+        }
+        else if (is_digit(input))
+        {
+            message.minor_version_ *= 10 + (input - '0');
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_status_code_start:
+        if (is_digit(input))
+        {
+            TRANSIT(response_status_code);
+            message.status_code_ = input - '0';
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_status_code:
+        if (input == ' ')
+        {
+            TRANSIT(response_status_message_start);
+            return Incomplete;
+        }
+        else if (is_digit(input))
+        {
+            message.status_code_ *= 10 + (input - '0');
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_status_message_start:
+        if (is_char(input))
+        {
+            TRANSIT(response_status_message);
+            buffer_.clear();
+            buffer_.push_back(input);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_status_message:
+        if (input == '\r')
+        {
+            TRANSIT(response_newline);
+            message.status_message_ = buffer_;
+            return Incomplete;
+        }
+        else if (is_char(input) || input == ' ')
+        {
+            buffer_.push_back(input);
+            return Incomplete;
+        }
+        return Invalid;
+
+    case response_newline:
+        if (input == '\n')
+        {
+            TRANSIT(header_line_start);
+            return Incomplete;
+        }
+        return Invalid;
+
+    // Headers
+    //
+
     case header_line_start:
         if (input == '\r')
         {
             TRANSIT(newline_3);
             return Incomplete;
         }
-        else if (!request.headers_.empty() && (input == ' ' || input == '\t'))
+        else if (!message.headers_.empty() && (input == ' ' || input == '\t'))
         {
             TRANSIT(header_lws);
             return Incomplete;
@@ -418,7 +544,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         if (input == '\r')
         {
             TRANSIT(newline_2);
-            request.headers_.push_back(Header(std::move(buffer_), std::move(value_buffer_)));
+            message.headers_.push_back(Header(std::move(buffer_), std::move(value_buffer_)));
             return Incomplete;
         }
         else if (! is_ctl(input))
@@ -439,8 +565,8 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     case newline_3:
         if (input == '\n')
         {
-            auto iter = request.headers_.find_by_name("Transfer-Encoding");
-            if (iter != request.headers_.end())
+            auto iter = message.headers_.find_by_name("Transfer-Encoding");
+            if (iter != message.headers_.end())
             {
                 // TODO(ben): This doesn't account for more than one value,
                 // which is explicitly allowed in the 1.1 spec.
@@ -448,7 +574,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
                 if (ci_equal(iter->value(), "chunked"))
                 {
                     TRANSIT(chunk_length_start);
-                    request.body_.clear();
+                    message.body_.clear();
                     return Incomplete;
                 }
                 else if (! ci_equal(iter->value(), "identity"))
@@ -462,8 +588,8 @@ RequestParser::State RequestParser::consume(Request &request, char input)
                 // fall through, check for content length
             }
 
-            iter = request.headers_.find_by_name("Content-Length");
-            if (iter != request.headers_.end())
+            iter = message.headers_.find_by_name("Content-Length");
+            if (iter != message.headers_.end())
             {
                 uint64_t length;
                 if (! parse_uint64_t(iter->value(), length))
@@ -473,8 +599,8 @@ RequestParser::State RequestParser::consume(Request &request, char input)
 
                 TRANSIT(fixed_length_entity);
                 remaining_ = length;
-                request.body_.clear();
-                request.body_.reserve(static_cast<size_t>(length));
+                message.body_.clear();
+                message.body_.reserve(static_cast<size_t>(length));
                 return Incomplete;
             }
 
@@ -534,7 +660,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         }
         else
         {
-            request.body_.push_back(input);
+            message.body_.push_back(input);
             remaining_--;
             return Incomplete;
         }
@@ -580,7 +706,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
         return Invalid;
 
     case fixed_length_entity:
-        request.body_.push_back(static_cast<uint8_t>(input));
+        message.body_.push_back(static_cast<uint8_t>(input));
         --remaining_;
 
         if (remaining_ == 0)
@@ -600,7 +726,7 @@ RequestParser::State RequestParser::consume(Request &request, char input)
     return Invalid;
 }
 
-QDebug operator<<(QDebug d, const RequestParser &parser)
+QDebug operator<<(QDebug d, const HttpMessageParser &parser)
 {
     return d << "RequestParser{state="
              << parser.state_

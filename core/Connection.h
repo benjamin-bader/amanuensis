@@ -29,8 +29,8 @@
 #include <asio/ip/tcp.hpp>
 
 #include "ConnectionManager.h"
-#include "Request.h"
-#include "RequestParser.h"
+#include "HttpMessage.h"
+#include "HttpMessageParser.h"
 
 class ConnectionManager;
 
@@ -70,8 +70,8 @@ private:
     std::mutex serverToClientOutboxMutex_;
     std::queue<Payload> serverToClientOutbox_;
 
-    RequestParser requestParser;
-    Request request;
+    HttpMessageParser requestParser;
+    HttpMessage request;
 };
 
 #endif // CONNECTION_H

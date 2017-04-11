@@ -24,7 +24,7 @@
 #include "ConnectionManager.h"
 
 #include "Headers.h"
-#include "Request.h"
+#include "HttpMessage.h"
 #include "Response.h"
 
 // doesn't exist yet
@@ -37,7 +37,7 @@ namespace {
         return d;
     }
 
-    void dump_request(const Request &req)
+    void dump_request(const HttpMessage &req)
     {
         qDebug() << req.method() << req.uri() << " " << req.major_version() << "/" << req.minor_version();
 
@@ -99,11 +99,11 @@ void Connection::do_read_client_request()
             outbox_.push(Payload { buffer, bytes_read });
         }
 
-        if (parserState == RequestParser::State::Incomplete)
+        if (parserState == HttpMessageParser::State::Incomplete)
         {
             do_read_client_request();
         }
-        else if (parserState == RequestParser::State::Invalid)
+        else if (parserState == HttpMessageParser::State::Invalid)
         {
             // d'oh, handle the error somehow
         }
