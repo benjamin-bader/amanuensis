@@ -33,7 +33,7 @@ std::unique_ptr<Proxy> ProxyFactory::create(const int port)
 #if defined(Q_OS_WIN)
     return std::make_unique<WindowsProxy>(port);
 #else
+#warning No platform support implemented for this OS, returning generic proxy.
     return std::make_unique<Proxy>(9999);
-    //#error Unsupported operating system :(
 #endif
 }

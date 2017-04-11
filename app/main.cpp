@@ -30,7 +30,9 @@ int main(int argc, char *argv[])
 {
     try
     {
-        Server server(9999);
+        ProxyFactory factory;
+
+        auto proxy = factory.create(9999);
 
         QApplication a(argc, argv);
         MainWindow w;

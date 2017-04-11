@@ -24,7 +24,7 @@
 
 #include <memory>
 
-#include "asio.hpp"
+#include "Server.h"
 
 class A_EXPORT Proxy : public QObject
 {
@@ -39,17 +39,10 @@ public:
 signals:
     void* requestCreated();
 
-private:
-    void do_accept();
 
 private:
     int port_;
-    asio::io_service io_service_;
-    asio::signal_set signals_;
-    asio::ip::tcp::acceptor acceptor_;
-    asio::ip::tcp::socket socket_;
-
-    asio::thread acceptorThread_;
+    Server server_;
 };
 
 #endif // PROXY_H

@@ -25,11 +25,6 @@ WindowsProxy::WindowsProxy(int port) :
 {    
     DWORD optionListSize = sizeof(INTERNET_PER_CONN_OPTION_LIST);
 
-    if (1)
-    {
-        return;
-    }
-
     // First, query the system's current proxy settings and save them
     originalOptions[0].dwOption = INTERNET_PER_CONN_AUTOCONFIG_URL;
     originalOptions[1].dwOption = INTERNET_PER_CONN_AUTODISCOVERY_FLAGS;
@@ -52,13 +47,7 @@ WindowsProxy::WindowsProxy(int port) :
     // TODO(ben): Save these settings somewhere?
 
     // Next, apply our new settings
-    std::wstringstream ss;
-    ss << L"http=[[::1]:" << this->port() << L"]";
-
-    std::wstring wstr = ss.str();
-
     const wchar_t proxyName[] = L"127.0.0.1:9999";
-    LPWSTR proxyNameTwo = const_cast<LPWSTR>(wstr.c_str());
 
     INTERNET_PER_CONN_OPTION_LIST optionList;
     INTERNET_PER_CONN_OPTION options[4];
