@@ -52,7 +52,6 @@ Connection::Connection(asio::ip::tcp::socket socket, std::shared_ptr<ConnectionM
     socket_(std::move(socket)),
     remoteSocket_(socket_.get_io_service()),
     connectionManager_(connectionManager),
-    buffer_(),
     requestParser(),
     request()
 {
@@ -73,11 +72,32 @@ void Connection::stop()
 
 void Connection::do_read_client_request()
 {
+    auto buffer = connectionManager_->takeBuffer();
     auto self(shared_from_this());
-    socket_.async_read_some(asio::buffer(buffer_), [this, self](asio::error_code ec, size_t bytes_read) {
-        auto begin = buffer_.begin();
+    socket_.async_read_some(asio::buffer(*buffer), [this, self, buffer](asio::error_code ec, size_t bytes_read) {
+        if (ec == asio::error::eof)
+        {
+            qWarning() << "Unexpected end of request, abandoning intercept";
+            do_write_client_request();
+            return;
+        }
+
+        if (ec)
+        {
+            qWarning() << "Error reading from client, abandoning session: " << ec.message();
+            connectionManager_->stop(self);
+            return;
+        }
+
+        auto begin = buffer->begin();
         auto end = begin + bytes_read;
         auto parserState = requestParser.parse(request, begin, end);
+
+        if (bytes_read > 0)
+        {
+            std::lock_guard<std::mutex> lock(outboxMutex_);
+            outbox_.push(Payload { buffer, bytes_read });
+        }
 
         if (parserState == RequestParser::State::Incomplete)
         {
@@ -159,21 +179,13 @@ void Connection::connect_to_remote_server(asio::ip::tcp::resolver::iterator resu
 
         qInfo() << "Connected to remote host " << i->host_name() << " at " << i->endpoint().address().to_string();
 
-        {
-            std::lock_guard<std::mutex> lock(outboxMutex_);
-            outbox_.push(std::make_shared<std::vector<uint8_t>>(request.make_buffer()));
-            if (! request.body().empty())
-            {
-                outbox_.push(std::make_shared<std::vector<uint8_t>>(request.body()));
-            }
-        }
         do_write_client_request();
     });
 }
 
 void Connection::do_write_client_request()
 {
-    std::shared_ptr<std::vector<uint8_t>> sharedBuffer;
+    Payload payload;
 
     {
         std::lock_guard<std::mutex> lock(outboxMutex_);
@@ -182,13 +194,16 @@ void Connection::do_write_client_request()
             return;
         }
 
-        sharedBuffer = outbox_.front();
+        payload = outbox_.front();
     }
 
     auto self = shared_from_this();
     asio::async_write(remoteSocket_,
-                      asio::buffer(sharedBuffer->data(), sharedBuffer->size()),
-                      [this, self, sharedBuffer](asio::error_code ec, size_t bytesWritten) {
+                      asio::buffer(payload.buffer->data(), payload.size),
+                      [this, self, payload](asio::error_code ec, size_t bytesWritten) {
+
+        Q_UNUSED(bytesWritten);
+
         if (ec)
         {
             // boo
@@ -197,20 +212,30 @@ void Connection::do_write_client_request()
             return;
         }
 
+        bool finishedWriting;
         {
             std::lock_guard<std::mutex> lock(outboxMutex_);
             outbox_.pop();
+            finishedWriting = outbox_.empty();
         }
 
-        do_write_client_request();
-        do_read_server_response();
+        if (finishedWriting)
+        {
+            do_read_server_response();
+        }
+        else
+        {
+            do_write_client_request();
+        }
     });
 }
 
 void Connection::do_read_server_response()
 {
     auto self = shared_from_this();
-    remoteSocket_.async_read_some(asio::buffer(buffer_), [this, self](asio::error_code ec, size_t bytesRead) {
+    auto buffer = connectionManager_->takeBuffer();
+    remoteSocket_.async_read_some(asio::buffer(*buffer),
+                                  [this, self, buffer](asio::error_code ec, size_t bytesRead) {
         qInfo() << "Received server chunk; ec=" << ec.message() << "bytesRead=" << bytesRead;
         if (ec == asio::error::eof)
         {
@@ -226,7 +251,7 @@ void Connection::do_read_server_response()
             return;
         }
 
-        auto payload = std::make_shared<std::vector<uint8_t>>(buffer_.begin(), buffer_.begin() + bytesRead);
+        Payload payload{buffer, bytesRead};
         {
             std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
             serverToClientOutbox_.push(payload);
@@ -238,7 +263,7 @@ void Connection::do_read_server_response()
 
 void Connection::do_write_server_response()
 {
-    std::shared_ptr<std::vector<uint8_t>> payload;
+    Payload payload;
 
     {
         std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
@@ -247,7 +272,7 @@ void Connection::do_write_server_response()
 
     auto self = shared_from_this();
     asio::async_write(socket_,
-                      asio::buffer(payload->data(), payload->size()),
+                      asio::buffer(payload.buffer->data(), payload.size),
                       [this, self, payload](asio::error_code ec, size_t bytesWritten) {
         Q_UNUSED(bytesWritten);
 

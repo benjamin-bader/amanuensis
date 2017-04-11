@@ -19,6 +19,8 @@
 
 #include <asio.hpp>
 
+#include "Connection.h"
+
 ConnectionManager::ConnectionManager(asio::io_service &io_service) :
     connections_(),
     resolver_(io_service)
@@ -56,5 +58,10 @@ void ConnectionManager::stop_all()
         connection->stop();
     }
     connections_.clear();
+}
+
+BufferPtr ConnectionManager::takeBuffer()
+{
+    return bufferPool_.acquire();
 }
 

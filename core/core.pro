@@ -63,7 +63,8 @@ HEADERS += Amanuensis.h \
     Response.h \
     ConnectionManager.h \
     ProxyFactory.h \
-    RequestParser.h
+    RequestParser.h \
+    ObjectPool.h
 
 windows {
     SOURCES += \

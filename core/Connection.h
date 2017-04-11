@@ -28,6 +28,7 @@
 
 #include <asio/ip/tcp.hpp>
 
+#include "ConnectionManager.h"
 #include "Request.h"
 #include "RequestParser.h"
 
@@ -58,13 +59,16 @@ private:
 
     std::shared_ptr<ConnectionManager> connectionManager_;
 
-    std::array<char, 8192> buffer_;
+    struct Payload {
+        BufferPtr buffer;
+        size_t size;
+    };
 
     std::mutex outboxMutex_;
-    std::queue<std::shared_ptr<std::vector<uint8_t>>> outbox_;
+    std::queue<Payload> outbox_;
 
     std::mutex serverToClientOutboxMutex_;
-    std::queue<std::shared_ptr<std::vector<uint8_t>>> serverToClientOutbox_;
+    std::queue<Payload> serverToClientOutbox_;
 
     RequestParser requestParser;
     Request request;

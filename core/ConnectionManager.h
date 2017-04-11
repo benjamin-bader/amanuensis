@@ -18,6 +18,7 @@
 #ifndef CONNECTIONMANAGER_H
 #define CONNECTIONMANAGER_H
 
+#include <array>
 #include <memory>
 #include <set>
 #include <string>
@@ -25,7 +26,12 @@
 #include <asio/io_service.hpp>
 #include <asio/ip/tcp.hpp>
 
-#include "Connection.h"
+#include "ObjectPool.h"
+
+class Connection;
+
+typedef std::array<char, 8192> BufferType;
+typedef ObjectPool<BufferType>::pool_ptr BufferPtr;
 
 class ConnectionManager
 {
@@ -41,6 +47,10 @@ public:
 
     asio::ip::tcp::resolver& resolver();
 
+    // Returns a shared pointer to a buffer.  When its refcount reaches
+    // zero, the buffer will be returned to a shared pool.
+    BufferPtr takeBuffer();
+
 private:
     ConnectionManager(const ConnectionManager &) = delete;
     ConnectionManager& operator =(const ConnectionManager &) = delete;
@@ -48,6 +58,8 @@ private:
     std::set<std::shared_ptr<Connection>> connections_;
 
     asio::ip::tcp::resolver resolver_;
+
+    ObjectPool<BufferType> bufferPool_;
 };
 
 #endif // CONNECTIONMANAGER_H
