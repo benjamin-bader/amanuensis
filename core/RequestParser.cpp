@@ -165,7 +165,20 @@ RequestParser::~RequestParser()
     // here to satisfy my wonky build setup
 }
 
-void RequestParser::reset()
+void RequestParser::resetForRequest()
+{
+    state_ = method_start;
+    method_.clear();
+    uri_.clear();
+    major_version_ = 0;
+    minor_version_ = 0;
+    headers_.clear();
+    remaining_ = 0;
+    buffer_.clear();
+    value_buffer_.clear();
+}
+
+void RequestParser::resetForResponse()
 {
     state_ = method_start;
     method_.clear();

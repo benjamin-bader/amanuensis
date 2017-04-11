@@ -211,12 +211,69 @@ void Connection::do_read_server_response()
 {
     auto self = shared_from_this();
     remoteSocket_.async_read_some(asio::buffer(buffer_), [this, self](asio::error_code ec, size_t bytesRead) {
-        std::string str(buffer_.data(), bytesRead);
-        qDebug() << "Response: \n" << str;
+        qInfo() << "Received server chunk; ec=" << ec.message() << "bytesRead=" << bytesRead;
+        if (ec == asio::error::eof)
+        {
+            // done reading, nothing more to do here
+            qInfo() << "End of server response";
+            do_write_server_response();
+            return;
+        }
+        else if (ec)
+        {
+            qWarning() << "Error reading from server!  " << ec.message();
+            connectionManager_->stop(self);
+            return;
+        }
+
+        auto payload = std::make_shared<std::vector<uint8_t>>(buffer_.begin(), buffer_.begin() + bytesRead);
+        {
+            std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
+            serverToClientOutbox_.push(payload);
+        }
+
+        do_read_server_response();
     });
 }
 
 void Connection::do_write_server_response()
 {
+    std::shared_ptr<std::vector<uint8_t>> payload;
 
+    {
+        std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
+        payload = serverToClientOutbox_.front();
+    }
+
+    auto self = shared_from_this();
+    asio::async_write(socket_,
+                      asio::buffer(payload->data(), payload->size()),
+                      [this, self, payload](asio::error_code ec, size_t bytesWritten) {
+        Q_UNUSED(bytesWritten);
+
+        if (ec)
+        {
+            qWarning() << "nope: " << ec.message();
+            connectionManager_->stop(self);
+            return;
+        }
+
+        bool hasMore = false;
+        {
+            std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
+            serverToClientOutbox_.pop();
+
+            hasMore = serverToClientOutbox_.size() > 0;
+        }
+
+        if (hasMore)
+        {
+            do_write_server_response();
+        }
+        else
+        {
+            // We're done!
+            connectionManager_->stop(self);
+        }
+    });
 }

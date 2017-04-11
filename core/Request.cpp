@@ -20,6 +20,8 @@
 #include <cctype>
 #include <sstream>
 
+#include <QDebug>
+
 Request::Request() :
     method_(),
     uri_(),
@@ -97,6 +99,9 @@ const std::vector<uint8_t> Request::make_buffer() const
 
     auto str = ss.str();
     std::vector<uint8_t> result(str.begin(), str.end());
+
+    qDebug() << "Body has " << result.size() << "bytes";
+    qDebug() << QString(str.c_str());
 
     return result;
 }

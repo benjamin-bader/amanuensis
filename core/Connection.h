@@ -63,6 +63,9 @@ private:
     std::mutex outboxMutex_;
     std::queue<std::shared_ptr<std::vector<uint8_t>>> outbox_;
 
+    std::mutex serverToClientOutboxMutex_;
+    std::queue<std::shared_ptr<std::vector<uint8_t>>> serverToClientOutbox_;
+
     RequestParser requestParser;
     Request request;
 };

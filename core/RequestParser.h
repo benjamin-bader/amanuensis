@@ -46,7 +46,8 @@ public:
         Invalid
     };
 
-    void reset();
+    void resetForRequest();
+    void resetForResponse();
 
     template <typename InputIterator>
     State parse(Request &request, InputIterator &begin, InputIterator end)
@@ -69,7 +70,7 @@ private:
     State consume(Request &request, char input);
 
     enum ParserState {
-        // Status line
+        // Request status line
         //
 
         method_start                     =  0,
@@ -86,41 +87,58 @@ private:
         http_version_minor               = 11,
         newline_1                        = 12,
 
+        // Response status line
+        //
+
+        response_start                   = 50,
+        response_http_t1                 = 51,
+        response_http_t2                 = 52,
+        response_http_p                  = 53,
+        response_http_space              = 54,
+
+        response_status_code_start       = 55,
+        response_status_code             = 56,
+
+        response_status_message_start    = 57,
+        response_status_message          = 58,
+        response_newline                 = 59,
+
+
         // Headers
         //
 
-        header_line_start                = 13,
-        header_lws                       = 14,
-        header_name                      = 15,
-        header_space                     = 16,
-        header_value                     = 17,
-        newline_2                        = 18,
-        newline_3                        = 19,
+        header_line_start                = 100,
+        header_lws                       = 101,
+        header_name                      = 102,
+        header_space                     = 103,
+        header_value                     = 104,
+        newline_2                        = 105,
+        newline_3                        = 106,
 
         // Entities
         //
 
         // Chunked entities
-        chunk_length_start               = 20,
-        chunk_length                     = 21,
-        chunk_extension                  = 22, // unsure of the format, TODO
-        chunk_length_newline             = 23,
+        chunk_length_start               = 200,
+        chunk_length                     = 201,
+        chunk_extension                  = 202, // unsure of the format, TODO
+        chunk_length_newline             = 203,
 
-        chunk                            = 24,
-        chunk_trailing_newline           = 25,
-        chunk_sequence_terminating_cr    = 26,
-        chunk_sequence_terminating_lf    = 27,
-        chunk_sequence_terminating_cr_2  = 28,
-        chunk_sequence_terminating_lf_2  = 29,
-        chunk_trailing_header_line_start = 30,
-        chunk_trailing_header_lws        = 31,
-        chunk_trailing_header_name       = 32,
-        chunk_trailing_header_space      = 33,
-        chunk_trailing_header_value      = 34,
-        chunk_terminating_newline        = 35,
+        chunk                            = 204,
+        chunk_trailing_newline           = 205,
+        chunk_sequence_terminating_cr    = 206,
+        chunk_sequence_terminating_lf    = 207,
+        chunk_sequence_terminating_cr_2  = 208,
+        chunk_sequence_terminating_lf_2  = 209,
+        chunk_trailing_header_line_start = 210,
+        chunk_trailing_header_lws        = 211,
+        chunk_trailing_header_name       = 212,
+        chunk_trailing_header_space      = 213,
+        chunk_trailing_header_value      = 214,
+        chunk_terminating_newline        = 215,
 
         // Non-chunked entities
-        fixed_length_entity              = 40,
+        fixed_length_entity              = 300,
     } state_;
 
     void transition_to_state(ParserState newState);
