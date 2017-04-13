@@ -45,7 +45,7 @@ const std::string& HttpMessage::uri() const
     return uri_;
 }
 
-const int HttpMessage::status_code() const
+int HttpMessage::status_code() const
 {
     return status_code_;
 }
@@ -102,32 +102,10 @@ void HttpMessage::set_body(const std::vector<uint8_t> &body)
 
 void HttpMessage::add_header(const std::string &name, const std::string &value)
 {
-    headers_.push_back(Header { name, value });
+    headers_.insert(name, value);;
 }
 
 const std::string HttpMessage::body_as_string() const
 {
     return std::string(body_.begin(), body_.end());
-}
-
-const std::vector<uint8_t> HttpMessage::make_buffer() const
-{
-    std::stringstream ss;
-    ss << method_;
-    ss << " " << uri_ << " HTTP/" << major_version_ << "." << minor_version_ << "\r\n";
-
-    for (auto &header : headers_)
-    {
-        ss << header.name() << ": " << header.value() << "\r\n";
-    }
-
-    ss << "\r\n";
-
-    auto str = ss.str();
-    std::vector<uint8_t> result(str.begin(), str.end());
-
-    qDebug() << "Body has " << result.size() << "bytes";
-    qDebug() << QString(str.c_str());
-
-    return result;
 }

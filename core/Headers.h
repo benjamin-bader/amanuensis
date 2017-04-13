@@ -18,44 +18,39 @@
 #ifndef HEADERS_H
 #define HEADERS_H
 
+#include <map>
 #include <string>
-#include <vector>
 
 #include "global.h"
 
-class A_EXPORT Header
+class A_EXPORT Headers
 {
-public:
-    Header() : name_(), value_() {}
-
-    Header(const std::string &name, const std::string &value)
-        : name_(name), value_(value)
-    {
-    }
-
-    std::string name() const
-    {
-        return this->name_;
-    }
-
-    std::string value() const
-    {
-        return this->value_;
-    }
-
 private:
-    std::string name_;
-    std::string value_;
-};
+    struct ci_less
+    {
+        bool operator()(const std::string &lhs, const std::string &rhs) const;
+    };
 
-class A_EXPORT Headers : public std::vector<Header>
-{
+    std::multimap<std::string, std::string, ci_less> map_;
+
 public:
+    typedef std::multimap<std::string, std::string, ci_less> MapType;
+    typedef MapType::iterator iterator;
+    typedef MapType::const_iterator const_iterator;
+
     Headers();
     Headers(const Headers &headers);
-    Headers(const std::vector<Header> &headers);
 
+    iterator find_by_name(const std::string &name);
     const_iterator find_by_name(const std::string &name) const;
+
+    const_iterator begin() const;
+    const_iterator end() const;
+
+    bool empty() const;
+    size_t size() const;
+
+    void insert(const std::string &name, const std::string &value);
 };
 
 #endif // HEADERS_H

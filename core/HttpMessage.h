@@ -38,7 +38,7 @@ public:
     const std::string& method() const;
     const std::string& uri() const;
 
-    const int status_code() const;
+    int status_code() const;
     const std::string& status_message() const;
 
     int major_version() const;
@@ -59,11 +59,6 @@ public:
     // Return the body as a string, using any specified Content-Encoding
     // if present.
     const std::string body_as_string() const;
-
-    // Format the request as a series of bytes, suitable for transmitting
-    // in an asio buffer.
-    const std::vector<uint8_t> make_buffer() const;
-
 private:
     // Request-specific data
     std::string method_;

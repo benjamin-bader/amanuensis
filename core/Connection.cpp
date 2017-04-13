@@ -22,13 +22,8 @@
 #include <asio.hpp>
 
 #include "ConnectionManager.h"
-
 #include "Headers.h"
 #include "HttpMessage.h"
-#include "Response.h"
-
-// doesn't exist yet
-//class ResponseBuilder {};
 
 namespace {
     QDebug operator<<(QDebug d, const std::string &str)
@@ -41,9 +36,10 @@ namespace {
     {
         qDebug() << req.method() << req.uri() << " " << req.major_version() << "/" << req.minor_version();
 
-        for (const Header& header : req.headers())
+
+        for (auto& header : req.headers())
         {
-            qDebug() << header.name() << ": " << header.value();
+            qDebug() << header.first << ": " << header.second;
         }
     }
 }
@@ -118,7 +114,7 @@ void Connection::do_read_client_request()
 
 void Connection::lookup_remote_host()
 {
-    auto iter = request.headers().find_by_name("Host");
+    Headers::const_iterator iter = request.headers().find_by_name("Host");
     if (iter == request.headers().end())
     {
         qWarning() << "Malformed request - no 'Host' header found!";
@@ -126,7 +122,7 @@ void Connection::lookup_remote_host()
         return;
     }
 
-    std::string host = iter->value();
+    std::string host = iter->second;
     std::string port = "80";
 
     size_t separator = host.find(':');

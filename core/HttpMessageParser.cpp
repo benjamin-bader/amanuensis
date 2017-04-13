@@ -27,7 +27,6 @@
 
 #include "Headers.h"
 #include "HttpMessage.h"
-#include "Response.h"
 
 class ResponseBuilder {};
 
@@ -139,8 +138,9 @@ namespace
         }
         else
         {
-            qFatal("Not a hex digit: %c", c);
-            return -1;
+            std::stringstream ss;
+            ss << "Not a hex value: " << c;
+            throw std::domain_error(ss.str());
         }
     }
 }
@@ -544,7 +544,7 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
         if (input == '\r')
         {
             TRANSIT(newline_2);
-            message.headers_.push_back(Header(std::move(buffer_), std::move(value_buffer_)));
+            message.headers_.insert(std::move(buffer_), std::move(value_buffer_));
             return Incomplete;
         }
         else if (! is_ctl(input))
@@ -565,34 +565,25 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
     case newline_3:
         if (input == '\n')
         {
-            auto iter = message.headers_.find_by_name("Transfer-Encoding");
-            if (iter != message.headers_.end())
+            Headers::iterator nameAndHeader = message.headers_.find_by_name("Transfer-Encoding");
+            while (nameAndHeader != message.headers_.end())
             {
-                // TODO(ben): This doesn't account for more than one value,
-                // which is explicitly allowed in the 1.1 spec.
-
-                if (ci_equal(iter->value(), "chunked"))
+                // TODO(ben) tokenize the header value, as it could be comma-separated.
+                if (ci_equal("chunked", nameAndHeader->second))
                 {
                     TRANSIT(chunk_length_start);
                     message.body_.clear();
                     return Incomplete;
                 }
-                else if (! ci_equal(iter->value(), "identity"))
-                {
-                    qFatal("Unsupported chunk encoding: %s", iter->value().c_str());
 
-                    // qFatal aborts the program, but just in case
-                    return Invalid;
-                }
-
-                // fall through, check for content length
+                ++nameAndHeader;
             }
 
-            iter = message.headers_.find_by_name("Content-Length");
-            if (iter != message.headers_.end())
+            nameAndHeader = message.headers_.find_by_name("Content-Length");
+            if (nameAndHeader != message.headers_.end())
             {
                 uint64_t length;
-                if (! parse_uint64_t(iter->value(), length))
+                if (! parse_uint64_t(nameAndHeader->second, length))
                 {
                     return Invalid;
                 }

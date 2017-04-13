@@ -47,7 +47,6 @@ SOURCES += Amanuensis.cpp \
     Server.cpp \
     Connection.cpp \
     Headers.cpp \
-    Response.cpp \
     ConnectionManager.cpp \
     ProxyFactory.cpp \
     HttpMessage.cpp \
@@ -59,7 +58,6 @@ HEADERS += Amanuensis.h \
     Server.h \
     Connection.h \
     Headers.h \
-    Response.h \
     ConnectionManager.h \
     ProxyFactory.h \
     ObjectPool.h \

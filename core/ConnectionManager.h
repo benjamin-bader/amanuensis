@@ -31,7 +31,8 @@
 class Connection;
 
 typedef std::array<char, 8192> BufferType;
-typedef ObjectPool<BufferType>::pool_ptr BufferPtr;
+typedef ObjectPool<BufferType> BufferPool;
+typedef BufferPool::pool_ptr BufferPtr;
 
 class ConnectionManager
 {
@@ -59,7 +60,7 @@ private:
 
     asio::ip::tcp::resolver resolver_;
 
-    ObjectPool<BufferType> bufferPool_;
+    BufferPool bufferPool_;
 };
 
 #endif // CONNECTIONMANAGER_H

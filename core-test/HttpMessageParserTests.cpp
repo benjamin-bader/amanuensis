@@ -63,8 +63,8 @@ void HttpMessageParserTests::simpleGet()
     }
 
     auto header = *headerFindResult;
-    QCOMPARE(header.name(), std::string("Accept"));
-    QCOMPARE(header.value(), std::string("application/html"));
+    QCOMPARE(header.first, {"Accept"});
+    QCOMPARE(header.second, {"application/html"});
 }
 
 void HttpMessageParserTests::fixedLengthSimplePost()
@@ -132,12 +132,10 @@ void HttpMessageParserTests::chunkedSimplePost()
 
     QCOMPARE(request.method(), {"POST"});
     QCOMPARE(request.uri(), {"/foo/bar"});
-    QCOMPARE(request.headers()[0].name(), {"Accept"});
-    QCOMPARE(request.headers()[0].value(), {"application/html"});
-    QCOMPARE(request.headers()[1].name(), {"Content-Type"});
-    QCOMPARE(request.headers()[1].value(), {"text/plain"});
-    QCOMPARE(request.headers()[2].name(), {"Transfer-Encoding"});
-    QCOMPARE(request.headers()[2].value(), {"chunked"});
+
+    QCOMPARE(request.headers().find_by_name("Accept")->second, {"application/html"});
+    QCOMPARE(request.headers().find_by_name("Content-Type")->second, {"text/plain"});
+    QCOMPARE(request.headers().find_by_name("Transfer-Encoding")->second, {"chunked"});
 }
 
 void HttpMessageParserTests::simpleOkResponse()

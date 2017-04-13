@@ -18,44 +18,101 @@
 #include "Headers.h"
 
 #include <algorithm>
-#include <cctype>
+#include <locale>
+#include <mutex>
 
-Headers::Headers() : std::vector<Header>()
+namespace {
+    char lowercase_lookup_table[256];
+    std::once_flag lowercase_init_flag;
+
+    inline int index_for_char(char c)
+    {
+        return static_cast<int>(c) - CHAR_MIN;
+    }
+
+    void init_lookup_table()
+    {
+        std::locale ascii = std::locale::classic();
+
+        char c = CHAR_MIN;
+        while (true)
+        {
+            lowercase_lookup_table[index_for_char(c)] = std::tolower(c, ascii);
+            if (c == CHAR_MAX)
+            {
+                break;
+            }
+            ++c;
+        }
+    }
+
+    inline char lookup_lower(char c)
+    {
+        return lowercase_lookup_table[index_for_char(c)];
+    }
+
+    struct lt_char
+    {
+        bool operator()(char x, char y) const
+        {
+            char lower_x = lookup_lower(x);
+            char lower_y = lookup_lower(y);
+
+            return lower_x < lower_y;
+        }
+    };
+}
+
+bool Headers::ci_less::operator ()(const std::string &lhs, const std::string &rhs) const
+{
+    std::call_once(lowercase_init_flag, &init_lookup_table);
+
+    return std::lexicographical_compare(lhs.begin(), lhs.end(),
+                                        rhs.begin(), rhs.end(),
+                                        lt_char());
+}
+
+Headers::Headers() :
+    map_()
 {
 }
 
-Headers::Headers(const Headers &headers) : std::vector<Header>(static_cast<std::vector<Header>>(headers))
+Headers::Headers(const Headers &headers) :
+    map_(headers.map_)
 {
 }
 
-Headers::Headers(const std::vector<Header> &headers) : std::vector<Header>(headers)
+Headers::const_iterator  Headers::begin() const
 {
+    return map_.begin();
+}
+
+Headers::const_iterator Headers::end() const
+{
+    return map_.end();
+}
+
+size_t Headers::size() const
+{
+    return map_.size();
+}
+
+bool Headers::empty() const
+{
+    return map_.empty();
+}
+
+void Headers::insert(const std::string &name, const std::string &value)
+{
+    map_.insert(MapType::value_type {name, value});
+}
+
+Headers::iterator Headers::find_by_name(const std::string &name)
+{
+    return map_.find(name);
 }
 
 Headers::const_iterator Headers::find_by_name(const std::string &name) const
 {
-    auto iter = begin();
-    while (iter != end())
-    {
-        auto headerName = iter->name();
-        if (name.size() == headerName.size())
-        {
-            bool areEqual = true;
-            for (size_t i = 0; i < name.size(); ++i)
-            {
-                if (std::tolower(name[i]) != std::tolower(headerName[i]))
-                {
-                    areEqual = false;
-                    break;
-                }
-            }
-
-            if (areEqual)
-            {
-                return iter;
-            }
-        }
-        ++iter;
-    }
-    return iter;
+    return map_.find(name);
 }
