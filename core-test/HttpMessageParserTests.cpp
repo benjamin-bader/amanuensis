@@ -101,7 +101,7 @@ void HttpMessageParserTests::chunkedSimplePost()
     requestText << "POST /foo/bar HTTP/1.1\r\n";
     requestText << "Accept: application/html\r\n";
     requestText << "Content-Type: text/plain\r\n";
-    requestText << "Transfer-Encoding: chunked\r\n";
+    requestText << "Transfer-Encoding: gzip, chunked\r\n";
     requestText << "\r\n";
     requestText << "5\r\n";
     requestText << "abcde\r\n";
@@ -135,7 +135,7 @@ void HttpMessageParserTests::chunkedSimplePost()
 
     QCOMPARE(request.headers().find_by_name("Accept")->second, {"application/html"});
     QCOMPARE(request.headers().find_by_name("Content-Type")->second, {"text/plain"});
-    QCOMPARE(request.headers().find_by_name("Transfer-Encoding")->second, {"chunked"});
+    QCOMPARE(request.headers().find_by_name("Transfer-Encoding")->second, {"gzip, chunked"});
 }
 
 void HttpMessageParserTests::simpleOkResponse()

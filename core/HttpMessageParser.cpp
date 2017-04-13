@@ -20,6 +20,7 @@
 #include <cctype>
 #include <cerrno>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 
@@ -568,12 +569,20 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
             Headers::iterator nameAndHeader = message.headers_.find_by_name("Transfer-Encoding");
             while (nameAndHeader != message.headers_.end())
             {
-                // TODO(ben) tokenize the header value, as it could be comma-separated.
-                if (ci_equal("chunked", nameAndHeader->second))
+                std::string headerValue(nameAndHeader->second); // copy because strtok is destructive
+                char *data = &headerValue[0];
+                char delimiters[] = ", ";
+
+                char *tokenPtr = std::strtok(data, ",");
+                while (tokenPtr != nullptr)
                 {
-                    TRANSIT(chunk_length_start);
-                    message.body_.clear();
-                    return Incomplete;
+                    if (std::strcmp(tokenPtr, "chunked") == 0)
+                    {
+                        TRANSIT(chunk_length_start);
+                        message.body_.clear();
+                        return Incomplete;
+                    }
+                    tokenPtr = std::strtok(nullptr, delimiters);
                 }
 
                 ++nameAndHeader;
