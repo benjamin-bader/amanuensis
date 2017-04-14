@@ -95,6 +95,14 @@ void Connection::do_read_client_request()
             outbox_.push(Payload { buffer, bytes_read });
         }
 
+        if (parserState == HttpMessageParser::State::Valid)
+        {
+            dump_request(request);
+
+            lookup_remote_host();
+
+            notify_client_request_received();
+        }
         if (parserState == HttpMessageParser::State::Incomplete)
         {
             do_read_client_request();
@@ -105,9 +113,7 @@ void Connection::do_read_client_request()
         }
         else
         {
-            dump_request(request);
 
-            lookup_remote_host();
         }
     });
 }
@@ -265,6 +271,8 @@ void Connection::do_read_server_response()
         else if (state == HttpMessageParser::State::Valid)
         {
             do_write_server_response();
+
+            notify_server_response_received();
         }
         else
         {
@@ -280,7 +288,19 @@ void Connection::do_write_server_response()
 
     {
         std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
+        if (isSendingServerResponse)
+        {
+            qDebug() << "Send in progress; not starting another.";
+        }
+
+        if (serverToClientOutbox_.empty())
+        {
+            // What are we even doing here
+            qFatal("Logic error; why do we have multiple threads waiting on an empty queue?");
+        }
+
         payload = serverToClientOutbox_.front();
+        this->isSendingServerResponse = true;
     }
 
     auto self = shared_from_this();
@@ -289,19 +309,20 @@ void Connection::do_write_server_response()
                       [this, self, payload](asio::error_code ec, size_t bytesWritten) {
         Q_UNUSED(bytesWritten);
 
+        bool hasMore = false;
+        {
+            std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
+            serverToClientOutbox_.pop();
+            hasMore = serverToClientOutbox_.size() > 0;
+
+            isSendingServerResponse = false;
+        }
+
         if (ec)
         {
             qWarning() << "nope: " << ec.message();
             connectionManager_->stop(self);
             return;
-        }
-
-        bool hasMore = false;
-        {
-            std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
-            serverToClientOutbox_.pop();
-
-            hasMore = serverToClientOutbox_.size() > 0;
         }
 
         if (hasMore)
@@ -313,5 +334,19 @@ void Connection::do_write_server_response()
             // We're done!
             connectionManager_->stop(self);
         }
+    });
+}
+
+void Connection::notify_client_request_received()
+{
+    notify_listeners([this](auto &listener) {
+        listener->client_request_received(request);
+    });
+}
+
+void Connection::notify_server_response_received()
+{
+    notify_listeners([this](auto &listener) {
+        listener->server_response_received(response);
     });
 }

@@ -20,12 +20,14 @@
 
 #include <array>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 
 #include <asio/io_service.hpp>
 #include <asio/ip/tcp.hpp>
 
+#include "Listenable.h"
 #include "ObjectPool.h"
 
 class Connection;
@@ -34,7 +36,13 @@ typedef std::array<char, 8192> BufferType;
 typedef ObjectPool<BufferType> BufferPool;
 typedef BufferPool::pool_ptr BufferPtr;
 
-class ConnectionManager
+class ConnectionManagerListener
+{
+public:
+    virtual void on_connected(const std::shared_ptr<Connection> &connection) = 0;
+};
+
+class ConnectionManager : public Listenable<ConnectionManagerListener>
 {
 public:
     ConnectionManager(asio::io_service &io_service);
@@ -57,6 +65,7 @@ private:
     ConnectionManager& operator =(const ConnectionManager &) = delete;
 
     std::set<std::shared_ptr<Connection>> connections_;
+    std::mutex mutex_; // protects connections_
 
     asio::ip::tcp::resolver resolver_;
 

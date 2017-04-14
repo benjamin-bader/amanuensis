@@ -62,7 +62,8 @@ HEADERS += Amanuensis.h \
     ProxyFactory.h \
     ObjectPool.h \
     HttpMessage.h \
-    HttpMessageParser.h
+    HttpMessageParser.h \
+    Listenable.h
 
 windows {
     SOURCES += \

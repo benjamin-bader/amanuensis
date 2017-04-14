@@ -20,6 +20,7 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -31,10 +32,26 @@
 #include "ConnectionManager.h"
 #include "HttpMessage.h"
 #include "HttpMessageParser.h"
+#include "Listenable.h"
 
 class ConnectionManager;
 
-class Connection : public std::enable_shared_from_this<Connection>
+class ConnectionListener
+{
+public:
+    ConnectionListener() {}
+    virtual ~ConnectionListener() {}
+
+    virtual void client_request_received(const HttpMessage &request) {}
+    virtual void server_response_received(const HttpMessage &response) {}
+
+    virtual void on_error(const std::error_code &error);
+
+    virtual void connection_closing() {}
+};
+
+class Connection : public std::enable_shared_from_this<Connection>,
+                   public Listenable<ConnectionListener>
 {
 public:
     Connection() = delete;
@@ -54,6 +71,11 @@ private:
     void do_read_server_response();  // server -> proxy
     void do_write_server_response(); // proxy -> client
 
+    void notify_client_request_received();
+    void notify_server_response_received();
+    void notify_error(const std::error_code &error);
+    void notify_connection_closing();
+
     asio::ip::tcp::socket socket_;
     asio::ip::tcp::socket remoteSocket_;
 
@@ -66,9 +88,11 @@ private:
 
     std::mutex outboxMutex_;
     std::queue<Payload> outbox_;
+    bool isSendingClientRequest_;
 
     std::mutex serverToClientOutboxMutex_;
     std::queue<Payload> serverToClientOutbox_;
+    bool isSendingServerResponse;
 
     HttpMessageParser requestParser;
     HttpMessage request;

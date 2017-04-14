@@ -17,12 +17,15 @@
 
 #include "ConnectionManager.h"
 
+#include <algorithm>
+
 #include <asio.hpp>
 
 #include "Connection.h"
 
 ConnectionManager::ConnectionManager(asio::io_service &io_service) :
     connections_(),
+    mutex_(),
     resolver_(io_service)
 {
 
@@ -41,18 +44,23 @@ asio::ip::tcp::resolver& ConnectionManager::resolver()
 
 void ConnectionManager::start(std::shared_ptr<Connection> connection)
 {
-    connections_.insert(connection);
+    notify_listeners([&connection](const std::shared_ptr<ConnectionManagerListener> &listener) {
+        listener->on_connected(connection);
+    });
+
     connection->start();
 }
 
 void ConnectionManager::stop(std::shared_ptr<Connection> connection)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     connections_.erase(connection);
     connection->stop();
 }
 
 void ConnectionManager::stop_all()
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     for (auto connection : connections_)
     {
         connection->stop();
