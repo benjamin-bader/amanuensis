@@ -42,12 +42,12 @@ public:
     ConnectionListener() {}
     virtual ~ConnectionListener() {}
 
-    virtual void client_request_received(const HttpMessage &request) {}
-    virtual void server_response_received(const HttpMessage &response) {}
+    virtual void client_request_received(const std::shared_ptr<Connection> connection, const HttpMessage &request) = 0;
+    virtual void server_response_received(const std::shared_ptr<Connection> connection, const HttpMessage &response) = 0;
 
-    virtual void on_error(const std::error_code &error);
+    virtual void on_error(const std::shared_ptr<Connection> connection, const std::error_code &error) = 0;
 
-    virtual void connection_closing() {}
+    virtual void connection_closing(const std::shared_ptr<Connection> connection) = 0;
 };
 
 class Connection : public std::enable_shared_from_this<Connection>,
@@ -63,6 +63,10 @@ public:
 
     void stop();
 
+    int id() const;
+
+    void set_id(int id);
+
 private:
     void do_read_client_request();   // client -> proxy
     void lookup_remote_host();       // proxy -> DNS
@@ -75,6 +79,8 @@ private:
     void notify_server_response_received();
     void notify_error(const std::error_code &error);
     void notify_connection_closing();
+
+    int id_;
 
     asio::ip::tcp::socket socket_;
     asio::ip::tcp::socket remoteSocket_;

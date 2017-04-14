@@ -18,10 +18,15 @@
 #include "ConnectionManager.h"
 
 #include <algorithm>
+#include <atomic>
 
 #include <asio.hpp>
 
 #include "Connection.h"
+
+namespace {
+    std::atomic_int next_connection_id = ATOMIC_VAR_INIT(1);
+}
 
 ConnectionManager::ConnectionManager(asio::io_service &io_service) :
     connections_(),
@@ -44,6 +49,9 @@ asio::ip::tcp::resolver& ConnectionManager::resolver()
 
 void ConnectionManager::start(std::shared_ptr<Connection> connection)
 {
+    int id = std::atomic_fetch_add(&next_connection_id, 1);
+    connection->set_id(id);
+
     notify_listeners([&connection](const std::shared_ptr<ConnectionManagerListener> &listener) {
         listener->on_connected(connection);
     });

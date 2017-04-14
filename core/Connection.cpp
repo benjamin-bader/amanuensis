@@ -66,6 +66,16 @@ void Connection::stop()
     remoteSocket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
 }
 
+int Connection::id() const
+{
+    return id_;
+}
+
+void Connection::set_id(int id)
+{
+    id_ = id;
+}
+
 void Connection::do_read_client_request()
 {
     auto buffer = connectionManager_->takeBuffer();
@@ -103,17 +113,13 @@ void Connection::do_read_client_request()
 
             notify_client_request_received();
         }
-        if (parserState == HttpMessageParser::State::Incomplete)
+        else if (parserState == HttpMessageParser::State::Incomplete)
         {
             do_read_client_request();
         }
         else if (parserState == HttpMessageParser::State::Invalid)
         {
             // d'oh, handle the error somehow
-        }
-        else
-        {
-
         }
     });
 }
@@ -340,13 +346,20 @@ void Connection::do_write_server_response()
 void Connection::notify_client_request_received()
 {
     notify_listeners([this](auto &listener) {
-        listener->client_request_received(request);
+        listener->client_request_received(shared_from_this(), request);
     });
 }
 
 void Connection::notify_server_response_received()
 {
     notify_listeners([this](auto &listener) {
-        listener->server_response_received(response);
+        listener->server_response_received(shared_from_this(), response);
+    });
+}
+
+void Connection::notify_error(const std::error_code &error)
+{
+    notify_listeners([this, &error](auto &listener) {
+        listener->on_error(shared_from_this(), error);
     });
 }

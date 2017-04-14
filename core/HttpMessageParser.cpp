@@ -569,23 +569,49 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
             Headers::iterator nameAndHeader = message.headers_.find_by_name("Transfer-Encoding");
             while (nameAndHeader != message.headers_.end())
             {
-                std::string headerValue(nameAndHeader->second); // copy because strtok is destructive
-                char *data = &headerValue[0];
-                char delimiters[] = ", ";
+                std::string &value = nameAndHeader->second;
+                bool is_chunked = false;
 
-                char *tokenPtr = std::strtok(data, ",");
-                while (tokenPtr != nullptr)
+                // Is this a simple chunk stream?  If not, do we have a comma-separated list
+                // of encodings, one of which might be 'chunked'?
+                if (value == "chunked")
                 {
-                    if (std::strcmp(tokenPtr, "chunked") == 0)
+                    is_chunked = true;
+                }
+                else if (value.find(",") != std::string::npos)
+                {
+                    // strtok modifies its arguments, so we need to
+                    // make a copy here.
+                    char *data = (char *) ::malloc(sizeof(char) * value.size() + 1);
+                    if (data == nullptr)
                     {
-                        TRANSIT(chunk_length_start);
-                        message.body_.clear();
-                        return Incomplete;
+                        throw std::bad_alloc();
                     }
-                    tokenPtr = std::strtok(nullptr, delimiters);
+                    ::strcpy(data, value.c_str());
+
+                    const char delimiters[] = ", ";
+
+                    char *tokenPtr = std::strtok(data, delimiters);
+                    while (tokenPtr != nullptr)
+                    {
+                        if (std::strcmp(tokenPtr, "chunked") == 0)
+                        {
+                            is_chunked = true;
+                            break;
+                        }
+                        tokenPtr = std::strtok(nullptr, delimiters);
+                    }
+
+                    ::free(data);
                 }
 
-                ++nameAndHeader;
+                if (is_chunked)
+                {
+                    TRANSIT(chunk_length_start);
+                    message.body_.clear();
+                    return Incomplete;
+                }
+                nameAndHeader++;
             }
 
             nameAndHeader = message.headers_.find_by_name("Content-Length");

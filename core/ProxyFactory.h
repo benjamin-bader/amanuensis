@@ -29,7 +29,7 @@ class A_EXPORT ProxyFactory
 public:
     ProxyFactory();
 
-    std::unique_ptr<Proxy> create(const int port);
+    std::shared_ptr<Proxy> create(const int port);
 };
 
 #endif // PROXYFACTORY_H

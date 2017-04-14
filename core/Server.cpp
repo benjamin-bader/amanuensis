@@ -76,6 +76,11 @@ Server::~Server()
     });
 }
 
+std::shared_ptr<ConnectionManager> Server::connection_manager() const
+{
+    return connectionManager_;
+}
+
 void Server::do_accept()
 {
     acceptor_.async_accept(socket_, [this] (asio::error_code ec) {

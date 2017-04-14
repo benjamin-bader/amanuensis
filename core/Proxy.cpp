@@ -17,20 +17,61 @@
 
 #include "Proxy.h"
 
+#include <memory>
+
 #include <QDebug>
 
 Proxy::Proxy(const int port) :
+    ConnectionManagerListener(),
+    ConnectionListener(),
     port_(port),
     server_(port)
 {
-
 }
 
 Proxy::~Proxy()
 {
 }
 
-const int Proxy::port() const
+void Proxy::init()
+{
+    server_.connection_manager()->add_listener(shared_from_this());
+}
+
+void Proxy::deinit()
+{
+    server_.connection_manager()->remove_listener(shared_from_this());
+}
+
+void Proxy::on_connected(const std::shared_ptr<Connection> &connection)
+{
+    connection->add_listener(shared_from_this());
+    emit connectionEstablished(connection);
+}
+
+void Proxy::client_request_received(const std::shared_ptr<Connection> connection, const HttpMessage &request)
+{
+    emit requestReceived(connection, request);
+}
+
+void Proxy::server_response_received(const std::shared_ptr<Connection> connection, const HttpMessage &response)
+{
+    emit responseReceived(connection, response);
+}
+
+void Proxy::on_error(const std::shared_ptr<Connection> connection, const std::error_code &error)
+{
+    Q_UNUSED(connection);
+    Q_UNUSED(error);
+}
+
+void Proxy::connection_closing(const std::shared_ptr<Connection> connection)
+{
+    connection->remove_listener(shared_from_this());
+    emit connectionClosed(connection);
+}
+
+int Proxy::port() const
 {
     return port_;
 }

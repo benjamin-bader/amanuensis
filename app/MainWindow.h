@@ -20,6 +20,15 @@
 
 #include <QMainWindow>
 
+#include <memory>
+
+#include <QStringListModel>
+#include <QVector>
+
+class Proxy;
+class Connection;
+class HttpMessage;
+
 namespace Ui {
 class MainWindow;
 }
@@ -32,8 +41,19 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+public slots:
+    void connectionEstablished(const std::shared_ptr<Connection> &connection);
+    void requestReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &request);
+    void responseReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &response);
+    void connectionClosed(const std::shared_ptr<Connection> &connection);
+
 private:
     Ui::MainWindow *ui;
+    std::shared_ptr<Proxy> proxy;
+    QVector<QMetaObject::Connection> connections;
+
+    QStringListModel *model;
+
 };
 
 #endif // MAINWINDOW_H

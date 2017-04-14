@@ -36,6 +36,8 @@ public:
     Server(const int port = 9999);
     ~Server();
 
+    std::shared_ptr<ConnectionManager> connection_manager() const;
+
 private:
     void do_accept();
 

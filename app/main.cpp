@@ -21,18 +21,22 @@
 #include <QThread>
 
 #include <exception>
+#include <memory>
 
+#include "HttpMessage.h"
 #include "Proxy.h"
 #include "ProxyFactory.h"
 #include "Server.h"
+
+Q_DECLARE_METATYPE(std::shared_ptr<Connection>)
+Q_DECLARE_METATYPE(HttpMessage)
 
 int main(int argc, char *argv[])
 {
     try
     {
-        ProxyFactory factory;
-
-        auto proxy = factory.create(9999);
+        qRegisterMetaType<std::shared_ptr<Connection>>();
+        qRegisterMetaType<HttpMessage>();
 
         QApplication a(argc, argv);
         MainWindow w;
