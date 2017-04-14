@@ -165,3 +165,58 @@ void HttpMessageParserTests::simpleOkResponse()
     QCOMPARE(message.body_as_string(), {"zzzzz"});
 }
 
+void HttpMessageParserTests::simpleForbiddenResponse()
+{
+    std::stringstream responseText;
+    responseText << "HTTP/1.1 403 Forbidden\r\n";
+    responseText << "Server: nginx\r\n";
+    responseText << "Date: Fri, 14 Apr 2017 22:23:44 GMT\r\n";
+    responseText << "Content-Type: text/html\r\n";
+    responseText << "Transfer-Encoding: chunked\r\n";
+    responseText << "Connection: keep-alive\r\n";
+    responseText << "Vary: Accept-Encoding\r\n";
+    responseText << "\r\n";
+    responseText << "8\r\n";
+    responseText << "<html>\r\n\r\n";
+    responseText << "2B\r\n";
+    responseText << "<head><title>403 Forbidden</title></head>\r\n\r\n";
+    responseText << "18\r\n";
+    responseText << "<body bgcolor=\"white\">\r\n\r\n";
+    responseText << "29\r\n";
+    responseText << "<center><h1>403 Forbidden</h1></center>\r\n\r\n";
+    responseText << "1C\r\n";
+    responseText << "<hr><center>nginx</center>\r\n\r\n";
+    responseText << "9\r\n";
+    responseText << "</body>\r\n\r\n";
+    responseText << "9\r\n";
+    responseText << "</html>\r\n\r\n";
+    responseText << "0\r\n";
+    responseText << "\r\n";
+
+    HttpMessage message;
+    HttpMessageParser parser;
+    parser.resetForResponse();
+
+    auto content = responseText.str();
+    auto begin = content.begin();
+    auto end = content.end();
+
+    auto state = parser.parse(message, begin, end);
+
+    QCOMPARE(state, HttpMessageParser::State::Valid);
+
+    QCOMPARE(message.status_code(), 403);
+    QCOMPARE(message.status_message(), {"Forbidden"});
+
+    std::stringstream expected;
+    expected << "<html>\r\n";
+    expected << "<head><title>403 Forbidden</title></head>\r\n";
+    expected << "<body bgcolor=\"white\">\r\n";
+    expected << "<center><h1>403 Forbidden</h1></center>\r\n";
+    expected << "<hr><center>nginx</center>\r\n";
+    expected << "</body>\r\n";
+    expected << "</html>\r\n";
+
+    QCOMPARE(message.body_as_string(), expected.str());
+}
+

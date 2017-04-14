@@ -389,7 +389,7 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
         }
         else if (is_digit(input))
         {
-            message.major_version_ *= 10 + (input - '0');
+            message.major_version_ = (message.major_version_ * 10) + (input - '0');
             return Incomplete;
         }
         return Invalid;
@@ -411,7 +411,7 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
         }
         else if (is_digit(input))
         {
-            message.minor_version_ *= 10 + (input - '0');
+            message.minor_version_ = (message.minor_version_ * 10) + (input - '0');
             return Incomplete;
         }
         return Invalid;
@@ -433,7 +433,7 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
         }
         else if (is_digit(input))
         {
-            message.status_code_ *= 10 + (input - '0');
+            message.status_code_ = (message.status_code_ * 10) + (input - '0');
             return Incomplete;
         }
         return Invalid;

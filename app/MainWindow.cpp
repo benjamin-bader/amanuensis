@@ -92,5 +92,12 @@ void MainWindow::responseReceived(const std::shared_ptr<Connection> &connection,
 
 void MainWindow::connectionClosed(const std::shared_ptr<Connection> &connection)
 {
+    std::stringstream ss;
+    ss << "CONN(" << connection->id() << "): Closed";
 
+    QString text(ss.str().c_str());
+
+    model->insertRow(model->rowCount());
+    QModelIndex index = model->index(model->rowCount() - 1);
+    model->setData(index, text);
 }

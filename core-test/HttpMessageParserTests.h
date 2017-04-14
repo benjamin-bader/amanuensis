@@ -33,6 +33,7 @@ private Q_SLOTS:
     void chunkedSimplePost();
 
     void simpleOkResponse();
+    void simpleForbiddenResponse();
 };
 
 #endif

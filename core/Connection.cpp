@@ -61,6 +61,8 @@ void Connection::start()
 
 void Connection::stop()
 {
+    notify_connection_closing();
+
     asio::error_code ec;
     socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
     remoteSocket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
@@ -361,5 +363,12 @@ void Connection::notify_error(const std::error_code &error)
 {
     notify_listeners([this, &error](auto &listener) {
         listener->on_error(shared_from_this(), error);
+    });
+}
+
+void Connection::notify_connection_closing()
+{
+    notify_listeners([this](auto &listener) {
+        listener->connection_closing(shared_from_this());
     });
 }
