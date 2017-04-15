@@ -18,12 +18,25 @@
 #ifndef OBJECTPOOL_H
 #define OBJECTPOOL_H
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <stack>
 
 #include <QDebug>
 
+// An object that owns a pool of resources, for example buffers of memory.
+// Consumers can acquire a shared pointer to a resource; when the pointer
+// goes out of scope, the resource is returned to the pool rather than being
+// deallocated.
+//
+// Resource types must have a public default constructor.
+//
+// A pool can be configured with min and max values.  The Min value
+// determines how many resources are initially contained in the pool; resources
+// over that number will be allocated as needed.  The Max value indicates the
+// largest number of resources to keep in the pool at a given time; objects
+// returned over that number will be deallocated instead of being pooled.
 template <typename T>
 class ObjectPool
 {
@@ -53,13 +66,23 @@ private:
     };
 
 public:
+    const static size_t default_pool_min = 0;
+    const static size_t default_pool_max = SIZE_MAX;
+
     typedef std::shared_ptr<T> pool_ptr;
 
-    ObjectPool() :
+    ObjectPool(size_t min_pool_size = default_pool_min,
+               size_t max_pool_size = default_pool_max) :
+        min_pool_size_(min_pool_size),
+        max_pool_size_(max_pool_size),
         self_(new ObjectPool<T>*(this)),
         pool_(),
         mutex_()
     {
+        for (int i = 0; i < min_pool_size_; ++i)
+        {
+            pool_.push(std::make_unique<T>());
+        }
     }
 
     virtual ~ObjectPool()
@@ -70,10 +93,16 @@ public:
     {
         {
             std::lock_guard<std::mutex> lock(mutex_);
+
+            // Regardless of whether the pool has anything in it,
+            // by the time we return we'll have borrowed an object.
+            num_borrowed_++;
+
             if (!pool_.empty())
             {
                 qDebug() << "Acquiring pooled object";
                 pool_ptr result(pool_.top().release(), Deleter(std::weak_ptr<ObjectPool<T> *>(self_)));
+                num_idle_--;
                 pool_.pop();
                 return std::move(result);
             }
@@ -85,16 +114,41 @@ public:
         return std::move(result);
     }
 
+    size_t num_idle() const
+    {
+        return num_idle_.load(std::memory_order_relaxed);
+    }
+
+    size_t num_borrowed() const
+    {
+        return num_borrowed_.load(std::memory_order_relaxed);
+    }
+
 private:
     void release(std::unique_ptr<T> object)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        pool_.push(std::move(object));
+        num_borrowed_--;
+
+        // If we have fewer than the max allowed objects pooled,
+        // put this one back in.  Otherwise, let the unique_ptr go
+        // out of scope and delete the object.
+        if (pool_.size() < max_pool_size_)
+        {
+            pool_.push(std::move(object));
+            num_idle_++;
+        }
     }
+
+    const size_t min_pool_size_;
+    const size_t max_pool_size_;
 
     std::shared_ptr<ObjectPool<T> *> self_;
     std::stack<std::unique_ptr<T>> pool_;
     std::mutex mutex_;
+
+    std::atomic<size_t> num_borrowed_ = ATOMIC_VAR_INIT(0);
+    std::atomic<size_t> num_idle_     = ATOMIC_VAR_INIT(0);
 };
 
 #endif // OBJECTPOOL_H
