@@ -79,7 +79,7 @@ public:
         pool_(),
         mutex_()
     {
-        for (int i = 0; i < min_pool_size_; ++i)
+        for (size_t i = 0; i < min_pool_size_; ++i)
         {
             pool_.push(std::make_unique<T>());
         }
