@@ -456,21 +456,23 @@ void Connection::do_tls_connect()
 
 void Connection::send_connect_response(bool success)
 {
-    HttpMessage connectResponse;
-    connectResponse.set_status_code(success ? 200 : 400);
-    connectResponse.set_status_message(success ? "OK" : "Bad Request");
-
-    std::stringstream ss;
-    ss << "HTTP/1.1 " << connectResponse.status_code() << " " << connectResponse.status_message() << "\r\n";
-    ss << "\r\n";
+    std::string responseText;
+    if (success) {
+        responseText = "HTTP/1.1 200 OK\r\n"
+                       "Proxy-Agent: amanuensis 0.1.0\r\n"
+                       "\r\n";
+    } else {
+        responseText = "HTTP/1.1 400 Bad Request\r\n"
+                       "Proxy-Agent: amanuensis 0.1.0\r\n"
+                       "\r\n";
+    }
 
     BufferPtr buffer = impl_->connectionManager_->takeBuffer();
-    std::string response = ss.str();
-    std::copy(response.begin(), response.end(), buffer->begin());
+    std::copy(responseText.begin(), responseText.end(), buffer->begin());
 
     auto self = shared_from_this();
     asio::async_write(impl_->socket_,
-                      asio::buffer(*buffer),
+                      asio::buffer(*buffer, responseText.size()),
                       [this, self, success, buffer](asio::error_code ec, size_t bytes_written) {
         Q_UNUSED(bytes_written);
 
@@ -499,7 +501,7 @@ void Connection::do_tls_client_to_server_forwarding()
     auto buffer = impl_->connectionManager_->takeBuffer();
     auto self = shared_from_this();
     impl_->socket_.async_read_some(asio::buffer(*buffer), [this, self, buffer](asio::error_code ec, size_t bytes_read) {
-        if (bytes_read = 0 || ec)
+        if (bytes_read == 0 || ec)
         {
             impl_->connectionManager_->stop(self);
             return;
@@ -508,6 +510,12 @@ void Connection::do_tls_client_to_server_forwarding()
         asio::async_write(impl_->remoteSocket_,
                           asio::buffer(buffer->data(), bytes_read),
                           [this, self, buffer](asio::error_code ec, size_t bytes_written) {
+            if (ec == asio::error::eof)
+            {
+                impl_->connectionManager_->stop(self);
+                return;
+            }
+
             if (ec || bytes_written == 0)
             {
                 impl_->connectionManager_->stop(self);
@@ -524,7 +532,7 @@ void Connection::do_tls_server_to_client_forwarding()
     auto buffer = impl_->connectionManager_->takeBuffer();
     auto self = shared_from_this();
     impl_->remoteSocket_.async_read_some(asio::buffer(*buffer), [this, self, buffer](asio::error_code ec, size_t bytes_read) {
-        if (bytes_read = 0 || ec)
+        if (bytes_read == 0 || ec)
         {
             impl_->connectionManager_->stop(self);
             return;
