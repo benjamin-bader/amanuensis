@@ -54,24 +54,6 @@ namespace
         return true;
     }
 
-    bool ci_equal(const std::string &lhs, const std::string &rhs)
-    {
-        if (lhs.size() != rhs.size())
-        {
-            return false;
-        }
-
-        for (size_t i = 0; i < lhs.size(); ++i)
-        {
-            if (std::tolower(lhs[i]) != std::tolower(rhs[i]))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     inline bool is_char(int input)
     {
         return input >= 0 && input <= 127;

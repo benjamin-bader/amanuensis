@@ -438,6 +438,8 @@ void Connection::do_tls_connect()
         }
 
         asio::async_connect(impl_->remoteSocket_, result, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator i) {
+            Q_UNUSED(i);
+
             if (ec)
             {
                 qWarning() << "Failed to connect to remote host: " << ec.message();
@@ -470,6 +472,8 @@ void Connection::send_connect_response(bool success)
     asio::async_write(impl_->socket_,
                       asio::buffer(*buffer),
                       [this, self, success, buffer](asio::error_code ec, size_t bytes_written) {
+        Q_UNUSED(bytes_written);
+
         if (ec)
         {
             qWarning() << "Error writing CONNECT response: " << ec.message();

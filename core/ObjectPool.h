@@ -21,11 +21,10 @@
 #pragma once
 
 #include <atomic>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <stack>
-
-//#include <QDebug>
 
 // An object that owns a pool of resources, for example buffers of memory.
 // Consumers can acquire a shared pointer to a resource; when the pointer
@@ -106,15 +105,12 @@ public:
                 num_idle_--;
                 pool_.pop();
 
-                //qDebug() << "Acquiring resource; idle=" << num_idle() << "; borrowed=" << num_borrowed();
-
                 return std::move(result);
             }
         }
 
         // Empty pool, time to make more things!
         pool_ptr result(new T(), Deleter(std::weak_ptr<ObjectPool<T> *>(self_)));
-        //qDebug() << "Acquiring resource; idle=" << num_idle() << "; borrowed=" << num_borrowed();
         return std::move(result);
     }
 
@@ -126,6 +122,16 @@ public:
     size_t num_borrowed() const
     {
         return num_borrowed_.load(std::memory_order_relaxed);
+    }
+
+    friend std::ostream& operator <<(std::ostream &o, const ObjectPool<T> &pool)
+    {
+        std::lock_guard<std::mutex> lock(pool.mutex_);
+        return o << "ObjectPool{min=" << pool.min_pool_size_
+                 << " max=" << pool.max_pool_size_
+                 << " idle=" << pool.num_idle()
+                 << " borrowed=" << pool.num_borrowed()
+                 << "}";
     }
 
 private:
@@ -142,8 +148,6 @@ private:
             pool_.push(std::move(object));
             num_idle_++;
         }
-
-        //qDebug() << "Releasing resource; idle=" << num_idle() << "; borrowed=" << num_borrowed();
     }
 
     const size_t min_pool_size_;
