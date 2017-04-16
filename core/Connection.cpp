@@ -166,9 +166,15 @@ void Connection::do_read_client_request()
         {
             dump_request(impl_->request_);
 
-            lookup_remote_host();
-
-            notify_client_request_received();
+            if (impl_->request_.method() == "CONNECT")
+            {
+                do_tls_connect();
+            }
+            else
+            {
+                lookup_remote_host();
+                notify_client_request_received();
+            }
         }
         else if (parserState == HttpMessageParser::State::Incomplete)
         {
@@ -391,6 +397,146 @@ void Connection::do_write_server_response()
             // We're done!
             impl_->connectionManager_->stop(self);
         }
+    });
+}
+
+void Connection::do_tls_connect()
+{
+    HttpMessage &request = impl_->request_;
+
+    std::string host = request.uri();
+    std::string port = "443";
+
+    size_t separator = host.find(':');
+    if (separator != std::string::npos)
+    {
+        try
+        {
+            port = host.substr(separator + 1);
+            host = host.substr(0, separator);
+        }
+        catch (std::out_of_range)
+        {
+            qWarning() << "Malformed request - assuming port 443";
+        }
+        catch (std::invalid_argument)
+        {
+            qWarning() << "Malformed request - assuming port 443";
+        }
+    }
+
+    asio::ip::tcp::resolver::query query(host, port);
+
+    auto self = shared_from_this();
+    impl_->connectionManager_->resolver().async_resolve(query,
+                                                        [this, self, request](asio::error_code ec, asio::ip::tcp::resolver::iterator result) {
+        if (ec)
+        {
+            qWarning() << "Error resolving remote host for CONNECT (" << request.uri() << "): " << ec.message();
+            send_connect_response(false);
+            return;
+        }
+
+        asio::async_connect(impl_->remoteSocket_, result, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator i) {
+            if (ec)
+            {
+                qWarning() << "Failed to connect to remote host: " << ec.message();
+                send_connect_response(false);
+                return;
+            }
+            else
+            {
+                send_connect_response(true);
+            }
+        });
+    });
+}
+
+void Connection::send_connect_response(bool success)
+{
+    HttpMessage connectResponse;
+    connectResponse.set_status_code(success ? 200 : 400);
+    connectResponse.set_status_message(success ? "OK" : "Bad Request");
+
+    std::stringstream ss;
+    ss << "HTTP/1.1 " << connectResponse.status_code() << " " << connectResponse.status_message() << "\r\n";
+    ss << "\r\n";
+
+    BufferPtr buffer = impl_->connectionManager_->takeBuffer();
+    std::string response = ss.str();
+    std::copy(response.begin(), response.end(), buffer->begin());
+
+    auto self = shared_from_this();
+    asio::async_write(impl_->socket_,
+                      asio::buffer(*buffer),
+                      [this, self, success, buffer](asio::error_code ec, size_t bytes_written) {
+        if (ec)
+        {
+            qWarning() << "Error writing CONNECT response: " << ec.message();
+            impl_->connectionManager_->stop(self);
+            return;
+        }
+
+        if (success)
+        {
+            do_tls_client_to_server_forwarding();
+            do_tls_server_to_client_forwarding();
+        }
+        else
+        {
+            // Failed to connect, so bail
+            impl_->connectionManager_->stop(self);
+        }
+    });
+}
+
+void Connection::do_tls_client_to_server_forwarding()
+{
+    auto buffer = impl_->connectionManager_->takeBuffer();
+    auto self = shared_from_this();
+    impl_->socket_.async_read_some(asio::buffer(*buffer), [this, self, buffer](asio::error_code ec, size_t bytes_read) {
+        if (bytes_read = 0 || ec)
+        {
+            impl_->connectionManager_->stop(self);
+            return;
+        }
+
+        asio::async_write(impl_->remoteSocket_,
+                          asio::buffer(buffer->data(), bytes_read),
+                          [this, self, buffer](asio::error_code ec, size_t bytes_written) {
+            if (ec || bytes_written == 0)
+            {
+                impl_->connectionManager_->stop(self);
+                return;
+            }
+
+            do_tls_client_to_server_forwarding();
+        });
+    });
+}
+
+void Connection::do_tls_server_to_client_forwarding()
+{
+    auto buffer = impl_->connectionManager_->takeBuffer();
+    auto self = shared_from_this();
+    impl_->remoteSocket_.async_read_some(asio::buffer(*buffer), [this, self, buffer](asio::error_code ec, size_t bytes_read) {
+        if (bytes_read = 0 || ec)
+        {
+            impl_->connectionManager_->stop(self);
+            return;
+        }
+
+        asio::async_write(impl_->socket_,
+                          asio::buffer(buffer->data(), bytes_read),
+                          [this, self, buffer](asio::error_code ec, size_t bytes_written) {
+            if (ec || bytes_written == 0)
+            {
+                impl_->connectionManager_->stop(self);
+                return;
+            }
+
+            do_tls_server_to_client_forwarding();
+        });
     });
 }
 

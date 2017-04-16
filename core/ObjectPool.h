@@ -25,7 +25,7 @@
 #include <mutex>
 #include <stack>
 
-#include <QDebug>
+//#include <QDebug>
 
 // An object that owns a pool of resources, for example buffers of memory.
 // Consumers can acquire a shared pointer to a resource; when the pointer
@@ -106,7 +106,7 @@ public:
                 num_idle_--;
                 pool_.pop();
 
-                qDebug() << "Acquiring resource; idle=" << num_idle() << "; borrwed=" << num_borrowed();
+                //qDebug() << "Acquiring resource; idle=" << num_idle() << "; borrowed=" << num_borrowed();
 
                 return std::move(result);
             }
@@ -114,7 +114,7 @@ public:
 
         // Empty pool, time to make more things!
         pool_ptr result(new T(), Deleter(std::weak_ptr<ObjectPool<T> *>(self_)));
-        qDebug() << "Acquiring resource; idle=" << num_idle() << "; borrwed=" << num_borrowed();
+        //qDebug() << "Acquiring resource; idle=" << num_idle() << "; borrowed=" << num_borrowed();
         return std::move(result);
     }
 
@@ -143,7 +143,7 @@ private:
             num_idle_++;
         }
 
-        qDebug() << "Releasing resource; idle=" << num_idle() << "; borrwed=" << num_borrowed();
+        //qDebug() << "Releasing resource; idle=" << num_idle() << "; borrowed=" << num_borrowed();
     }
 
     const size_t min_pool_size_;

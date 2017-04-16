@@ -55,6 +55,9 @@ public:
     void set_minor_version(int minor_version);
     void set_body(const std::vector<uint8_t> &body);
 
+    void set_status_code(int status_code);
+    void set_status_message(const std::string &message);
+
     void add_header(const std::string &name, const std::string &value);
 
     // Return the body as a string, using any specified Content-Encoding

@@ -70,6 +70,14 @@ private:
     void do_read_server_response();  // server -> proxy
     void do_write_server_response(); // proxy -> client
 
+    // We don't (yet) support TLS interception, so until then
+    // we just shuffle bytes between TLS endpoints without
+    // inspecting or modifying them.
+    void do_tls_connect();
+    void send_connect_response(bool success);
+    void do_tls_client_to_server_forwarding();
+    void do_tls_server_to_client_forwarding();
+
     void notify_client_request_received();
     void notify_server_response_received();
     void notify_error(const std::error_code &error);

@@ -100,6 +100,16 @@ void HttpMessage::set_body(const std::vector<uint8_t> &body)
     body_ = body;
 }
 
+void HttpMessage::set_status_code(int status_code)
+{
+    status_code_ = status_code;
+}
+
+void HttpMessage::set_status_message(const std::string &message)
+{
+    status_message_ = message;
+}
+
 void HttpMessage::add_header(const std::string &name, const std::string &value)
 {
     headers_.insert(name, value);;
