@@ -15,16 +15,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#ifndef LISTENABLE_H
+#define LISTENABLE_H
+
+#pragma once
+
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <vector>
 
-#ifndef LISTENABLE_H
-#define LISTENABLE_H
+#include "global.h"
 
 template <typename Listener>
-class Listenable
+class A_EXPORT Listenable
 {
 public:
     Listenable() :

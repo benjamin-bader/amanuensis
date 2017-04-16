@@ -18,6 +18,8 @@
 #ifndef PROXYFACTORY_H
 #define PROXYFACTORY_H
 
+#pragma once
+
 #include <memory>
 
 #include "global.h"

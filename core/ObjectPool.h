@@ -18,6 +18,8 @@
 #ifndef OBJECTPOOL_H
 #define OBJECTPOOL_H
 
+#pragma once
+
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -53,12 +55,12 @@ private:
         {
             if (auto pool = pool_.lock())
             {
-                qDebug() << "Returning object to pool";
                 (*pool.get())->release(std::unique_ptr<T> { pointer });
-                return;
             }
-            qDebug() << "Pool is dead, deleting object";
-            std::default_delete<T>{}(pointer);
+            else
+            {
+                std::default_delete<T>{}(pointer);
+            }
         }
 
     private:
@@ -100,17 +102,19 @@ public:
 
             if (!pool_.empty())
             {
-                qDebug() << "Acquiring pooled object";
                 pool_ptr result(pool_.top().release(), Deleter(std::weak_ptr<ObjectPool<T> *>(self_)));
                 num_idle_--;
                 pool_.pop();
+
+                qDebug() << "Acquiring resource; idle=" << num_idle() << "; borrwed=" << num_borrowed();
+
                 return std::move(result);
             }
         }
 
         // Empty pool, time to make more things!
-        qDebug() << "Pool is empty, creating new object";
         pool_ptr result(new T(), Deleter(std::weak_ptr<ObjectPool<T> *>(self_)));
+        qDebug() << "Acquiring resource; idle=" << num_idle() << "; borrwed=" << num_borrowed();
         return std::move(result);
     }
 
@@ -138,6 +142,8 @@ private:
             pool_.push(std::move(object));
             num_idle_++;
         }
+
+        qDebug() << "Releasing resource; idle=" << num_idle() << "; borrwed=" << num_borrowed();
     }
 
     const size_t min_pool_size_;

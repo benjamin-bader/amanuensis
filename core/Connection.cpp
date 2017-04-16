@@ -17,6 +17,12 @@
 
 #include "Connection.h"
 
+#include <array>
+#include <functional>
+#include <mutex>
+#include <queue>
+#include <vector>
+
 #include <QDebug>
 
 #include <asio.hpp>
@@ -24,6 +30,8 @@
 #include "ConnectionManager.h"
 #include "Headers.h"
 #include "HttpMessage.h"
+#include "HttpMessageParser.h"
+#include "Listenable.h"
 
 namespace {
     QDebug operator<<(QDebug d, const std::string &str)
@@ -42,17 +50,74 @@ namespace {
             qDebug() << header.first << ": " << header.second;
         }
     }
+
+    struct Payload {
+        BufferPtr buffer;
+        size_t size;
+    };
 }
 
+class Connection::impl : public Listenable<ConnectionListener>
+{
+public:
+    impl(asio::ip::tcp::socket socket, std::shared_ptr<ConnectionManager> connectionManager) :
+        id_(-1),
+        socket_(std::move(socket)),
+        remoteSocket_(socket_.get_io_service()),
+        connectionManager_(connectionManager),
+        outboxMutex_(),
+        outbox_(),
+        isSendingClientRequest_(false),
+        serverToClientOutboxMutex_(),
+        serverToClientOutbox_(),
+        isSendingServerResponse_(false),
+        requestParser_(),
+        request_(),
+        response_()
+    {}
+
+    int id_;
+
+    asio::ip::tcp::socket socket_;
+    asio::ip::tcp::socket remoteSocket_;
+
+    std::shared_ptr<ConnectionManager> connectionManager_;
+
+    std::mutex outboxMutex_;
+    std::queue<Payload> outbox_;
+    bool isSendingClientRequest_;
+
+    std::mutex serverToClientOutboxMutex_;
+    std::queue<Payload> serverToClientOutbox_;
+    bool isSendingServerResponse_;
+
+    HttpMessageParser requestParser_;
+    HttpMessage request_;
+    HttpMessage response_;
+};
+
+
 Connection::Connection(asio::ip::tcp::socket socket, std::shared_ptr<ConnectionManager> connectionManager) :
-    socket_(std::move(socket)),
-    remoteSocket_(socket_.get_io_service()),
-    connectionManager_(connectionManager),
-    requestParser(),
-    request()
+    impl_(std::make_unique<Connection::impl>(std::move(socket), connectionManager))
 {
 
 }
+
+Connection::~Connection()
+{
+}
+
+int Connection::id() const
+{
+    return impl_->id_;
+}
+
+void Connection::set_id(int id)
+{
+    impl_->id_ = id;
+}
+
+// Impl
 
 void Connection::start()
 {
@@ -64,25 +129,15 @@ void Connection::stop()
     notify_connection_closing();
 
     asio::error_code ec;
-    socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-    remoteSocket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-}
-
-int Connection::id() const
-{
-    return id_;
-}
-
-void Connection::set_id(int id)
-{
-    id_ = id;
+    impl_->socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+    impl_->remoteSocket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
 }
 
 void Connection::do_read_client_request()
 {
-    auto buffer = connectionManager_->takeBuffer();
+    auto buffer = impl_->connectionManager_->takeBuffer();
     auto self(shared_from_this());
-    socket_.async_read_some(asio::buffer(*buffer), [this, self, buffer](asio::error_code ec, size_t bytes_read) {
+    impl_->socket_.async_read_some(asio::buffer(*buffer), [this, self, buffer](asio::error_code ec, size_t bytes_read) {
         if (ec == asio::error::eof)
         {
             qWarning() << "Unexpected end of request, abandoning intercept";
@@ -93,23 +148,23 @@ void Connection::do_read_client_request()
         if (ec)
         {
             qWarning() << "Error reading from client, abandoning session: " << ec.message();
-            connectionManager_->stop(self);
+            impl_->connectionManager_->stop(self);
             return;
         }
 
         auto begin = buffer->begin();
         auto end = begin + bytes_read;
-        auto parserState = requestParser.parse(request, begin, end);
+        auto parserState = impl_->requestParser_.parse(impl_->request_, begin, end);
 
         if (bytes_read > 0)
         {
-            std::lock_guard<std::mutex> lock(outboxMutex_);
-            outbox_.push(Payload { buffer, bytes_read });
+            std::lock_guard<std::mutex> lock(impl_->outboxMutex_);
+            impl_->outbox_.push(Payload { buffer, bytes_read });
         }
 
         if (parserState == HttpMessageParser::State::Valid)
         {
-            dump_request(request);
+            dump_request(impl_->request_);
 
             lookup_remote_host();
 
@@ -128,11 +183,11 @@ void Connection::do_read_client_request()
 
 void Connection::lookup_remote_host()
 {
-    Headers::const_iterator iter = request.headers().find_by_name("Host");
-    if (iter == request.headers().end())
+    Headers::const_iterator iter = impl_->request_.headers().find_by_name("Host");
+    if (iter == impl_->request_.headers().end())
     {
         qWarning() << "Malformed request - no 'Host' header found!";
-        connectionManager_->stop(shared_from_this());
+        impl_->connectionManager_->stop(shared_from_this());
         return;
     }
 
@@ -160,36 +215,30 @@ void Connection::lookup_remote_host()
     asio::ip::tcp::resolver::query query(host, port);
 
     auto self = shared_from_this();
-    connectionManager_->resolver().async_resolve(query, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator result) {
+    impl_->connectionManager_->resolver().async_resolve(query, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator result) {
         if (ec)
         {
             // Something happened - couldn't connect to the remote endpoint?
             // TODO(ben): Propagate the failure!
 
             qWarning() << "Failed to connect to the remote endpoint: " << ec.message();
-            connectionManager_->stop(self);
+            impl_->connectionManager_->stop(self);
             return;
         }
 
         qInfo() << "DNS lookup complete, connecting to remote host";
-        connect_to_remote_server(result);
-    });
-}
+        asio::async_connect(impl_->remoteSocket_, result, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator i) {
+            if (ec)
+            {
+                qWarning() << "Failed to connect to remote host: " << ec.message();
+                impl_->connectionManager_->stop(self);
+                return;
+            }
 
-void Connection::connect_to_remote_server(asio::ip::tcp::resolver::iterator result)
-{
-    auto self = shared_from_this();
-    asio::async_connect(remoteSocket_, result, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator i) {
-        if (ec)
-        {
-            qWarning() << "Failed to connect to remote host: " << ec.message();
-            connectionManager_->stop(self);
-            return;
-        }
+            qInfo() << "Connected to remote host " << i->host_name() << " at " << i->endpoint().address().to_string();
 
-        qInfo() << "Connected to remote host " << i->host_name() << " at " << i->endpoint().address().to_string();
-
-        do_write_client_request();
+            do_write_client_request();
+        });
     });
 }
 
@@ -198,17 +247,17 @@ void Connection::do_write_client_request()
     Payload payload;
 
     {
-        std::lock_guard<std::mutex> lock(outboxMutex_);
-        if (outbox_.empty())
+        std::lock_guard<std::mutex> lock(impl_->outboxMutex_);
+        if (impl_->outbox_.empty())
         {
             return;
         }
 
-        payload = outbox_.front();
+        payload = impl_->outbox_.front();
     }
 
     auto self = shared_from_this();
-    asio::async_write(remoteSocket_,
+    asio::async_write(impl_->remoteSocket_,
                       asio::buffer(payload.buffer->data(), payload.size),
                       [this, self, payload](asio::error_code ec, size_t bytesWritten) {
 
@@ -218,20 +267,20 @@ void Connection::do_write_client_request()
         {
             // boo
             qWarning() << "Error sending client request to server: " << ec.message();
-            connectionManager_->stop(self);
+            impl_->connectionManager_->stop(self);
             return;
         }
 
         bool finishedWriting;
         {
-            std::lock_guard<std::mutex> lock(outboxMutex_);
-            outbox_.pop();
-            finishedWriting = outbox_.empty();
+            std::lock_guard<std::mutex> lock(impl_->outboxMutex_);
+            impl_->outbox_.pop();
+            finishedWriting = impl_->outbox_.empty();
         }
 
         if (finishedWriting)
         {
-            requestParser.resetForResponse();
+            impl_->requestParser_.resetForResponse();
             do_read_server_response();
         }
         else
@@ -244,9 +293,9 @@ void Connection::do_write_client_request()
 void Connection::do_read_server_response()
 {
     auto self = shared_from_this();
-    auto buffer = connectionManager_->takeBuffer();
-    remoteSocket_.async_read_some(asio::buffer(*buffer),
-                                  [this, self, buffer](asio::error_code ec, size_t bytesRead) {
+    auto buffer = impl_->connectionManager_->takeBuffer();
+    impl_->remoteSocket_.async_read_some(asio::buffer(*buffer),
+                                         [this, self, buffer](asio::error_code ec, size_t bytesRead) {
         qInfo() << "Received server chunk; ec=" << ec.message() << "bytesRead=" << bytesRead;
         if (ec == asio::error::eof)
         {
@@ -258,19 +307,19 @@ void Connection::do_read_server_response()
         else if (ec)
         {
             qWarning() << "Error reading from server!  " << ec.message();
-            connectionManager_->stop(self);
+            impl_->connectionManager_->stop(self);
             return;
         }
 
         Payload payload{buffer, bytesRead};
         {
-            std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
-            serverToClientOutbox_.push(payload);
+            std::lock_guard<std::mutex> lock(impl_->serverToClientOutboxMutex_);
+            impl_->serverToClientOutbox_.push(payload);
         }
 
         auto begin = buffer->begin();
         auto end = begin + bytesRead;
-        auto state = requestParser.parse(response, begin, end);
+        auto state = impl_->requestParser_.parse(impl_->response_, begin, end);
 
         if (state == HttpMessageParser::State::Incomplete)
         {
@@ -295,41 +344,41 @@ void Connection::do_write_server_response()
     Payload payload;
 
     {
-        std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
-        if (isSendingServerResponse)
+        std::lock_guard<std::mutex> lock(impl_->serverToClientOutboxMutex_);
+        if (impl_->isSendingServerResponse_)
         {
             qDebug() << "Send in progress; not starting another.";
         }
 
-        if (serverToClientOutbox_.empty())
+        if (impl_->serverToClientOutbox_.empty())
         {
             // What are we even doing here
             qFatal("Logic error; why do we have multiple threads waiting on an empty queue?");
         }
 
-        payload = serverToClientOutbox_.front();
-        this->isSendingServerResponse = true;
+        payload = impl_->serverToClientOutbox_.front();
+        impl_->isSendingServerResponse_ = true;
     }
 
     auto self = shared_from_this();
-    asio::async_write(socket_,
+    asio::async_write(impl_->socket_,
                       asio::buffer(payload.buffer->data(), payload.size),
                       [this, self, payload](asio::error_code ec, size_t bytesWritten) {
         Q_UNUSED(bytesWritten);
 
         bool hasMore = false;
         {
-            std::lock_guard<std::mutex> lock(serverToClientOutboxMutex_);
-            serverToClientOutbox_.pop();
-            hasMore = serverToClientOutbox_.size() > 0;
+            std::lock_guard<std::mutex> lock(impl_->serverToClientOutboxMutex_);
+            impl_->serverToClientOutbox_.pop();
+            hasMore = impl_->serverToClientOutbox_.size() > 0;
 
-            isSendingServerResponse = false;
+            impl_->isSendingServerResponse_ = false;
         }
 
         if (ec)
         {
             qWarning() << "nope: " << ec.message();
-            connectionManager_->stop(self);
+            impl_->connectionManager_->stop(self);
             return;
         }
 
@@ -340,7 +389,7 @@ void Connection::do_write_server_response()
         else
         {
             // We're done!
-            connectionManager_->stop(self);
+            impl_->connectionManager_->stop(self);
         }
     });
 }
@@ -348,14 +397,14 @@ void Connection::do_write_server_response()
 void Connection::notify_client_request_received()
 {
     notify_listeners([this](auto &listener) {
-        listener->client_request_received(shared_from_this(), request);
+        listener->client_request_received(shared_from_this(), impl_->request_);
     });
 }
 
 void Connection::notify_server_response_received()
 {
     notify_listeners([this](auto &listener) {
-        listener->server_response_received(shared_from_this(), response);
+        listener->server_response_received(shared_from_this(), impl_->response_);
     });
 }
 

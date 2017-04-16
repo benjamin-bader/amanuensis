@@ -18,6 +18,8 @@
 #ifndef CORE_GLOBAL_H
 #define CORE_GLOBAL_H
 
+#pragma once
+
 #include <QtCore/qglobal.h>
 
 #if defined(CORE_LIBRARY)

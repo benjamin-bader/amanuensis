@@ -18,6 +18,8 @@
 #ifndef PROXY_H
 #define PROXY_H
 
+#pragma once
+
 #include "global.h"
 
 #include <QObject>

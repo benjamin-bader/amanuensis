@@ -18,15 +18,18 @@
 #ifndef CONNECTIONMANAGER_H
 #define CONNECTIONMANAGER_H
 
+#pragma once
+
 #include <array>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <string>
 
-#include <asio/io_service.hpp>
-#include <asio/ip/tcp.hpp>
+//#include <asio/io_service.hpp>
+//#include <asio/ip/tcp.hpp>
 
+#include "asiofwd.h"
 #include "Listenable.h"
 #include "ObjectPool.h"
 
@@ -54,7 +57,7 @@ public:
 
     void stop_all();
 
-    asio::ip::tcp::resolver& resolver();
+    asio::ip::basic_resolver<asio::ip::tcp, asio::ip::resolver_service<asio::ip::tcp>>& resolver();
 
     // Returns a shared pointer to a buffer.  When its refcount reaches
     // zero, the buffer will be returned to a shared pool.
@@ -64,12 +67,8 @@ private:
     ConnectionManager(const ConnectionManager &) = delete;
     ConnectionManager& operator =(const ConnectionManager &) = delete;
 
-    std::set<std::shared_ptr<Connection>> connections_;
-    std::mutex mutex_; // protects connections_
-
-    asio::ip::tcp::resolver resolver_;
-
-    BufferPool bufferPool_;
+    class impl;
+    const std::unique_ptr<impl> impl_;
 };
 
 #endif // CONNECTIONMANAGER_H

@@ -18,22 +18,16 @@
 #ifndef CONNECTION_H
 #define CONNECTION_H
 
-#include <array>
-#include <cstdint>
-#include <functional>
+#pragma once
+
 #include <memory>
-#include <mutex>
-#include <queue>
+#include <system_error>
 
-#include <QObject>
-
-#include <asio/ip/tcp.hpp>
-
-#include "ConnectionManager.h"
+#include "asiofwd.h"
 #include "HttpMessage.h"
-#include "HttpMessageParser.h"
 #include "Listenable.h"
 
+class Connection;
 class ConnectionManager;
 
 class ConnectionListener
@@ -56,21 +50,22 @@ class Connection : public std::enable_shared_from_this<Connection>,
 public:
     Connection() = delete;
     Connection& operator=(const Connection&) = delete;
+    virtual ~Connection();
 
-    explicit Connection(asio::ip::tcp::socket socket, std::shared_ptr<ConnectionManager> connectionManager);
+    explicit Connection(asio::basic_stream_socket<asio::ip::tcp, asio::stream_socket_service<asio::ip::tcp>> socket, std::shared_ptr<ConnectionManager> connectionManager);
 
     void start();
-
     void stop();
 
     int id() const;
-
     void set_id(int id);
 
 private:
+    class impl;
+    const std::unique_ptr<impl> impl_;
+
     void do_read_client_request();   // client -> proxy
     void lookup_remote_host();       // proxy -> DNS
-    void connect_to_remote_server(asio::ip::tcp::resolver::iterator result);
     void do_write_client_request();  // proxy -> server
     void do_read_server_response();  // server -> proxy
     void do_write_server_response(); // proxy -> client
@@ -79,30 +74,6 @@ private:
     void notify_server_response_received();
     void notify_error(const std::error_code &error);
     void notify_connection_closing();
-
-    int id_;
-
-    asio::ip::tcp::socket socket_;
-    asio::ip::tcp::socket remoteSocket_;
-
-    std::shared_ptr<ConnectionManager> connectionManager_;
-
-    struct Payload {
-        BufferPtr buffer;
-        size_t size;
-    };
-
-    std::mutex outboxMutex_;
-    std::queue<Payload> outbox_;
-    bool isSendingClientRequest_;
-
-    std::mutex serverToClientOutboxMutex_;
-    std::queue<Payload> serverToClientOutbox_;
-    bool isSendingServerResponse;
-
-    HttpMessageParser requestParser;
-    HttpMessage request;
-    HttpMessage response;
 };
 
 #endif // CONNECTION_H

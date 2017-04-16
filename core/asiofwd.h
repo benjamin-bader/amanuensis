@@ -15,25 +15,39 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "ProxyFactory.h"
+#ifndef ASIOFWD_H
+#define ASIOFWD_H
 
-#include "Proxy.h"
+#pragma once
 
-#if defined(Q_OS_WIN)
-#include "win/WindowsProxy.h"
-#endif
+// Useful forward-declarations for keeping ASIO out of headers.
 
-ProxyFactory::ProxyFactory()
-{
+namespace asio {
 
-}
+class io_service;
 
-std::shared_ptr<Proxy> ProxyFactory::create(const int port)
-{
-#if defined(Q_OS_WIN)
-    return std::make_shared<WindowsProxy>(port);
-#else
-#warning No platform support implemented for this OS, returning generic proxy.
-    return std::make_shared<Proxy>(port);
-#endif
-}
+template <typename Protocol>
+class stream_socket_service;
+
+template <typename Protocol, typename StreamSocketService>
+class basic_stream_socket;
+
+
+namespace ip {
+
+template <typename Protocol>
+class basic_socket;
+
+template <typename InternetProtocol>
+class resolver_service;
+
+template <typename Protocol, typename ResolverService>
+class basic_resolver;
+
+class tcp;
+
+} // namespace ip
+
+} // namespace asio
+
+#endif // ASIOFWD_H

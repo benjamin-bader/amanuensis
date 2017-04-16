@@ -18,6 +18,8 @@
 #ifndef HEADERS_H
 #define HEADERS_H
 
+#pragma once
+
 #include <map>
 #include <string>
 

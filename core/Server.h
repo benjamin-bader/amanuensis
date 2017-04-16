@@ -18,13 +18,9 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <memory>
-#include <thread>
-#include <vector>
+#pragma once
 
-#include <asio/io_service.hpp>
-#include <asio/signal_set.hpp>
-#include <asio/ip/tcp.hpp>
+#include <memory>
 
 #include "global.h"
 
@@ -41,15 +37,8 @@ public:
 private:
     void do_accept();
 
-    int port_;
-    asio::io_service io_service_;
-    asio::signal_set signals_;
-    asio::ip::tcp::acceptor acceptor_;
-    asio::ip::tcp::socket socket_;
-
-    std::vector<std::thread> workers_;
-
-    std::shared_ptr<ConnectionManager> connectionManager_;
+    class impl;
+    std::unique_ptr<impl> impl_;
 };
 
 #endif // SERVER_H

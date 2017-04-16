@@ -22,53 +22,76 @@
 
 #include <QDebug>
 
+#include <asio.hpp>
+
 #include "Connection.h"
 #include "ConnectionManager.h"
 
-Server::Server(const int port) :
-    port_(port),
-    io_service_(),
-    signals_(io_service_),
-    acceptor_(io_service_),
-    socket_(io_service_),
-    workers_(),
-    connectionManager_(std::make_shared<ConnectionManager>(io_service_))
+class Server::impl
 {
-    signals_.add(SIGINT);
-    signals_.add(SIGTERM);
+public:
+    impl(int port) :
+        port_(port),
+        io_service_(),
+        signals_(io_service_),
+        acceptor_(io_service_),
+        socket_(io_service_),
+        workers_(),
+        connectionManager_(std::make_shared<ConnectionManager>(io_service_))
+    {}
+
+    int port_;
+    asio::io_service io_service_;
+    asio::signal_set signals_;
+    asio::ip::tcp::acceptor acceptor_;
+    asio::ip::tcp::socket socket_;
+
+    std::vector<std::thread> workers_;
+
+    std::shared_ptr<ConnectionManager> connectionManager_;
+};
+
+Server::Server(const int port) :
+    impl_(std::make_unique<Server::impl>(port))
+{
+    impl_->signals_.add(SIGINT);
+    impl_->signals_.add(SIGTERM);
 #if defined(SIGQUIT)
-    signals_.add(SIGQUIT);
+    impl_->signals_.add(SIGQUIT);
 #endif // defined(SIGQUIT)
 
-    signals_.async_wait([this](std::error_code /*ec*/, int /*signo*/) {
-       acceptor_.close();
+    impl_->signals_.async_wait([this](std::error_code /*ec*/, int /*signo*/) {
+       impl_->acceptor_.close();
     });
 
     asio::ip::tcp::endpoint endpoint(asio::ip::tcp::v4(), port);
 
-    acceptor_.open(endpoint.protocol());
-    acceptor_.set_option(asio::ip::tcp::acceptor::reuse_address(true));
-    acceptor_.bind(endpoint);
-    acceptor_.listen();
+    impl_->acceptor_.open(endpoint.protocol());
+    impl_->acceptor_.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+    impl_->acceptor_.bind(endpoint);
+    impl_->acceptor_.listen();
 
     do_accept();
 
+    // TODO(ben): This is a total stab in the dark.  Do we need
+    //            fewer threads?  More?  A dynamic adjustment based
+    //            on usage?
     for (int i = 0; i < 8; ++i)
     {
-        auto thread = std::thread([this] { io_service_.run(); });
-        workers_.push_back(std::move(thread));
+        auto thread = std::thread([this] { impl_->io_service_.run(); });
+        impl_->workers_.push_back(std::move(thread));
     }
 }
 
 Server::~Server()
 {
-    acceptor_.close();
-    signals_.clear();
-    io_service_.stop();
+    impl_->signals_.clear();
+    impl_->acceptor_.close();
+    impl_->io_service_.stop();
 
-    connectionManager_->stop_all();
+    impl_->connectionManager_->stop_all();
 
-    std::for_each(workers_.begin(), workers_.end(), [](std::thread &t) {
+    std::for_each(impl_->workers_.begin(), impl_->workers_.end(), [](std::thread &t) {
         if (t.joinable())
         {
             t.join();
@@ -78,27 +101,27 @@ Server::~Server()
 
 std::shared_ptr<ConnectionManager> Server::connection_manager() const
 {
-    return connectionManager_;
+    return impl_->connectionManager_;
 }
 
 void Server::do_accept()
 {
-    acceptor_.async_accept(socket_, [this] (asio::error_code ec) {
-        if (!acceptor_.is_open())
+    impl_->acceptor_.async_accept(impl_->socket_, [this] (asio::error_code ec) {
+        if (!impl_->acceptor_.is_open())
         {
             qDebug() << "Acceptor has closed, abandoning accept";
+            return;
         }
 
         if (!ec)
         {
-            qDebug() << "Accepted a client connection, processing it";
-            connectionManager_->start(std::make_shared<Connection>(std::move(socket_), connectionManager_));
+            impl_->connectionManager_->start(std::make_shared<Connection>(std::move(impl_->socket_), impl_->connectionManager_));
 
             do_accept();
         }
         else
         {
-            qWarning() << "Awww!  " << QString(ec.message().c_str());
+            qWarning() << QString(ec.message().c_str());
         }
     });
 }

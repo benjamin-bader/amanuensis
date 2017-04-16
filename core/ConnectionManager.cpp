@@ -18,20 +18,36 @@
 #include "ConnectionManager.h"
 
 #include <algorithm>
-#include <atomic>
 
 #include <asio.hpp>
 
 #include "Connection.h"
 
-namespace {
-    std::atomic_int next_connection_id = ATOMIC_VAR_INIT(1);
-}
+class ConnectionManager::impl
+{
+public:
+    impl(asio::io_service &io_service) :
+        connections_(),
+        mutex_(),
+        resolver_(io_service),
+        bufferPool_(),
+        nextId_(1)
+    {}
+
+    ~impl() = default;
+
+    std::set<std::shared_ptr<Connection>> connections_;
+    std::mutex mutex_; // protects connections_
+
+    asio::ip::tcp::resolver resolver_;
+
+    BufferPool bufferPool_;
+
+    int nextId_;
+};
 
 ConnectionManager::ConnectionManager(asio::io_service &io_service) :
-    connections_(),
-    mutex_(),
-    resolver_(io_service)
+    impl_(std::make_unique<ConnectionManager::impl>(io_service))
 {
 
 }
@@ -39,18 +55,23 @@ ConnectionManager::ConnectionManager(asio::io_service &io_service) :
 ConnectionManager::~ConnectionManager()
 {
     stop_all();
-    resolver_.cancel();
+    impl_->resolver_.cancel();
 }
 
 asio::ip::tcp::resolver& ConnectionManager::resolver()
 {
-    return resolver_;
+    return impl_->resolver_;
 }
 
 void ConnectionManager::start(std::shared_ptr<Connection> connection)
 {
-    int id = std::atomic_fetch_add(&next_connection_id, 1);
-    connection->set_id(id);
+    {
+        std::lock_guard<std::mutex> lock(impl_->mutex_);
+        int id = impl_->nextId_++;
+        connection->set_id(id);
+
+        impl_->connections_.insert(connection);
+    }
 
     notify_listeners([&connection](const std::shared_ptr<ConnectionManagerListener> &listener) {
         listener->on_connected(connection);
@@ -61,23 +82,23 @@ void ConnectionManager::start(std::shared_ptr<Connection> connection)
 
 void ConnectionManager::stop(std::shared_ptr<Connection> connection)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
-    connections_.erase(connection);
+    std::lock_guard<std::mutex> lock(impl_->mutex_);
+    impl_->connections_.erase(connection);
     connection->stop();
 }
 
 void ConnectionManager::stop_all()
 {
-    std::lock_guard<std::mutex> lock(mutex_);
-    for (auto connection : connections_)
+    std::lock_guard<std::mutex> lock(impl_->mutex_);
+    for (auto connection : impl_->connections_)
     {
         connection->stop();
     }
-    connections_.clear();
+    impl_->connections_.clear();
 }
 
 BufferPtr ConnectionManager::takeBuffer()
 {
-    return bufferPool_.acquire();
+    return impl_->bufferPool_.acquire();
 }
 

@@ -20,6 +20,8 @@
 #ifndef HTTPMESSAGEPARSER_H
 #define HTTPMESSAGEPARSER_H
 
+#pragma once
+
 #include <cstdint>
 #include <string>
 #include <system_error>

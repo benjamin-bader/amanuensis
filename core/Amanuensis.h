@@ -18,6 +18,8 @@
 #ifndef AMANUENSIS_H
 #define AMANUENSIS_H
 
+#pragma once
+
 #include "global.h"
 
 #include <QObject>

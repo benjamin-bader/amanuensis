@@ -18,9 +18,10 @@
 #ifndef HTTPMESSAGE_H
 #define HTTPMESSAGE_H
 
+#pragma once
+
 #include <cstdint>
 #include <string>
-#include <map>
 #include <tuple>
 #include <vector>
 
