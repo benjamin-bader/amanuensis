@@ -19,7 +19,7 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = app
+TARGET = Amanuensis
 TEMPLATE = app
 
 # The following define makes your compiler emit warnings if you use
@@ -56,4 +56,31 @@ macx {
     QMAKE_CXXFLAGS += \
         -Wno-unused-local-typedef \ # ASIO has unused typedefs, which is unfortunate.
         -isystem $$PWD/../include/
+}
+
+mac {
+    HEADERS += \
+        mac/TrustyCommon.h
+
+    DISTFILES += \
+        Info.plist
+
+    include($$PWD/../mac-common.pri)
+
+    DESTDIR = $$PWD/../
+
+    INFO_PLIST_PATH = $$shell_quote($${DESTDIR}$${TARGET}.app/Contents/Info.plist)
+
+    HELPER_IDENTIFIER = com.bendb.amanuensis.Trusty
+
+    plist.commands += $(COPY) $$PWD/Info.plist $${INFO_PLIST_PATH};
+    plist.commands += /usr/libexec/PlistBuddy -c \"Set :CFBundleIdentifier com.bendb.amanuensis.$${TARGET}\" $${INFO_PLIST_PATH};
+    plist.commands += /usr/libexec/PlistBuddy -c \'Set :SMPrivilegedExecutables:$${HELPER_IDENTIFIER} 'anchor apple generic and identifier \\\"$${HELPER_IDENTIFIER}\\\" and (certificate leaf[field.1.2.840.113635.100.6.1.9] /* exists */ or certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = $${CERT_OU})'\' $${INFO_PLIST_PATH};
+
+    first.depends = $(first) plist
+
+    export(first.depends)
+    export(plist.depends)
+
+    QMAKE_EXTRA_TARGETS += first plist
 }

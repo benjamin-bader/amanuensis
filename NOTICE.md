@@ -37,7 +37,6 @@ FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
-
 date.h
 ------
 
@@ -69,3 +68,11 @@ SOFTWARE.
 Our apologies.  When the previous paragraph was written, lowercase had not yet
 been invented (that would involve another several millennia of evolution).
 We did not mean to shout.
+
+Mac SMJobBless/qmake integration
+--------------------------------
+
+Copyright 2016-2017 mbsanchez.  All rights reserved.  Distributed under GNU Public License 3.0
+
+Various qmake snippets and project structures adapted from mbzanchez' very helpful project on Github:
+https://github.com/mbsanchez/QtPrivilegedHelperExample
