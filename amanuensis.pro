@@ -28,30 +28,32 @@ app.depends = core
 core-test.depends = core
 
 mac {
-    SUBDIRS += trusty
+    SUBDIRS += \
+        trusty \
+        trusty-interface
 
-    trusty.depends = core
+    trusty.depends = trusty-interface
+    app.depends += trusty-interface
 
     BUNDLEAPP = Amanuensis
     HELPERAPP = com.bendb.amanuensis.Trusty
     HELPERAPP_INFO = trusty-Info.plist
     HELPER_APP_LAUNCHD_INFO = trusty-Launchd.plist
 
+    organizer.depends += app trusty
     organizer.commands += $(MKDIR) $$OUT_PWD/$${BUNDLEAPP}.app/Contents/Library/LaunchServices;
     organizer.commands += $(MKDIR) $$OUT_PWD/$${BUNDLEAPP}.app/Contents/Resources;
     organizer.commands += $(MOVE) $$OUT_PWD/$${HELPERAPP} $$OUT_PWD/$${BUNDLEAPP}.app/Contents/Library/LaunchServices;
     organizer.commands += $(COPY) $$PWD/trusty/$${HELPERAPP_INFO} $$OUT_PWD/$${BUNDLEAPP}.app/Contents/Resources;
     organizer.commands += $(COPY) $$PWD/trusty/$${HELPER_APP_LAUNCHD_INFO} $$OUT_PWD/$${BUNDLEAPP}.app/Contents/Resources;
 
-    include(mac-common.pri)
+    include(trusty-constants.pri)
 
     BUNDLEID = com.bendb.amanuensis.$${BUNDLEAPP}
 
     codesigner.commands += dsymutil $${OUT_PWD}/$${BUNDLEAPP}.app/Contents/MacOS/$${BUNDLEAPP} -o $${OUT_PWD}/$${BUNDLEAPP}.app.dSYM;
     codesigner.commands += $(COPY_DIR) $${OUT_PWD}/$${BUNDLEAPP}.app.dSYM $${OUT_PWD}/$${BUNDLEAPP}.app/Contents/MacOS/$${BUNDLEAPP}.dSYM;
-
     codesigner.commands += macdeployqt $${OUT_PWD}/$${BUNDLEAPP}.app -always-overwrite -codesign=$${CERTSHA1};
-
     codesigner.commands += touch -c $${OUT_PWD}/$${BUNDLEAPP}.app;
 
     CODESIGN_ALLOCATE_PATH=$$system(xcrun -find codesign_allocate)

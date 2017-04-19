@@ -47,7 +47,7 @@ win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../core/release/ -lcor
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../core/debug/ -lcore
 else:unix: LIBS += -L$$OUT_PWD/../core/ -lcore
 
-INCLUDEPATH += $$PWD/../core $$PWD/../include
+INCLUDEPATH += $$PWD/../core $$PWD/../include $$PWD/../trusty-interface
 DEPENDPATH += $$PWS/../core
 
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
@@ -59,13 +59,19 @@ macx {
 }
 
 mac {
+    include($$PWD/../trusty-constants.pri)
+    include($$PWD/../trusty-libs.pri)
+
+    LIBS += -L$${OUT_PWD}/../trusty-interface/ -ltrusty-interface
+
     HEADERS += \
-        mac/TrustyCommon.h
+        mac/MacProxy.h
+
+    SOURCES += \
+        mac/MacProxy.cpp
 
     DISTFILES += \
         Info.plist
-
-    include($$PWD/../mac-common.pri)
 
     DESTDIR = $$PWD/../
 

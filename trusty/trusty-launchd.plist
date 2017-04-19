@@ -6,6 +6,11 @@
         <string>com.bendb.amanuensis.Trusty</string>
         <key>StandardErrorPath</key>
         <string>/var/log/com.bendb.amanuensis.trusty.log</string>
+        <key>MachServices</key>
+        <dict>
+            <key>com.bendb.amanuensis.Trusty</key>
+            <true />
+        </dict>
         <key>Sockets</key>
         <dict>
                 <key>com.bendb.amanuensis.Trusty</key>
