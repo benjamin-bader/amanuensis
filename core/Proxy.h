@@ -30,7 +30,6 @@
 #include "ConnectionManager.h"
 #include "Server.h"
 
-class Connection;
 class HttpMessage;
 
 class A_EXPORT Proxy : public QObject,

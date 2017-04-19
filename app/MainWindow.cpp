@@ -21,6 +21,7 @@
 #include <sstream>
 
 #include <QLabel>
+#include <QSettings>
 
 #include "Proxy.h"
 #include "ProxyFactory.h"
@@ -28,11 +29,18 @@
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    proxy(ProxyFactory().create(9999)),
     connections(),
     model(new QStringListModel)
 {
     ui->setupUi(this);
+
+    QSettings settings(QSettings::IniFormat,
+                       QSettings::UserScope,
+                       QCoreApplication::organizationName(),
+                       QCoreApplication::applicationName());
+
+    int port = settings.value("Proxy/port", 9999).toInt();
+    proxy = ProxyFactory().create(port);
 
     connections << connect(proxy.get(), &Proxy::connectionEstablished, this, &MainWindow::connectionEstablished);
     connections << connect(proxy.get(), &Proxy::requestReceived,       this, &MainWindow::requestReceived);

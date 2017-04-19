@@ -37,3 +37,9 @@ PROJECT
 *.moc
 Makefile*
 *build-*/
+
+# Mac build artifacts
+*.app/
+
+# OS detritus
+.DS_Store

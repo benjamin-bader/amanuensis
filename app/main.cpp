@@ -18,6 +18,7 @@
 #include "MainWindow.h"
 #include <QApplication>
 #include <QDebug>
+#include <QSettings>
 #include <QThread>
 
 #include <exception>
@@ -33,6 +34,11 @@ Q_DECLARE_METATYPE(HttpMessage)
 
 int main(int argc, char *argv[])
 {
+    QCoreApplication::setOrganizationName("Amanuensis");
+    QCoreApplication::setOrganizationDomain("bendb.com");
+    QCoreApplication::setApplicationName("amanuensis");
+    QCoreApplication::setApplicationVersion("0.1.0");
+
     try
     {
         qRegisterMetaType<std::shared_ptr<Connection>>();
