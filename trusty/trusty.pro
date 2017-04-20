@@ -11,6 +11,14 @@ TEMPLATE = app
 include($$PWD/../trusty-constants.pri)
 include($$PWD/../trusty-libs.pri)
 
+DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
+
+QMAKE_CXXFLAGS += \
+    -isystem $$PWD/../include
+
+INCLUDEPATH += \
+    $$PWD/../include
+
 QMAKE_LFLAGS += \
     -sectcreate __TEXT __info_plist $$PWD/trusty-info.plist \
     -sectcreate __TEXT __launchd_plist $$PWD/trusty-launchd.plist

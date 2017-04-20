@@ -3,10 +3,7 @@
 
 #pragma once
 
-#include <dispatch/dispatch.h>
-
 #include "OSLoggable.h"
-
 
 class TrustyServer : public OSLoggable
 {
@@ -17,9 +14,8 @@ public:
     void run();
 
 private:
-    void do_accept();
-
-    dispatch_queue_t queue_;
+    struct impl;
+    const std::unique_ptr<impl> impl_;
 };
 
 #endif // TRUSTYSERVER_H

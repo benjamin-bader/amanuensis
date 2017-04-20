@@ -49,10 +49,12 @@ protected:
     LogStatement log_info();
     LogStatement log_error();
 
+    std::shared_ptr<SystemLogger> logger() const;
+
 private:
     OSLoggable() = delete;
 
-    std::shared_ptr<SystemLogger> logger;
+    std::shared_ptr<SystemLogger> logger_;
 };
 
 class Log : public OSLoggable

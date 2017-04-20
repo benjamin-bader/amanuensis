@@ -75,20 +75,25 @@ LogStatement::~LogStatement()
 }
 
 OSLoggable::OSLoggable(const std::string &label, const std::string &category) :
-    logger(std::make_shared<UnifiedSystemLogger>(label, category))
+    logger_(std::make_shared<UnifiedSystemLogger>(label, category))
 {}
 
 LogStatement OSLoggable::log_debug()
 {
-    return LogStatement(LogStatement::debug, logger);
+    return LogStatement(LogStatement::debug, logger_);
 }
 
 LogStatement OSLoggable::log_info()
 {
-    return LogStatement(LogStatement::info, logger);
+    return LogStatement(LogStatement::info, logger_);
 }
 
 LogStatement OSLoggable::log_error()
 {
-    return LogStatement(LogStatement::error, logger);
+    return LogStatement(LogStatement::error, logger_);
+}
+
+std::shared_ptr<SystemLogger> OSLoggable::logger() const
+{
+    return logger_;
 }
