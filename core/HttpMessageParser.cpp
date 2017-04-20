@@ -599,10 +599,15 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
             nameAndHeader = message.headers_.find_by_name("Content-Length");
             if (nameAndHeader != message.headers_.end())
             {
-                uint64_t length;
+                uint64_t length = 0;
                 if (! parse_uint64_t(nameAndHeader->second, length))
                 {
                     return Invalid;
+                }
+
+                if (length == 0)
+                {
+                    return Valid;
                 }
 
                 TRANSIT(fixed_length_entity);

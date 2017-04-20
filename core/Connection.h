@@ -23,6 +23,8 @@
 #include <memory>
 #include <system_error>
 
+#include "global.h"
+
 #include "asiofwd.h"
 #include "HttpMessage.h"
 #include "Listenable.h"
@@ -30,7 +32,7 @@
 class Connection;
 class ConnectionManager;
 
-class ConnectionListener
+class A_EXPORT ConnectionListener
 {
 public:
     ConnectionListener() {}
@@ -44,8 +46,8 @@ public:
     virtual void connection_closing(const std::shared_ptr<Connection> connection) = 0;
 };
 
-class Connection : public std::enable_shared_from_this<Connection>,
-                   public Listenable<ConnectionListener>
+class A_EXPORT Connection : public std::enable_shared_from_this<Connection>,
+                            public Listenable<ConnectionListener>
 {
 public:
     Connection() = delete;

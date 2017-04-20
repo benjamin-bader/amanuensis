@@ -28,7 +28,7 @@
 #include "global.h"
 
 template <typename Listener>
-class A_EXPORT Listenable
+class A_EXPORT_ONLY Listenable
 {
 public:
     Listenable() :

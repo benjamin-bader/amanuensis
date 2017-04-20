@@ -220,3 +220,26 @@ void HttpMessageParserTests::simpleForbiddenResponse()
     QCOMPARE(message.body_as_string(), expected.str());
 }
 
+void HttpMessageParserTests::connectFromEdge()
+{
+    std::string content =
+            "CONNECT news.ycombinator.com:443 HTTP/1.0\r\n"
+            "User-Agent: Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10136\r\n"
+            "Content-Length: 0\r\n"
+            "Proxy-Connection: keep-alive\r\n"
+            "Pragma: wtf\r\n"
+            "\r\n";
+
+    HttpMessage request;
+    HttpMessageParser parser;
+    parser.resetForRequest();
+
+    auto begin = content.begin();
+    auto end = content.end();
+
+    auto state = parser.parse(request, begin, end);
+
+    QCOMPARE(state, HttpMessageParser::State::Valid);
+    QCOMPARE(request.method(), {"CONNECT"});
+}
+

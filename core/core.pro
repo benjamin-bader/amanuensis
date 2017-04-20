@@ -37,14 +37,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-
-QMAKE_CXXFLAGS += -isystem $$PWD/../include
-
 INCLUDEPATH += $$PWD/../include
 
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
-SOURCES += Amanuensis.cpp \
+SOURCES += \
     Proxy.cpp \
     Server.cpp \
     Connection.cpp \
@@ -54,7 +51,7 @@ SOURCES += Amanuensis.cpp \
     HttpMessage.cpp \
     HttpMessageParser.cpp
 
-HEADERS += Amanuensis.h \
+HEADERS += \
     Proxy.h \
     global.h \
     Server.h \
@@ -79,6 +76,12 @@ windows {
 
     LIBS += -lwininet
 }
+
+macx {
+    # Silence Clang warnings about ASIO by marking it as a "system" include.
+    QMAKE_CXXFLAGS += -isystem $$PWD/../include
+}
+
 
 unix {
     target.path = /usr/lib

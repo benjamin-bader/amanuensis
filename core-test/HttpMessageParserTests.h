@@ -34,6 +34,8 @@ private Q_SLOTS:
 
     void simpleOkResponse();
     void simpleForbiddenResponse();
+
+    void connectFromEdge();
 };
 
 #endif

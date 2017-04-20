@@ -26,8 +26,7 @@
 #include <set>
 #include <string>
 
-//#include <asio/io_service.hpp>
-//#include <asio/ip/tcp.hpp>
+#include "global.h"
 
 #include "asiofwd.h"
 #include "Listenable.h"
@@ -39,13 +38,13 @@ typedef std::array<char, 8192> BufferType;
 typedef ObjectPool<BufferType> BufferPool;
 typedef BufferPool::pool_ptr BufferPtr;
 
-class ConnectionManagerListener
+class A_EXPORT ConnectionManagerListener
 {
 public:
     virtual void on_connected(const std::shared_ptr<Connection> &connection) = 0;
 };
 
-class ConnectionManager : public Listenable<ConnectionManagerListener>
+class A_EXPORT ConnectionManager : public Listenable<ConnectionManagerListener>
 {
 public:
     ConnectionManager(asio::io_service &io_service);
