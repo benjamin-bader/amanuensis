@@ -48,6 +48,9 @@ public slots:
     void connectionClosed(const std::shared_ptr<Connection> &connection);
 
 private:
+    void addRowToListView(const std::shared_ptr<Connection> &connection, const std::string &message);
+
+private:
     Ui::MainWindow *ui;
     std::shared_ptr<Proxy> proxy;
     QVector<QMetaObject::Connection> connections;

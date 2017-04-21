@@ -66,46 +66,34 @@ MainWindow::~MainWindow()
 
 void MainWindow::connectionEstablished(const std::shared_ptr<Connection> &connection)
 {
-    QString text = QString("CONN(%1): Established").arg(connection->id());
-
-    model->insertRow(model->rowCount());
-    QModelIndex index = model->index(model->rowCount() - 1);
-    model->setData(index, text);
-    ui->listView->setCurrentIndex(index);
+    addRowToListView(connection, "Established");
 }
 
 void MainWindow::requestReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &request)
 {
-    // TODO(ben): Print hostname and port
     std::stringstream ss;
-    ss << "CONN(" << connection->id() << "): >>> " << request.method() << " " << request.uri();
+    ss << ">>> " << request.method() << " " << request.uri();
 
-    QString text(ss.str().c_str());
-
-    model->insertRow(model->rowCount());
-    QModelIndex index = model->index(model->rowCount() - 1);
-    model->setData(index, text);
-    ui->listView->setCurrentIndex(index);
+    addRowToListView(connection, ss.str());
 }
 
 void MainWindow::responseReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &response)
 {
     std::stringstream ss;
-    ss << "CONN(" << connection->id() << "): <<< " << response.status_code() << " " << response.status_message();
+    ss << "<<< " << response.status_code() << " " << response.status_message();
 
-    QString text(ss.str().c_str());
-
-    model->insertRow(model->rowCount());
-    QModelIndex index = model->index(model->rowCount() - 1);
-    model->setData(index, text);
-    ui->listView->setCurrentIndex(index);
+    addRowToListView(connection, ss.str());
 }
 
 void MainWindow::connectionClosed(const std::shared_ptr<Connection> &connection)
 {
-    std::stringstream ss;
-    ss << "CONN(" << connection->id() << "): Closed";
+    addRowToListView(connection, "Closed");
+}
 
+void MainWindow::addRowToListView(const std::shared_ptr<Connection> &connection, const std::string &message)
+{
+    std::stringstream ss;
+    ss << "CONN(" << connection->id() << "): " << message;
     QString text(ss.str().c_str());
 
     model->insertRow(model->rowCount());
