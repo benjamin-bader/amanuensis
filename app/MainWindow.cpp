@@ -71,6 +71,7 @@ void MainWindow::connectionEstablished(const std::shared_ptr<Connection> &connec
     model->insertRow(model->rowCount());
     QModelIndex index = model->index(model->rowCount() - 1);
     model->setData(index, text);
+    ui->listView->setCurrentIndex(index);
 }
 
 void MainWindow::requestReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &request)
@@ -84,6 +85,7 @@ void MainWindow::requestReceived(const std::shared_ptr<Connection> &connection, 
     model->insertRow(model->rowCount());
     QModelIndex index = model->index(model->rowCount() - 1);
     model->setData(index, text);
+    ui->listView->setCurrentIndex(index);
 }
 
 void MainWindow::responseReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &response)
@@ -96,6 +98,7 @@ void MainWindow::responseReceived(const std::shared_ptr<Connection> &connection,
     model->insertRow(model->rowCount());
     QModelIndex index = model->index(model->rowCount() - 1);
     model->setData(index, text);
+    ui->listView->setCurrentIndex(index);
 }
 
 void MainWindow::connectionClosed(const std::shared_ptr<Connection> &connection)
@@ -108,4 +111,5 @@ void MainWindow::connectionClosed(const std::shared_ptr<Connection> &connection)
     model->insertRow(model->rowCount());
     QModelIndex index = model->index(model->rowCount() - 1);
     model->setData(index, text);
+    ui->listView->setCurrentIndex(index);
 }
