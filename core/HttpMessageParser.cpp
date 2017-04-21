@@ -42,6 +42,8 @@ namespace
     bool parse_uint64_t(const std::string &str, uint64_t &result, int base = 10)
     {
         char *end;
+
+        errno = 0;
         auto parsed = Q_STRTOULL(str.c_str(), &end, base);
 
         auto parse_error = errno;

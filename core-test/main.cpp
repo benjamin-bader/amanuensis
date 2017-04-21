@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <cerrno>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -35,6 +36,11 @@ int main(int argc, char **argv)
     int status = 0;
     for (auto& kvp : tests)
     {
+        // QApplication's ctor sometimes leaves errno set to EINVAL.
+        // Some tests may also alter errno.  In any case, let's start
+        // our tests with a blank slate.
+        errno = 0;
+
         auto& test = kvp.second;
         status |= QTest::qExec(test.get(), arguments);
     }

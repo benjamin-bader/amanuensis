@@ -21,6 +21,7 @@
 #include <QSettings>
 #include <QThread>
 
+#include <cerrno>
 #include <exception>
 #include <memory>
 
@@ -45,6 +46,11 @@ int main(int argc, char *argv[])
         qRegisterMetaType<HttpMessage>();
 
         QApplication a(argc, argv);
+
+        // QApplication pollutes errno on Windows if no debugger
+        // is attached.  Fix that here!
+        errno = 0;
+
         MainWindow w;
         w.show();
 
