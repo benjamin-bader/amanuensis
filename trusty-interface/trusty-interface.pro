@@ -13,8 +13,16 @@ include(../trusty-libs.pri)
 
 HEADERS += \
     Command.h \
-    TrustyCommon.h
+    TrustyCommon.h \
+    CommandRegistry.h \
+    IService.h
 
 SOURCES += \
-    Command.cpp
+    Command.cpp \
+    CommandRegistry.cpp
 
+INCLUDEPATH += \
+    $$PWD/../include
+
+QMAKE_CXXFLAGS += \
+    -isystem $$PWD/../include

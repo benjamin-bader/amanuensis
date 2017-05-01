@@ -15,17 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef COMMAND_H
-#define COMMAND_H
+#ifndef ISERVICE_H
+#define ISERVICE_H
 
-#include <cstdint>
-#include <vector>
+#include <string>
 
-class Command
+class IService
 {
 public:
-    Command();
-    virtual std::vector<uint8_t> serialize() const = 0;
+    virtual void set_http_proxy_host(const std::string &host) = 0;
+    virtual void set_http_proxy_port(int port) = 0;
 };
 
-#endif // COMMAND_H
+#endif // ISERVICE_H

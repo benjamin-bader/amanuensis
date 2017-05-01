@@ -17,10 +17,9 @@
 
 // Apple stuff
 #include <launch.h>
-#include <xpc/xpc.h>
 
 #include "OSLoggable.h"
-#include "TrustyServer.h"
+#include "LocalServer.h"
 
 int lookup_socket_endpoint(std::error_code &ec)
 {
@@ -58,7 +57,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    TrustyServer server(fd);
+    LocalServer server(fd);
     server.run();
 
 

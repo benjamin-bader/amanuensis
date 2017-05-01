@@ -2,7 +2,9 @@
 
 #include <asio.hpp>
 
-struct TrustyServer::impl
+struct TrustyServer::impl :
+        public IService,
+        public std::enable_shared_from_this<TrustyServer::impl>
 {
 public:
     impl(const std::shared_ptr<SystemLogger> &logger, int fd);
@@ -39,7 +41,7 @@ TrustyServer::impl::~impl()
 
 void TrustyServer::impl::do_accept()
 {
-
+    auto self = shared_from_this()
 }
 
 void TrustyServer::impl::run()
@@ -49,7 +51,7 @@ void TrustyServer::impl::run()
 
 TrustyServer::TrustyServer(int socket_fd) :
     OSLoggable("com.bendb.amanuensis.Trusty", "TrustyServer"),
-    impl_(std::make_unique<impl>(this->logger(), socket_fd))
+    impl_(std::make_shared<impl>(this->logger(), socket_fd))
 {
 }
 
@@ -60,4 +62,14 @@ TrustyServer::~TrustyServer()
 void TrustyServer::run()
 {
     impl_->run();
+}
+
+void TrustyServer::set_http_proxy_host(const std::string &host)
+{
+
+}
+
+void TrustyServer::set_http_proxy_port(int port)
+{
+
 }

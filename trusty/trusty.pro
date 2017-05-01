@@ -17,21 +17,25 @@ QMAKE_CXXFLAGS += \
     -isystem $$PWD/../include
 
 INCLUDEPATH += \
-    $$PWD/../include
+    $$PWD/../include \
+    $$PWD/../trusty-interface
 
 QMAKE_LFLAGS += \
+    -F /System/Library/Frameworks/SystemConfiguration.framework/ \
     -sectcreate __TEXT __info_plist $$PWD/trusty-info.plist \
     -sectcreate __TEXT __launchd_plist $$PWD/trusty-launchd.plist
 
-LIBS += -framework Security -framework ServiceManagement
+LIBS += \
+    -framework SystemConfiguration
 
 LIBS += -L$${OUT_PWD}/../trusty-interface/ -ltrusty-interface
 
 DESTDIR = ../
 
 SOURCES += main.cpp \
-    TrustyServer.cpp \
-    OSLoggable.cpp
+    OSLoggable.cpp \
+    TrustyService.cpp \
+    LocalServer.cpp
 
 DISTFILES += \
     trusty-info.plist \
@@ -39,6 +43,7 @@ DISTFILES += \
 
 HEADERS += \
     ../TrustyCommon.h \
-    TrustyServer.h \
-    OSLoggable.h
+    OSLoggable.h \
+    TrustyService.h \
+    LocalServer.h
 
