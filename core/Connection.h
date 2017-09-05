@@ -28,6 +28,7 @@
 #include "asiofwd.h"
 #include "HttpMessage.h"
 #include "Listenable.h"
+#include "Transaction.h"
 
 class Connection;
 class ConnectionManager;
@@ -47,7 +48,8 @@ public:
 };
 
 class A_EXPORT Connection : public std::enable_shared_from_this<Connection>,
-                            public Listenable<ConnectionListener>
+                            public Listenable<ConnectionListener>,
+                            public Transaction
 {
 public:
     Connection() = delete;
@@ -59,8 +61,10 @@ public:
     void start();
     void stop();
 
-    int id() const;
+    int id() const override;
     void set_id(int id);
+
+    TransactionState state() const override;
 
 private:
     class impl;

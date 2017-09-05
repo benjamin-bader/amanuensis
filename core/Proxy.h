@@ -29,6 +29,7 @@
 #include "Connection.h"
 #include "ConnectionManager.h"
 #include "Server.h"
+#include "Transaction.h"
 
 class HttpMessage;
 
@@ -58,12 +59,18 @@ public:
 signals:
     void connectionEstablished(const std::shared_ptr<Connection> &connection);
 
+    void transactionStarted(std::shared_ptr<Transaction> tx);
+
     void requestReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &message);
     void responseReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &message);
 
     void connectionClosed(const std::shared_ptr<Connection> &connection);
 
 private:
+    class ProxyImpl;
+
+    std::unique_ptr<ProxyImpl> impl_;
+
     int port_;
     Server server_;
 };

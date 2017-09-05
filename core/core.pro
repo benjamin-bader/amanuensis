@@ -49,7 +49,9 @@ SOURCES += \
     ConnectionManager.cpp \
     ProxyFactory.cpp \
     HttpMessage.cpp \
-    HttpMessageParser.cpp
+    HttpMessageParser.cpp \
+    Transaction.cpp \
+    ProxyTransaction.cpp
 
 HEADERS += \
     Proxy.h \
@@ -63,7 +65,9 @@ HEADERS += \
     HttpMessage.h \
     HttpMessageParser.h \
     Listenable.h \
-    asiofwd.h
+    asiofwd.h \
+    Transaction.h \
+    ProxyTransaction.h
 
 windows {
     SOURCES += \

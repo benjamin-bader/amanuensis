@@ -21,11 +21,49 @@
 
 #include <QDebug>
 
-Proxy::Proxy(const int port) :
+class Proxy::ProxyImpl : public std::enable_shared_from_this<Proxy>,
+                         public ConnectionManagerListener,
+                         public ConnectionListener
+{
+public:
+    ProxyImpl(const int port);
+
+    void init();
+    void deinit();
+
+    virtual void on_connected(const std::shared_ptr<Connection> &connetion) override;
+
+    virtual void client_request_received(const std::shared_ptr<Connection> connection, const HttpMessage &request) override;
+    virtual void server_response_received(const std::shared_ptr<Connection> connection, const HttpMessage &request) override;
+    virtual void on_error(const std::shared_ptr<Connection> connection, const std::error_code &error) override;
+    virtual void connection_closing(const std::shared_ptr<Connection> connection) override;
+
+private:
+    int port_;
+    Server server_;
+};
+
+Proxy::ProxyImpl::ProxyImpl(const int port) :
     ConnectionManagerListener(),
     ConnectionListener(),
     port_(port),
     server_(port)
+{
+}
+
+void Proxy::ProxyImpl::init()
+{
+    server_.connection_manager()->add_listener(shared_from_this());
+}
+
+void Proxy::ProxyImpl::deinit()
+{
+    server_.connection_manager()->remove_listener(shared_from_this());
+}
+
+
+Proxy::Proxy(const int port) :
+    impl_(std::make_unique<Proxy::ProxyImpl>(port))
 {
 }
 
@@ -35,12 +73,13 @@ Proxy::~Proxy()
 
 void Proxy::init()
 {
-    server_.connection_manager()->add_listener(shared_from_this());
+    impl_->init();
+
 }
 
 void Proxy::deinit()
 {
-    server_.connection_manager()->remove_listener(shared_from_this());
+    impl_->deinit();
 }
 
 void Proxy::on_connected(const std::shared_ptr<Connection> &connection)

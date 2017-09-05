@@ -35,6 +35,19 @@
 class QDebug;
 class HttpMessage;
 
+class HttpMessageParserListener
+{
+    virtual void request_method_read(const std::string &method) = 0;
+    virtual void request_uri_read(const std::string &uri) = 0;
+
+    virtual void response_code_read(int code) = 0;
+    virtual void response_message_read(const std::string &message) = 0;
+
+    virtual void header_read(const std::string &name, const std::string &value) = 0;
+
+    virtual void body_chunk_read(const std::string &buffer, size_t len) = 0;
+};
+
 class A_EXPORT HttpMessageParser
 {
 

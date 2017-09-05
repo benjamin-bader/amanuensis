@@ -18,6 +18,8 @@
 #ifndef WINDOWSPROXY_H
 #define WINDOWSPROXY_H
 
+#pragma once
+
 #include "global.h"
 
 #include "Proxy.h"

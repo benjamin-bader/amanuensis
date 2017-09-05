@@ -1,0 +1,20 @@
+language: cpp
+
+dist: trusty
+sudo: required
+
+compiler: gcc
+
+before_install:
+  - sudo apt-get -qq update
+
+script:
+  - qmake "CONFIG+=test" amanuensis.pro
+  - make
+  - ./core-test
+
+addons:
+  apt:
+    packages:
+      - cmake
+      - 

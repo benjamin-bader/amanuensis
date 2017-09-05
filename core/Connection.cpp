@@ -15,6 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*! \file Implements transparent HTTP proxy session per [RFC 2616](https://tools.ietf.org/html/rfc2616).
+ *
+ *
+ */
+
 #include "Connection.h"
 
 #include <array>
@@ -55,8 +60,55 @@ namespace {
         BufferPtr buffer;
         size_t size;
     };
+
+    std::list<std::string> hop_by_hop_headers = std::list<std::string> {
+            "Connection",
+            "Keep-Alive",
+            "Proxy-Authenticate",
+            "Proxy-Authorization",
+            "TE",
+            "Trailers",
+            "Transfer-Encoding",
+            "Upgrade"
+    };
 }
 
+/**
+ * @brief Holds implementations details of a Connection.
+ *
+ * The Connection state lifecycle is a little complicated,
+ * because it attempts to perform certain proxy functions in
+ * parallel with reading client requests:
+ *
+ * - As soon as a complete request line is received, we initiate
+ *   a DNS query and a subsequent remote connection, buffering
+ *   request data until the remote connection is established.
+ *
+ * - As soon as the remote connection is established, we begin
+ *   sending buffered client data.  At the same time, we begin
+ *   relaying data received from the remote back to the client.
+ *
+ * Thus, there are three independent "threads":
+ * 1. A "thread" reading data from the client, parsing it, and
+ *    subsequently feeding it into an output buffer.
+ *
+ * 2. A "thread" pulling from the output buffer and writing the
+ *    data to the remote.
+ *
+ * 3. A "thread" reading from the remote, parsing it, and relaying
+ *    the data directly to the client.
+ *
+ * There is no division of labor in the return direction, because
+ * we don't need to perform work analogous to DNS resolution - the
+ * connection from us to the client is already open.  Therefore we
+ * can condense reading, parsing, and relaying into one fiber.
+ *
+ * @remarks
+ * Because we expect that the client connection originates on the same
+ * machine on which we are running, we don't bother to begin emitting
+ * listener events (or forwarding data to the remote) until all headers
+ * have been read.
+ */
 class Connection::impl : public Listenable<ConnectionListener>
 {
 public:
@@ -73,7 +125,8 @@ public:
         isSendingServerResponse_(false),
         requestParser_(),
         request_(),
-        response_()
+        response_(),
+        txState_(TransactionState::Start)
     {}
 
     int id_;
@@ -94,6 +147,8 @@ public:
     HttpMessageParser requestParser_;
     HttpMessage request_;
     HttpMessage response_;
+
+    TransactionState txState_;
 };
 
 
