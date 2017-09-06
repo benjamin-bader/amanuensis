@@ -56,7 +56,7 @@ std::chrono::system_clock::time_point parse_http_date(const std::string &text)
         std::istringstream input(text);
         input.imbue(std::locale("en_US"));
 
-        input >> date::parse("", &tp);
+        //input >> date::parse("", &tp);
 
         if (input)
         {

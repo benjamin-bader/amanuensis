@@ -8,8 +8,10 @@
 #include <string>
 #include <system_error>
 
-#include "asiofwd.h"
+//#include "asiofwd.h"
 #include "global.h"
+
+#include <asio.hpp>
 
 class ConnectionPool;
 
@@ -18,22 +20,23 @@ class Conn
 public:
     Conn(asio::basic_stream_socket<asio::ip::tcp, asio::stream_socket_service<asio::ip::tcp>> &&socket);
 
-    std::chrono::time_point expires_at() const;
-    void expires_at(const std::chrono::time_point &expires_at);
+    std::chrono::system_clock::time_point expires_at() const;
+    void expires_at(const std::chrono::system_clock::time_point &expires_at);
 
 
 
 private:
     asio::basic_stream_socket<asio::ip::tcp, asio::stream_socket_service<asio::ip::tcp>> socket_;
+
+    std::chrono::system_clock::time_point expires_at_;
 };
 
 class ConnectionPool
 {
 public:
     ConnectionPool(asio::io_service &service);
-    ~ConnectionPool();
 
-    Conn make_client_connection(asio::basic_stream_socket<asio::ip::tcp, asio::stream_socket_service<asio::ip::tcp> &&socket);
+    Conn make_client_connection(asio::basic_stream_socket<asio::ip::tcp, asio::stream_socket_service<asio::ip::tcp>> &&socket);
 
     /**
      * @brief Find any open (and unused) connection to the given endpoint.
@@ -48,6 +51,6 @@ public:
 private:
     class impl;
     const std::unique_ptr<impl> impl_;
-}
+};
 
 #endif // CONNECTIONPOOL_H

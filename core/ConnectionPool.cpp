@@ -1,29 +1,37 @@
 #include "ConnectionPool.h"
 
+#include <unordered_map>
 #include <utility>
 
 #include <asio.hpp>
 
+
+Conn::Conn(asio::ip::tcp::socket &&socket) :
+    socket_(std::move(socket)),
+    expires_at_(std::chrono::system_clock::time_point::max())
+{
+
+}
+
+
 class ConnectionPool::impl
 {
 public:
-    impl(asio::ip::tcp::socket &&socket);
+    impl(asio::io_service &);
 
 private:
-    asio::ip::tcp::socket socket_;
+    asio::ip::tcp::resolver resolver_;
 
-    std::chrono::time_point expires_at_;
 };
 
-ConnectionPool::impl::impl(asio::ip::tcp::socket &&socket) :
-    socket_(std::move(socket)),
-    expires_at_(std::chrono::time_point())
+ConnectionPool::impl::impl(asio::io_service &service) : resolver_(service)
 {
 
 }
 
-ConnectionPool::ConnectionPool(asio::ip::tcp::socket &&socket) :
-    impl_(std::make_unique<ConnectionPool::impl>(std::move(socket)))
-{
+ConnectionPool::ConnectionPool(asio::io_service &service)
+    : impl_(std::make_unique<ConnectionPool::impl>(service))
+{}
 
-}
+
+
