@@ -18,11 +18,13 @@ class Conn
 public:
     Conn(asio::basic_stream_socket<asio::ip::tcp, asio::stream_socket_service<asio::ip::tcp>> &&socket);
 
-    std::chrono::time_point expires_at();
+    std::chrono::time_point expires_at() const;
+    void expires_at(const std::chrono::time_point &expires_at);
+
+
 
 private:
     asio::basic_stream_socket<asio::ip::tcp, asio::stream_socket_service<asio::ip::tcp>> socket_;
-    bool is_open_;
 };
 
 class ConnectionPool

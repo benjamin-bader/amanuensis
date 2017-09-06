@@ -152,6 +152,8 @@ enum TransactionState
 class A_EXPORT Transaction : public Listenable<TransactionListener>
 {
 public:
+    Transaction() {}
+
     virtual ~Transaction()
     {
     }

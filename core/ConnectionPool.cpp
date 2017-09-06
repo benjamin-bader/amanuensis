@@ -16,7 +16,8 @@ private:
 };
 
 ConnectionPool::impl::impl(asio::ip::tcp::socket &&socket) :
-    socket_(std::move(socket))
+    socket_(std::move(socket)),
+    expires_at_(std::chrono::time_point())
 {
 
 }

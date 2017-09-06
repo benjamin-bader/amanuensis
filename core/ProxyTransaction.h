@@ -28,7 +28,7 @@ class ConnectionManager;
 class ProxyTransaction : public Transaction
 {
 public:
-    ProxyTransaction(int id, ConnectionManager *connectionPool, Connection &&clientConnection);
+    ProxyTransaction(int id, ConnectionManager *connectionPool, Connection *clientConnection);
 
     int id() const override { return id_; }
 
@@ -38,10 +38,10 @@ private:
     int id_;
     std::error_code error_;
 
-    Connection client_;
-    Connection remote_;
+    Connection *client_;
+    Connection *remote_;
 
-    ConnectionManager *connectionPool_;
+    ConnectionManager *connection_pool_;
 
     TransactionState state_;
 };

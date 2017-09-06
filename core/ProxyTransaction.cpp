@@ -29,13 +29,6 @@
 namespace
 {
 
-std::chrono::time_point tm_to_time_point(const std::tm &tm)
-{
-    auto d = std::chrono::duration();
-
-    std::chrono::time_point()
-}
-
 /**
  * Parses the given text into a std::chrono::time_point, according
  * to RFC 7231's Date/Time Formats spec in section 7.1.1.1.
@@ -44,7 +37,7 @@ std::chrono::time_point tm_to_time_point(const std::tm &tm)
  * @return a std::chrono::time_point parsed from the given @ref text.
  * @throws std::domain_error if the date cannot be understood.
  */
-std::chrono::time_point parse_http_date(const std::string &text)
+std::chrono::system_clock::time_point parse_http_date(const std::string &text)
 {
     // per RFC 7231, we MUST accept dates in the following formats:
     // 1. IMF-fixdate (e.g. Sun, 06 Nov 1994 08:49:37 GMT)
@@ -58,16 +51,16 @@ std::chrono::time_point parse_http_date(const std::string &text)
 
     for (auto &format : { IMF_FIXDATE, RFC_850, ASCTIME })
     {
-        std::tm tm = {};
+        std::chrono::system_clock::time_point tp = {};
 
         std::istringstream input(text);
         input.imbue(std::locale("en_US"));
 
-        input >> std::get_time(&tm, format);
+        input >> date::parse("", &tp);
 
         if (input)
         {
-            return tm_to_time_point(tm);
+            return tp;
         }
     }
 
@@ -76,7 +69,14 @@ std::chrono::time_point parse_http_date(const std::string &text)
 
 } // namespace
 
-ProxyTransaction::ProxyTransaction()
+ProxyTransaction::ProxyTransaction(int id, ConnectionManager *connectionPool, Connection *clientConnection)
+    : Transaction()
+    , id_(id)
+    , error_()
+    , client_(nullptr)
+    , remote_(nullptr)
+    , connection_pool_(connectionPool)
+    , state_(TransactionState::Start)
 {
 
 }

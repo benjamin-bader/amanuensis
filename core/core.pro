@@ -54,7 +54,6 @@ SOURCES += \
     ProxyFactory.cpp \
     HttpMessage.cpp \
     HttpMessageParser.cpp \
-    Transaction.cpp \
     ProxyTransaction.cpp \
     ConnectionPool.cpp
 
