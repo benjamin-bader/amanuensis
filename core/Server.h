@@ -24,6 +24,9 @@
 
 #include "global.h"
 
+namespace ama
+{
+
 class ConnectionManager;
 
 class A_EXPORT Server : public std::enable_shared_from_this<Server>
@@ -40,5 +43,7 @@ private:
     class impl;
     std::unique_ptr<impl> impl_;
 };
+
+} // namespace ama
 
 #endif // SERVER_H

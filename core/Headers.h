@@ -25,6 +25,9 @@
 
 #include "global.h"
 
+namespace ama
+{
+
 class A_EXPORT Headers
 {
 private:
@@ -54,5 +57,7 @@ public:
 
     void insert(const std::string &name, const std::string &value);
 };
+
+} // namespace ama
 
 #endif // HEADERS_H

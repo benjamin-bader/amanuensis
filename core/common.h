@@ -15,40 +15,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef PROXYTRANSACTION_H
-#define PROXYTRANSACTION_H
+#ifndef COMMON_H
+#define COMMON_H
 
 #pragma once
 
-#include "Transaction.h"
+#include <chrono>
 
 namespace ama
 {
 
-class Connection;
-class ConnectionManager;
-
-class ProxyTransaction : public Transaction
-{
-public:
-    ProxyTransaction(int id, ConnectionManager *connectionPool, Connection *clientConnection);
-
-    int id() const override { return id_; }
-
-    std::error_code error() const override { return error_; }
-
-private:
-    int id_;
-    std::error_code error_;
-
-    Connection *client_;
-    Connection *remote_;
-
-    ConnectionManager *connection_pool_;
-
-    TransactionState state_;
-};
+typedef std::chrono::system_clock::time_point time_point;
 
 } // namespace ama
 
-#endif // PROXYTRANSACTION_H
+#endif // COMMON_H

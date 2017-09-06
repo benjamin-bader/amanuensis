@@ -22,6 +22,8 @@
 
 #include <QDebug>
 
+using namespace ama;
+
 HttpMessage::HttpMessage() :
     method_(),
     uri_(),

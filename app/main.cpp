@@ -30,8 +30,8 @@
 #include "ProxyFactory.h"
 #include "Server.h"
 
-Q_DECLARE_METATYPE(std::shared_ptr<Connection>)
-Q_DECLARE_METATYPE(HttpMessage)
+Q_DECLARE_METATYPE(std::shared_ptr<ama::Connection>)
+Q_DECLARE_METATYPE(ama::HttpMessage)
 
 int main(int argc, char *argv[])
 {
@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
 
     try
     {
-        qRegisterMetaType<std::shared_ptr<Connection>>();
-        qRegisterMetaType<HttpMessage>();
+        qRegisterMetaType<std::shared_ptr<ama::Connection>>();
+        qRegisterMetaType<ama::HttpMessage>();
 
         QApplication a(argc, argv);
 

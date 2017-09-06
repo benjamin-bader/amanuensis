@@ -26,6 +26,8 @@
 #include "Proxy.h"
 #include "ProxyFactory.h"
 
+using namespace ama;
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),

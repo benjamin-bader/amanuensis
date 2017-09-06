@@ -29,6 +29,8 @@
 #include "Headers.h"
 #include "HttpMessage.h"
 
+using namespace ama;
+
 class ResponseBuilder {};
 
 #if defined(Q_OS_WIN)

@@ -33,6 +33,10 @@
 #include "Headers.h"
 
 class QDebug;
+
+namespace ama
+{
+
 class HttpMessage;
 
 class HttpMessageParserListener
@@ -174,6 +178,8 @@ private:
     std::string value_buffer_;
 };
 
-QDebug operator<<(QDebug d, const HttpMessageParser &parser);
+} // namespace ama
+
+QDebug operator<<(QDebug d, const ama::HttpMessageParser &parser);
 
 #endif // HTTPMESSAGEPARSER_H

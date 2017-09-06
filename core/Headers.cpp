@@ -21,6 +21,8 @@
 #include <locale>
 #include <mutex>
 
+using namespace ama;
+
 namespace {
     char lowercase_lookup_table[256];
     std::once_flag lowercase_init_flag;

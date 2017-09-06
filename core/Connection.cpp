@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-/*! \file Implements transparent HTTP proxy session per [RFC 2616](https://tools.ietf.org/html/rfc2616).
+/*! \file Implements transparent HTTP proxy session per [RFC 7230](https://tools.ietf.org/html/rfc7230).
  *
  *
  */
@@ -37,6 +37,8 @@
 #include "HttpMessage.h"
 #include "HttpMessageParser.h"
 #include "Listenable.h"
+
+using namespace ama;
 
 namespace {
     QDebug operator<<(QDebug d, const std::string &str)

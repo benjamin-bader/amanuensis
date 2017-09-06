@@ -24,6 +24,9 @@
 
 #include "global.h"
 
+namespace ama
+{
+
 class Proxy;
 
 class A_EXPORT ProxyFactory
@@ -33,5 +36,7 @@ public:
 
     std::shared_ptr<Proxy> create(const int port);
 };
+
+} // ama
 
 #endif // PROXYFACTORY_H

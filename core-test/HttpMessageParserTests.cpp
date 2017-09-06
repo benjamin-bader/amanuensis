@@ -27,6 +27,8 @@
 #include "HttpMessage.h"
 #include "HttpMessageParser.h"
 
+using namespace ama;
+
 HttpMessageParserTests::HttpMessageParserTests()
 {
 }

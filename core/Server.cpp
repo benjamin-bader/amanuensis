@@ -27,6 +27,8 @@
 #include "Connection.h"
 #include "ConnectionManager.h"
 
+using namespace ama;
+
 class Server::impl
 {
 public:

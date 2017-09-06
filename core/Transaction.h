@@ -29,6 +29,9 @@
 
 #include "Listenable.h"
 
+namespace ama
+{
+
 class Transaction;
 
 /**
@@ -174,5 +177,7 @@ private:
     Transaction(const Transaction&) = delete;
     Transaction& operator=(const Transaction&) = delete;
 };
+
+} // namespace ama
 
 #endif // TRANSACTION_H

@@ -21,6 +21,8 @@
 
 #include <QDebug>
 
+using namespace ama;
+
 class Proxy::ProxyImpl : public std::enable_shared_from_this<Proxy>,
                          public ConnectionManagerListener,
                          public ConnectionListener

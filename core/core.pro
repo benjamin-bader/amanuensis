@@ -73,7 +73,8 @@ HEADERS += \
     Transaction.h \
     ProxyTransaction.h \
     ConnectionPool.h \
-    date.h
+    date.h \
+    common.h
 
 windows {
     SOURCES += \

@@ -26,6 +26,9 @@
 #include <mutex>
 #include <stack>
 
+namespace ama
+{
+
 /**
  * @brief An object that owns a pool of resources, for example buffers of memory.
  *
@@ -163,5 +166,7 @@ private:
     std::atomic<size_t> num_borrowed_ = ATOMIC_VAR_INIT(0);
     std::atomic<size_t> num_idle_     = ATOMIC_VAR_INIT(0);
 };
+
+} // namespace ama
 
 #endif // OBJECTPOOL_H

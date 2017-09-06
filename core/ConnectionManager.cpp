@@ -23,6 +23,8 @@
 
 #include "Connection.h"
 
+using namespace ama;
+
 class ConnectionManager::impl
 {
 public:

@@ -30,6 +30,9 @@
 #include "Listenable.h"
 #include "Transaction.h"
 
+namespace ama
+{
+
 class Connection;
 class ConnectionManager;
 
@@ -86,5 +89,7 @@ private:
     void notify_error(const std::error_code &error);
     void notify_connection_closing();
 };
+
+} // namespace ama
 
 #endif // CONNECTION_H

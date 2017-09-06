@@ -27,6 +27,8 @@
 #include <windows.h>
 #include <wininet.h>
 
+namespace ama { namespace win {
+
 class A_EXPORT WindowsProxy : public Proxy
 {
 public:
@@ -37,5 +39,8 @@ private:
     INTERNET_PER_CONN_OPTION_LIST originalOptionList;
     INTERNET_PER_CONN_OPTION originalOptions[5];
 };
+
+} // namespace ama::win
+} // namespace ama
 
 #endif // WINDOWSPROXY_H
