@@ -149,8 +149,7 @@ enum TransactionState
  * A Transaction is modeled as a state machine, defined by the TransactionState
  * enum.
  */
-class A_EXPORT Transaction : public std::enable_shared_from_this<Transaction>,
-                             public Listenable<TransactionListener>
+class A_EXPORT Transaction : public Listenable<TransactionListener>
 {
 public:
     virtual ~Transaction()

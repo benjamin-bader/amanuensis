@@ -32,6 +32,8 @@ class stream_socket_service;
 template <typename Protocol, typename StreamSocketService>
 class basic_stream_socket;
 
+template <typename InternetProtocol>
+class basic_endpoint;
 
 namespace ip {
 

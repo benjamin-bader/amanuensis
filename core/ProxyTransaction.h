@@ -23,15 +23,25 @@
 #include "Transaction.h"
 
 class Connection;
+class ConnectionManager;
 
 class ProxyTransaction : public Transaction
 {
 public:
-    ProxyTransaction();
+    ProxyTransaction(int id, ConnectionManager *connectionPool, Connection &&clientConnection);
+
+    int id() const override { return id_; }
+
+    std::error_code error() const override { return error_; }
 
 private:
+    int id_;
+    std::error_code error_;
+
     Connection client_;
     Connection remote_;
+
+    ConnectionManager *connectionPool_;
 
     TransactionState state_;
 };
