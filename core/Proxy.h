@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "common.h"
 #include "global.h"
 
 #include <QObject>

@@ -20,10 +20,11 @@
 #include <ctime>
 
 #include <chrono>
-#include <iomanip>>
+#include <iomanip>
 #include <locale>
 #include <sstream>
 
+#include "common.h"
 #include "date.h"
 
 using namespace ama;
@@ -39,7 +40,7 @@ namespace
  * @return a std::chrono::time_point parsed from the given @ref text.
  * @throws std::domain_error if the date cannot be understood.
  */
-std::chrono::system_clock::time_point parse_http_date(const std::string &text)
+time_point parse_http_date(const std::string &text)
 {
     // per RFC 7231, we MUST accept dates in the following formats:
     // 1. IMF-fixdate (e.g. Sun, 06 Nov 1994 08:49:37 GMT)
@@ -53,7 +54,7 @@ std::chrono::system_clock::time_point parse_http_date(const std::string &text)
 
     for (auto &format : { IMF_FIXDATE, RFC_850, ASCTIME })
     {
-        std::chrono::system_clock::time_point tp = {};
+        time_point tp = {};
 
         std::istringstream input(text);
         input.imbue(std::locale("en_US"));
@@ -82,4 +83,7 @@ ProxyTransaction::ProxyTransaction(int id, std::shared_ptr<ConnectionPool> conne
 {
 }
 
-
+time_point ama::parse_date(const std::string &text)
+{
+    return parse_http_date(text);
+}

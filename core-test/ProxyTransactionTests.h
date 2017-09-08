@@ -15,36 +15,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef SERVER_H
-#define SERVER_H
+#ifndef PROXYTRANSACTIONTESTS_H
+#define PROXYTRANSACTIONTESTS_H
 
-#pragma once
+#include <QObject>
 
-#include <memory>
-
-#include "global.h"
-
-namespace ama
+class ProxyTransactionTests : public QObject
 {
+    Q_OBJECT
 
-class ConnectionManager;
-class ConnectionPool;
-
-class A_EXPORT Server : public std::enable_shared_from_this<Server>
-{
 public:
-    Server(const int port = 9999);
-    ~Server();
+    ProxyTransactionTests();
 
-    std::shared_ptr<ConnectionManager> connection_manager() const;
-
-private:
-    void do_accept();
-
-    class impl;
-    std::unique_ptr<impl> impl_;
+private Q_SLOTS:
+    void parseModernDate();
+    void parseLegacyDate();
+    void parseAsctimeDate();
 };
 
-} // namespace ama
 
-#endif // SERVER_H
+#endif // PROXYTRANSACTIONTESTS_H

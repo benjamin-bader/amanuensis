@@ -41,7 +41,6 @@ class Transaction;
 class A_EXPORT TransactionListener
 {
 public:
-    TransactionListener();
     virtual ~TransactionListener() {}
 
     virtual void RequestLineRead(const Transaction &tx, const std::string &requestLine) = 0;

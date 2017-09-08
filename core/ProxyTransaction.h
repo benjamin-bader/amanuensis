@@ -22,6 +22,8 @@
 
 #include <memory>
 
+#include "common.h"
+
 #include "Transaction.h"
 
 namespace ama
@@ -50,6 +52,8 @@ private:
 
     TransactionState state_;
 };
+
+time_point parse_date(const std::string &text);
 
 } // namespace ama
 

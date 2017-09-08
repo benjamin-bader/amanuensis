@@ -63,29 +63,33 @@ void Proxy::ProxyImpl::deinit()
     server_.connection_manager()->remove_listener(shared_from_this());
 }
 
-void Proxy::ProxyImpl::on_connected(const std::shared_ptr<Connection> &connetion)
+void Proxy::ProxyImpl::on_connected(const std::shared_ptr<Connection> &connection)
 {
+    UNUSED(connection);
     // TODO
 }
 
 void Proxy::ProxyImpl::client_request_received(const std::shared_ptr<Connection> connection, const HttpMessage &request)
 {
-
+    UNUSED(connection);
+    UNUSED(request);
 }
 
 void Proxy::ProxyImpl::server_response_received(const std::shared_ptr<Connection> connection, const HttpMessage &request)
 {
-
+    UNUSED(connection);
+    UNUSED(request);
 }
 
 void Proxy::ProxyImpl::on_error(const std::shared_ptr<Connection> connection, const std::error_code &error)
 {
-
+    UNUSED(connection);
+    UNUSED(error);
 }
 
 void Proxy::ProxyImpl::connection_closing(const std::shared_ptr<Connection> connection)
 {
-
+    UNUSED(connection);
 }
 
 

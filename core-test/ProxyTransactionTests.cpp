@@ -15,36 +15,38 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef SERVER_H
-#define SERVER_H
+#include "ProxyTransactionTests.h"
 
-#pragma once
+#include <chrono>
+#include <string>
+#include <sstream>
 
-#include <memory>
+#include <QString>
+#include <QtTest>
 
-#include "global.h"
+#include "ProxyTransaction.h"
 
-namespace ama
+#include "date.h"
+
+using namespace ama;
+
+ProxyTransactionTests::ProxyTransactionTests()
 {
+    // noop
+}
 
-class ConnectionManager;
-class ConnectionPool;
-
-class A_EXPORT Server : public std::enable_shared_from_this<Server>
+// TODO: Validate the return values of these parsed dates
+void ProxyTransactionTests::parseModernDate()
 {
-public:
-    Server(const int port = 9999);
-    ~Server();
+    ama::parse_date("Sun, 06 Nov 1994 08:49:37 GMT");
+}
 
-    std::shared_ptr<ConnectionManager> connection_manager() const;
+void ProxyTransactionTests::parseLegacyDate()
+{
+    ama::parse_date("Sunday, 06-Nov-94 08:49:37 GMT");
+}
 
-private:
-    void do_accept();
-
-    class impl;
-    std::unique_ptr<impl> impl_;
-};
-
-} // namespace ama
-
-#endif // SERVER_H
+void ProxyTransactionTests::parseAsctimeDate()
+{
+    ama::parse_date("Sun Nov  6 08:49:37 1994");
+}

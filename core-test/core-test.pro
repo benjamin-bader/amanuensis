@@ -28,11 +28,13 @@ CONFIG += c++14
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
 HEADERS += \
-    HttpMessageParserTests.h
+    HttpMessageParserTests.h \
+    ProxyTransactionTests.h
 
 SOURCES += \
     main.cpp \
-    HttpMessageParserTests.cpp
+    HttpMessageParserTests.cpp \
+    ProxyTransactionTests.cpp
 
 DEFINES += SRCDIR=\\\"$$PWD/\\\"
 

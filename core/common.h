@@ -22,6 +22,8 @@
 
 #include <chrono>
 
+#define UNUSED(x) ((void) x)
+
 namespace ama
 {
 

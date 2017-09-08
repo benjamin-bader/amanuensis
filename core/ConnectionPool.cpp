@@ -24,14 +24,14 @@ Conn::Conn(asio::ip::tcp::socket &&socket)
     : socket_(std::move(socket))
     , expires_at_(time_point::max())
     , should_close_(false)
-    , pool_(nullptr)
+//    , pool_(nullptr)
 {}
 
 Conn::Conn(asio::io_service &service)
     : socket_(service)
     , expires_at_(time_point::max())
     , should_close_(false)
-    , pool_(nullptr)
+//    , pool_(nullptr)
 {}
 
 Conn::~Conn()
@@ -67,6 +67,8 @@ std::shared_ptr<Conn> ConnectionPool::impl::make_connection(asio::ip::tcp::socke
 
 std::shared_ptr<Conn> ConnectionPool::impl::find_open_connection(const std::string &host, int port)
 {
+    UNUSED(host);
+    UNUSED(port);
     return std::shared_ptr<Conn>(nullptr);
 }
 

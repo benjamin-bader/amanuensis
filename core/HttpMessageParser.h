@@ -28,6 +28,7 @@
 #include <tuple>
 #include <vector>
 
+#include "common.h"
 #include "global.h"
 
 #include "Headers.h"
@@ -84,7 +85,7 @@ public:
     }
 
 private:
-    friend QDebug operator<<(QDebug, const ama::HttpMessageParser &parser);
+    friend QDebug operator<<(QDebug, const HttpMessageParser &parser);
 
     State consume(HttpMessage &message, char input);
 
@@ -178,8 +179,8 @@ private:
     std::string value_buffer_;
 };
 
-} // namespace ama
+//QDebug operator<<(QDebug d, const HttpMessageParser &parser);
 
-QDebug operator<<(QDebug d, const ama::HttpMessageParser &parser);
+} // namespace ama
 
 #endif // HTTPMESSAGEPARSER_H

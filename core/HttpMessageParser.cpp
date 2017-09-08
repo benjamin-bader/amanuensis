@@ -617,7 +617,7 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
                 TRANSIT(fixed_length_entity);
                 remaining_ = length;
                 message.body_.clear();
-                message.body_.reserve(static_cast<size_t>(length));
+                message.body_.reserve(static_cast<size_t>(length));  // TODO: can length be bigger than a size_t?
                 return Incomplete;
             }
 
@@ -743,11 +743,11 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
     return Invalid;
 }
 
-QDebug operator<<(QDebug d, const HttpMessageParser &parser)
-{
-    return d << "RequestParser{state="
+//QDebug operator<<(QDebug d, const HttpMessageParser &parser)
+//{
+//    return d << "RequestParser{state="
 //             << parser.state_
 //             << ", buffer=" << QString(parser.buffer_.c_str())
 //             << ", value_buffer= " << QString(parser.value_buffer_.c_str())
-             << "}";
-}
+//             << "}";
+//}

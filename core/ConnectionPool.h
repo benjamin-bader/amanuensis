@@ -62,8 +62,6 @@ private:
     time_point expires_at_;
     bool should_close_;
 
-    ConnectionPool *pool_;
-
     friend class ConnectionPool;
 };
 
