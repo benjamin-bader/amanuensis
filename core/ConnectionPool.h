@@ -4,6 +4,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <system_error>
 
@@ -17,13 +18,53 @@ namespace ama
 
 class ConnectionPool;
 
-class Connection
+class Conn : public std::enable_shared_from_this<Conn>
 {
 public:
-    virtual ~Connection() {}
+    Conn(asio::io_service &service);
+    Conn(asio::ip::tcp::socket &&socket);
 
-    virtual time_point expires_at() const = 0;
-    virtual void set_expires_at(const time_point &tp) = 0;
+    ~Conn();
+
+    time_point expires_at() const
+    {
+        return expires_at_;
+    }
+
+    void set_expires_at(const time_point &tp)
+    {
+        expires_at_ = tp;
+    }
+
+    /**
+     * @brief Mark this connection for closure when it is returned
+     *        to the connection pool.
+     */
+    void force_close_on_return()
+    {
+        should_close_ = true;
+    }
+
+    template <typename BufferSequence, typename WriteHandler>
+    void async_write(const BufferSequence &bufferSequence, WriteHandler&& handler)
+    {
+        asio::async_write(socket_, bufferSequence, std::move(handler));
+    }
+
+    template <typename MutableBufferSequence, typename ReadHandler>
+    void async_read_some(const MutableBufferSequence &buffers, ReadHandler &&handler)
+    {
+        socket_.async_read_some(buffers, std::move(handler));
+    }
+
+private:
+    asio::ip::tcp::socket socket_;
+    time_point expires_at_;
+    bool should_close_;
+
+    ConnectionPool *pool_;
+
+    friend class ConnectionPool;
 };
 
 class ConnectionPool
@@ -31,7 +72,7 @@ class ConnectionPool
 public:
     ConnectionPool(asio::io_service &service);
 
-    Connection* make_connection(asio::basic_stream_socket<asio::ip::tcp, asio::stream_socket_service<asio::ip::tcp>> &&socket);
+    std::shared_ptr<Conn> make_connection(asio::ip::tcp::socket &&socket);
 
     /**
      * @brief Find any open (and unused) connection to the given endpoint.
@@ -39,9 +80,9 @@ public:
      * @param port the remote enpoint's TCP port
      * @return Returns a pointer to an open Conn, or @code nullptr if none exists.
      */
-    Connection* find_open_connection(const std::string &host, int port);
+    std::shared_ptr<Conn> find_open_connection(const std::string &host, int port);
 
-    void try_open(const std::string *host, int port, std::function<void(Connection*, std::error_code)> callback);
+    void try_open(const std::string &host, int port, std::function<void(std::shared_ptr<Conn>, std::error_code)> &&callback);
 
 private:
     class impl;

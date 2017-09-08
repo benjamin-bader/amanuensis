@@ -84,7 +84,7 @@ public:
     }
 
 private:
-    friend QDebug operator<<(QDebug, const HttpMessageParser &parser);
+    friend QDebug operator<<(QDebug, const ama::HttpMessageParser &parser);
 
     State consume(HttpMessage &message, char input);
 

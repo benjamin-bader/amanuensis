@@ -31,6 +31,9 @@
 #include "Server.h"
 #include "Transaction.h"
 
+namespace ama
+{
+
 class HttpMessage;
 
 class A_EXPORT Proxy : public QObject,
@@ -74,5 +77,7 @@ private:
     int port_;
     Server server_;
 };
+
+} // namespace ama
 
 #endif // PROXY_H

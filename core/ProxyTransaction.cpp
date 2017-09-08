@@ -71,14 +71,15 @@ std::chrono::system_clock::time_point parse_http_date(const std::string &text)
 
 } // namespace
 
-ProxyTransaction::ProxyTransaction(int id, ConnectionManager *connectionPool, Connection *clientConnection)
+ProxyTransaction::ProxyTransaction(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection)
     : Transaction()
     , id_(id)
     , error_()
-    , client_(nullptr)
+    , client_(clientConnection)
     , remote_(nullptr)
     , connection_pool_(connectionPool)
     , state_(TransactionState::Start)
 {
-
 }
+
+

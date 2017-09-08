@@ -27,8 +27,6 @@ CONFIG += c++14
 
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
-HEADERS += RequestParserTests.h
-
 HEADERS += \
     HttpMessageParserTests.h
 

@@ -20,31 +20,33 @@
 
 #pragma once
 
+#include <memory>
+
 #include "Transaction.h"
 
 namespace ama
 {
 
-class Connection;
-class ConnectionManager;
+class Conn;
+class ConnectionPool;
 
 class ProxyTransaction : public Transaction
 {
 public:
-    ProxyTransaction(int id, ConnectionManager *connectionPool, Connection *clientConnection);
+    ProxyTransaction(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection);
 
-    int id() const override { return id_; }
-
-    std::error_code error() const override { return error_; }
+    virtual int id() const override { return id_; }
+    virtual TransactionState state() const override { return state_; }
+    virtual std::error_code error() const override { return error_; }
 
 private:
     int id_;
     std::error_code error_;
 
-    Connection *client_;
-    Connection *remote_;
+    std::shared_ptr<Conn> client_;
+    std::shared_ptr<Conn> remote_;
 
-    ConnectionManager *connection_pool_;
+    std::shared_ptr<ConnectionPool> connection_pool_;
 
     TransactionState state_;
 };

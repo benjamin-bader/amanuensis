@@ -746,8 +746,8 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
 QDebug operator<<(QDebug d, const HttpMessageParser &parser)
 {
     return d << "RequestParser{state="
-             << parser.state_
-             << ", buffer=" << QString(parser.buffer_.c_str())
-             << ", value_buffer= " << QString(parser.value_buffer_.c_str())
+//             << parser.state_
+//             << ", buffer=" << QString(parser.buffer_.c_str())
+//             << ", value_buffer= " << QString(parser.value_buffer_.c_str())
              << "}";
 }
