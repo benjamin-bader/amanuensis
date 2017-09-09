@@ -33,26 +33,29 @@ class Conn;
 class ConnectionPool;
 
 class ProxyTransaction : public Transaction
+                       , public std::enable_shared_from_this<ProxyTransaction>
 {
 public:
     ProxyTransaction(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection);
 
-    virtual int id() const override { return id_; }
-    virtual TransactionState state() const override { return state_; }
-    virtual std::error_code error() const override { return error_; }
+    virtual int id() const override;
+    virtual TransactionState state() const override;
+    virtual std::error_code error() const override;
 
 private:
-    int id_;
-    std::error_code error_;
-
-    std::shared_ptr<Conn> client_;
-    std::shared_ptr<Conn> remote_;
-
-    std::shared_ptr<ConnectionPool> connection_pool_;
-
-    TransactionState state_;
+    class impl;
+    std::unique_ptr<impl> impl_;
 };
 
+/**
+ * Parses the given text into a time_point, according
+ * to RFC 7231's Date/Time Formats spec in section 7.1.1.1.
+ *
+ * @param text the text to be parsed.
+ * @return a time_point parsed from the given @c text.
+ * @throws std::invalid_argument if the date cannot be understood.
+ */
+time_point parse_http_date(const std::string &text);
 time_point parse_date(const std::string &text);
 
 } // namespace ama

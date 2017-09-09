@@ -136,7 +136,19 @@ HttpMessageParser::HttpMessageParser() :
     state_(method_start),
     remaining_(0),
     buffer_(),
-    value_buffer_()
+    value_buffer_(),
+    listener_(nullptr)
+{
+    buffer_.reserve(64);
+    value_buffer_.reserve(64);
+}
+
+HttpMessageParser::HttpMessageParser(std::shared_ptr<HttpMessageParserListener> listener)
+    : state_(method_start)
+    , remaining_(0)
+    , buffer_()
+    , value_buffer_()
+    , listener_(listener)
 {
     buffer_.reserve(64);
     value_buffer_.reserve(64);

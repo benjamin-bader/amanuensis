@@ -58,6 +58,7 @@ class A_EXPORT HttpMessageParser
 
 public:
     HttpMessageParser();
+    HttpMessageParser(std::shared_ptr<HttpMessageParserListener> listener);
     ~HttpMessageParser();
 
     enum State {
@@ -89,6 +90,7 @@ private:
 
     State consume(HttpMessage &message, char input);
 
+private:
     enum ParserState {
         // Request status line
         //
@@ -177,6 +179,8 @@ private:
     // A special string buffer used for header values, so that
     // we keep the current header name at the same time.
     std::string value_buffer_;
+
+    std::shared_ptr<HttpMessageParserListener> listener_;
 };
 
 //QDebug operator<<(QDebug d, const HttpMessageParser &parser);

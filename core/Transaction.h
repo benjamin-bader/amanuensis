@@ -43,19 +43,19 @@ class A_EXPORT TransactionListener
 public:
     virtual ~TransactionListener() {}
 
-    virtual void RequestLineRead(const Transaction &tx, const std::string &requestLine) = 0;
-    virtual void RequestHeaderRead(const Transaction &tx, const std::pair<std::string, std::string> &header) = 0;
-    virtual void RequestBodyChunkRead(const Transaction &tx, const std::array<char, 8192> &buffer, size_t size) = 0;
-    virtual void ReadRequestFinished(const Transaction &tx) = 0;
+    virtual void request_line_read(const Transaction &tx, const std::string &method, const std::string &uri) = 0;
+    virtual void request_header_read(const Transaction &tx, const std::string &name, const std::string &value) = 0;
+    virtual void request_body_chunk_read(const Transaction &tx, const std::array<char, 8192> &buffer, size_t size) = 0;
+    virtual void request_finished(const Transaction &tx) = 0;
 
-    virtual void ResponseStatusRead(const Transaction &tx, int statusCode, const std::string &message) = 0;
-    virtual void ResponseHeaderRead(const Transaction &tx, const std::pair<std::string, std::string> &header) = 0;
-    virtual void ResponseBodyChunkRead(const Transaction &tx, const std::array<char, 8192> &buffer, size_t size) = 0;
-    virtual void ReadResponseFinished(const Transaction &tx) = 0;
+    virtual void response_status_read(const Transaction &tx, int statusCode, const std::string &message) = 0;
+    virtual void response_header_read(const Transaction &tx, const std::string &name, const std::string &value) = 0;
+    virtual void response_body_chunk_read(const Transaction &tx, const std::array<char, 8192> &buffer, size_t size) = 0;
+    virtual void response_finished(const Transaction &tx) = 0;
 
-    virtual void TransactionComplete(const Transaction &tx) = 0;
+    virtual void transaction_complete(const Transaction &tx) = 0;
 
-    virtual void TransactionFailed(const Transaction &tx) = 0;
+    virtual void transaction_failed(const Transaction &tx) = 0;
 };
 
 /**

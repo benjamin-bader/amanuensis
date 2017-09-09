@@ -31,6 +31,8 @@ private Q_SLOTS:
     void parseModernDate();
     void parseLegacyDate();
     void parseAsctimeDate();
+
+    void parseInvalidInputThrowsInvalidArgument();
 };
 
 

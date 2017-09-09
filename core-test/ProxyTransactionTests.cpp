@@ -38,15 +38,28 @@ ProxyTransactionTests::ProxyTransactionTests()
 // TODO: Validate the return values of these parsed dates
 void ProxyTransactionTests::parseModernDate()
 {
-    ama::parse_date("Sun, 06 Nov 1994 08:49:37 GMT");
+    ama::parse_http_date("Sun, 06 Nov 1994 08:49:37 GMT");
 }
 
 void ProxyTransactionTests::parseLegacyDate()
 {
-    ama::parse_date("Sunday, 06-Nov-94 08:49:37 GMT");
+    ama::parse_http_date("Sunday, 06-Nov-94 08:49:37 GMT");
 }
 
 void ProxyTransactionTests::parseAsctimeDate()
 {
-    ama::parse_date("Sun Nov  6 08:49:37 1994");
+    ama::parse_http_date("Sun Nov  6 08:49:37 1994");
+}
+
+void ProxyTransactionTests::parseInvalidInputThrowsInvalidArgument()
+{
+    try
+    {
+        ama::parse_http_date("ceci n'est pas un date");
+        QFAIL("Expected an invalid_argument exception, but none was thrown");
+    }
+    catch (std::invalid_argument &ex)
+    {
+        // good
+    }
 }
