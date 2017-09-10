@@ -93,6 +93,11 @@ ProxyTransaction::impl::impl(
 {
 }
 
+void ProxyTransaction::impl::begin()
+{
+    // TODO
+}
+
 #define ASSERT_STATE(expected) do { \
     if (state_ != (expected)) { \
         notify_failure(); \
@@ -198,7 +203,7 @@ std::error_code ProxyTransaction::error() const
     return impl_->error();
 }
 
-time_point ama::parse_http_date(const std::string &text)
+time_point ProxyTransaction::parse_http_date(const std::string &text)
 {
     // per RFC 7231, we MUST accept dates in the following formats:
     // 1. IMF-fixdate (e.g. Sun, 06 Nov 1994 08:49:37 GMT)
@@ -215,7 +220,7 @@ time_point ama::parse_http_date(const std::string &text)
         time_point tp = {};
 
         std::istringstream input(text);
-        input.imbue(std::locale("en_US"));
+        input.imbue(std::locale("C"));
 
         input >> date::parse(format, tp);
 
@@ -228,7 +233,3 @@ time_point ama::parse_http_date(const std::string &text)
     throw std::invalid_argument("Invalid date-time value");
 }
 
-time_point ama::parse_date(const std::string &text)
-{
-    return parse_http_date(text);
-}

@@ -26,6 +26,7 @@
 #include <functional>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <vector>
 
 #include <QDebug>
@@ -204,7 +205,7 @@ void Connection::do_read_client_request()
 
         if (ec)
         {
-            qWarning() << "Error reading from client, abandoning session: " << ec.message();
+            qWarning() << "Error reading from client, abandoning session: " << ec.message().c_str();
             impl_->connectionManager_->stop(self);
             return;
         }
@@ -284,7 +285,7 @@ void Connection::lookup_remote_host()
             // Something happened - couldn't connect to the remote endpoint?
             // TODO(ben): Propagate the failure!
 
-            qWarning() << "Failed to connect to the remote endpoint: " << ec.message();
+            qWarning() << "Failed to connect to the remote endpoint: " << ec.message().c_str();
             impl_->connectionManager_->stop(self);
             return;
         }
@@ -293,12 +294,12 @@ void Connection::lookup_remote_host()
         asio::async_connect(impl_->remoteSocket_, result, [this, self](asio::error_code ec, asio::ip::tcp::resolver::iterator i) {
             if (ec)
             {
-                qWarning() << "Failed to connect to remote host: " << ec.message();
+                qWarning() << "Failed to connect to remote host: " << ec.message().c_str();
                 impl_->connectionManager_->stop(self);
                 return;
             }
 
-            qInfo() << "Connected to remote host " << i->host_name() << " at " << i->endpoint().address().to_string();
+            qInfo() << "Connected to remote host " << i->host_name().c_str() << " at " << i->endpoint().address().to_string().c_str();
 
             do_write_client_request();
         });
@@ -329,7 +330,7 @@ void Connection::do_write_client_request()
         if (ec)
         {
             // boo
-            qWarning() << "Error sending client request to server: " << ec.message();
+            qWarning() << "Error sending client request to server: " << ec.message().c_str();
             impl_->connectionManager_->stop(self);
             return;
         }
@@ -359,7 +360,7 @@ void Connection::do_read_server_response()
     auto buffer = impl_->connectionManager_->takeBuffer();
     impl_->remoteSocket_.async_read_some(asio::buffer(*buffer),
                                          [this, self, buffer](asio::error_code ec, size_t bytesRead) {
-        qInfo() << "Received server chunk; ec=" << ec.message() << "bytesRead=" << bytesRead;
+        qInfo() << "Received server chunk; ec=" << ec.message().c_str() << "; bytesRead=" << bytesRead;
         if (ec == asio::error::eof)
         {
             // done reading, nothing more to do here
@@ -369,7 +370,7 @@ void Connection::do_read_server_response()
         }
         else if (ec)
         {
-            qWarning() << "Error reading from server!  " << ec.message();
+            qWarning() << "Error reading from server!  " << ec.message().c_str();
             impl_->connectionManager_->stop(self);
             return;
         }
@@ -440,7 +441,7 @@ void Connection::do_write_server_response()
 
         if (ec)
         {
-            qWarning() << "nope: " << ec.message();
+            qWarning() << "nope: " << ec.message().c_str();
             impl_->connectionManager_->stop(self);
             return;
         }
@@ -489,7 +490,7 @@ void Connection::do_tls_connect()
                                                         [this, self, request](asio::error_code ec, asio::ip::tcp::resolver::iterator result) {
         if (ec)
         {
-            qWarning() << "Error resolving remote host for CONNECT (" << request.uri() << "): " << ec.message();
+            qWarning() << "Error resolving remote host for CONNECT (" << request.uri().c_str() << "): " << ec.message().c_str();
             send_connect_response(false);
             return;
         }
@@ -499,7 +500,7 @@ void Connection::do_tls_connect()
 
             if (ec)
             {
-                qWarning() << "Failed to connect to remote host: " << ec.message();
+                qWarning() << "Failed to connect to remote host: " << ec.message().c_str();
                 send_connect_response(false);
                 return;
             }
@@ -535,7 +536,7 @@ void Connection::send_connect_response(bool success)
 
         if (ec)
         {
-            qWarning() << "Error writing CONNECT response: " << ec.message();
+            qWarning() << "Error writing CONNECT response: " << ec.message().c_str();
             impl_->connectionManager_->stop(self);
             return;
         }
@@ -611,28 +612,31 @@ void Connection::do_tls_server_to_client_forwarding()
 
 void Connection::notify_client_request_received()
 {
-    notify_listeners([this](auto &listener) {
-        listener->client_request_received(shared_from_this(), impl_->request_);
+    auto self = shared_from_this();
+    notify_listeners([this, self](auto &listener) {
+        listener->client_request_received(self, impl_->request_);
     });
 }
 
 void Connection::notify_server_response_received()
 {
-    notify_listeners([this](auto &listener) {
-        listener->server_response_received(shared_from_this(), impl_->response_);
+    auto self = shared_from_this();
+    notify_listeners([this, self](auto &listener) {
+        listener->server_response_received(self, impl_->response_);
     });
 }
 
 void Connection::notify_error(const std::error_code &error)
 {
-    notify_listeners([this, &error](auto &listener) {
-        listener->on_error(shared_from_this(), error);
+    auto self = shared_from_this();
+    notify_listeners([this, self, &error](auto &listener) {
+        listener->on_error(self, error);
     });
 }
 
 void Connection::notify_connection_closing()
 {
     notify_listeners([this](auto &listener) {
-        listener->connection_closing(shared_from_this());
+        listener->connection_closing(this->shared_from_this());
     });
 }

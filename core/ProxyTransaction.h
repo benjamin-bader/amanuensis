@@ -21,8 +21,10 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "common.h"
+#include "global.h"
 
 #include "Transaction.h"
 
@@ -32,8 +34,8 @@ namespace ama
 class Conn;
 class ConnectionPool;
 
-class ProxyTransaction : public Transaction
-                       , public std::enable_shared_from_this<ProxyTransaction>
+class A_EXPORT ProxyTransaction : public Transaction
+                                , public std::enable_shared_from_this<ProxyTransaction>
 {
 public:
     ProxyTransaction(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection);
@@ -42,21 +44,20 @@ public:
     virtual TransactionState state() const override;
     virtual std::error_code error() const override;
 
+    /**
+     * Parses the given text into a time_point, according
+     * to RFC 7231's Date/Time Formats spec in section 7.1.1.1.
+     *
+     * @param text the text to be parsed.
+     * @return a time_point parsed from the given @c text.
+     * @throws std::invalid_argument if the date cannot be understood.
+     */
+    static time_point parse_http_date(const std::string &text);
+
 private:
     class impl;
     std::unique_ptr<impl> impl_;
 };
-
-/**
- * Parses the given text into a time_point, according
- * to RFC 7231's Date/Time Formats spec in section 7.1.1.1.
- *
- * @param text the text to be parsed.
- * @return a time_point parsed from the given @c text.
- * @throws std::invalid_argument if the date cannot be understood.
- */
-time_point parse_http_date(const std::string &text);
-time_point parse_date(const std::string &text);
 
 } // namespace ama
 
