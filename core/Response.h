@@ -25,10 +25,11 @@
 
 #include "Headers.h"
 #include "HttpMessage.h"
-#include "HttpMessageParser.h"
 
 namespace ama
 {
+
+class HttpMessageParser;
 
 class A_EXPORT Response
 {
@@ -38,12 +39,13 @@ public:
     Headers& headers() { return message_.headers(); }
     const Headers& headers() const { return message_.headers(); }
 
-    HttpMessage& message() { return message_; }
+    int status_code() const { return message_.status_code(); }
+    const std::string& status_message() const { return message_.status_message(); }
+
+    friend class HttpMessageParser;
 
 private:
     HttpMessage message_;
-
-    friend class ama::HttpMessageParser;
 };
 
 } // namespace ama

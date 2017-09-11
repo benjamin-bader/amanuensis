@@ -155,7 +155,7 @@ void ProxyTransaction::impl::read_client_request()
 
         self->raw_input_.insert(self->raw_input_.end(), start, stop);
 
-        auto state = self->parser_.parse(self->request().message(), start, stop);
+        auto state = self->parser_.parse(self->request(), start, stop);
         if (state == HttpMessageParser::State::Incomplete)
         {
             self->read_client_request();
@@ -279,7 +279,7 @@ void ProxyTransaction::impl::read_remote_response()
 
        self->raw_input_.insert(self->raw_input_.end(), begin, end);
 
-       switch (self->parser_.parse(self->response().message(), begin, end))
+       switch (self->parser_.parse(self->response(), begin, end))
        {
        case HttpMessageParser::State::Incomplete:
            self->read_remote_response();

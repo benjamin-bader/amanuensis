@@ -32,6 +32,8 @@
 #include "global.h"
 
 #include "Headers.h"
+#include "Request.h"
+#include "Response.h"
 
 class QDebug;
 
@@ -55,6 +57,18 @@ public:
 
     void resetForRequest();
     void resetForResponse();
+
+    template <typename InputIterator>
+    State parse(Request &request, InputIterator &begin, InputIterator end)
+    {
+        return parse(request.message_, begin, end);
+    }
+
+    template <typename InputIterator>
+    State parse(Response &response, InputIterator &begin, InputIterator end)
+    {
+        return parse(response.message_, begin, end);
+    }
 
     template <typename InputIterator>
     State parse(HttpMessage &message, InputIterator &begin, InputIterator end)

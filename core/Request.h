@@ -29,6 +29,8 @@
 namespace ama
 {
 
+class HttpMessageParser;
+
 class A_EXPORT Request
 {
 public:
@@ -40,7 +42,7 @@ public:
     Headers& headers() { return message_.headers(); }
     const Headers& headers() const { return message_.headers(); }
 
-    HttpMessage& message() { return message_; }
+    friend class HttpMessageParser;
 
 private:
     HttpMessage message_;
