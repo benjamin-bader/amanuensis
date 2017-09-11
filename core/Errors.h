@@ -40,9 +40,11 @@ enum class ProxyError
 
 enum class ProxyErrorType
 {
-    SessionFatal = 0,
-    GlobalFatal = 0,
+    SessionFatal = 1,
+    GlobalFatal,
 };
+
+std::error_code make_error_code(ama::ProxyError pe);
 
 } // namespace ama
 
@@ -54,8 +56,6 @@ struct is_error_code_enum<ama::ProxyError> : true_type {};
 
 template <>
 struct is_error_condition_enum<ama::ProxyErrorType> : true_type {};
-
-std::error_code make_error_code(ama::ProxyError);
 
 } // namespace std
 

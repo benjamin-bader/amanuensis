@@ -65,7 +65,7 @@ const ProxyErrorCategory category = {};
 
 } // namespace
 
-std::error_code std::make_error_code(ProxyError pe)
+std::error_code ama::make_error_code(ProxyError pe)
 {
     return {static_cast<int>(pe), category};
 }
