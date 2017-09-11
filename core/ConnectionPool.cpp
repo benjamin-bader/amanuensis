@@ -48,7 +48,7 @@ public:
 
     std::shared_ptr<Conn> find_open_connection(const std::string &host, int port);
 
-    void try_open(const std::string &host, int port, std::function<void (std::shared_ptr<Conn>, std::error_code)> callback);
+    void try_open(const std::string &host, const std::string &port, std::function<void (std::shared_ptr<Conn>, std::error_code)> &&callback);
 
 private:
     asio::ip::tcp::resolver resolver_;
@@ -72,13 +72,12 @@ std::shared_ptr<Conn> ConnectionPool::impl::find_open_connection(const std::stri
     return std::shared_ptr<Conn>(nullptr);
 }
 
-void ConnectionPool::impl::try_open(const std::string &host, int port, std::function<void (std::shared_ptr<Conn>, std::error_code)> callback)
+void ConnectionPool::impl::try_open(const std::string &host, const std::string &port, std::function<void (std::shared_ptr<Conn>, std::error_code)> &&callback)
 {
     auto self = shared_from_this();
-    auto port_text = std::to_string(port);
     auto conn = std::make_shared<Conn>(resolver_.get_io_service());
 
-    asio::ip::tcp::resolver::query query(host, port_text);
+    asio::ip::tcp::resolver::query query(host, port);
 
     resolver_.async_resolve(query, [this, self, conn, callback]
                             (asio::error_code ec, asio::ip::tcp::resolver::iterator result)
@@ -118,7 +117,7 @@ std::shared_ptr<Conn> ConnectionPool::find_open_connection(const std::string &ho
     return impl_->find_open_connection(host, port);
 }
 
-void ConnectionPool::try_open(const std::string &host, int port, std::function<void (std::shared_ptr<Conn>, std::error_code)> &&callback)
+void ConnectionPool::try_open(const std::string &host, const std::string &port, std::function<void (std::shared_ptr<Conn>, std::error_code)> &&callback)
 {
     impl_->try_open(host, port, std::move(callback));
 }

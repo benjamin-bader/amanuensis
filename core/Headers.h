@@ -22,6 +22,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include "global.h"
 
@@ -36,6 +37,9 @@ private:
         bool operator()(const std::string &lhs, const std::string &rhs) const;
     };
 
+    std::vector<std::string> names_;
+    std::vector<std::string> values_;
+
     std::multimap<std::string, std::string, ci_less> map_;
 
 public:
@@ -46,14 +50,18 @@ public:
     Headers();
     Headers(const Headers &headers);
 
-    iterator find_by_name(const std::string &name);
-    const_iterator find_by_name(const std::string &name) const;
+    std::vector<std::string> find_by_name(const std::string &name) const;
 
-    const_iterator begin() const;
-    const_iterator end() const;
+//    iterator find_by_name(const std::string &name);
+//    const_iterator find_by_name(const std::string &name) const;
+
+    Headers normalize() const;
 
     bool empty() const;
     size_t size() const;
+
+    const std::vector<std::string>& names() const { return names_; }
+    const std::vector<std::string>& values() const { return values_; }
 
     void insert(const std::string &name, const std::string &value);
 };

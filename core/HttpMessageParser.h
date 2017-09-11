@@ -23,7 +23,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <string>
 #include <system_error>
 #include <tuple>
@@ -41,25 +40,11 @@ namespace ama
 
 class HttpMessage;
 
-class HttpMessageParserListener
-{
-    virtual void request_method_read(const std::string &method) = 0;
-    virtual void request_uri_read(const std::string &uri) = 0;
-
-    virtual void response_code_read(int code) = 0;
-    virtual void response_message_read(const std::string &message) = 0;
-
-    virtual void header_read(const std::string &name, const std::string &value) = 0;
-
-    virtual void body_chunk_read(const std::string &buffer, size_t len) = 0;
-};
-
 class A_EXPORT HttpMessageParser
 {
 
 public:
     HttpMessageParser();
-    HttpMessageParser(std::shared_ptr<HttpMessageParserListener> listener);
     ~HttpMessageParser();
 
     enum State {
@@ -180,8 +165,6 @@ private:
     // A special string buffer used for header values, so that
     // we keep the current header name at the same time.
     std::string value_buffer_;
-
-    std::shared_ptr<HttpMessageParserListener> listener_;
 };
 
 //QDebug operator<<(QDebug d, const HttpMessageParser &parser);

@@ -17,25 +17,33 @@
 
 #include "ProxyTransaction.h"
 
+#include <array>
+
 #include <ctime>
 
 #include <chrono>
+#include <cstdint>
 #include <iomanip>
 #include <locale>
 #include <sstream>
+#include <vector>
+
+#include <asio.hpp>
 
 #include "common.h"
 #include "date.h"
 
+#include "ConnectionPool.h"
+#include "Errors.h"
 #include "HttpMessageParser.h"
 
 using namespace ama;
 
-class ProxyTransaction::impl : public HttpMessageParserListener
-                             , public std::enable_shared_from_this<ProxyTransaction::impl>
+class ProxyTransaction::impl : public std::enable_shared_from_this<ProxyTransaction::impl>
 {
 public:
     impl(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection, ProxyTransaction *parent);
+    ~impl();
 
     int id() const { return id_; }
     TransactionState state() const { return state_; }
@@ -43,19 +51,24 @@ public:
 
     void begin();
 
-public:
-    virtual void request_method_read(const std::string &method) override;
-    virtual void request_uri_read(const std::string &uri) override;
-
-    virtual void response_code_read(int code) override;
-    virtual void response_message_read(const std::string &message) override;
-
-    virtual void header_read(const std::string &name, const std::string &value) override;
-
-    virtual void body_chunk_read(const std::string &buffer, size_t len) override;
+    Request& request() { return request_; }
+    Response& response() { return response_; }
 
 private:
-    void notify_failure();
+    void read_client_request();
+    void open_remote_connection();
+    void send_client_request_to_remote();
+
+    void read_remote_response();
+    void send_remote_response_to_client();
+
+    void establish_tls_tunnel();
+    void send_client_request_via_tunnel();
+    void send_server_response_via_tunnel();
+
+    void notify_failure(std::error_code ec);
+
+    void release_connections();
 
 private:
     int id_;
@@ -71,10 +84,14 @@ private:
     HttpMessageParser parser_;
     ProxyTransaction *parent_;
 
-    // "temporaries" to hold values that are parsed
-    // until we can pass them along to listeners.
-    std::string buffer_;
-    int response_code_;
+    std::array<uint8_t, 8192> read_buffer_;
+
+    // Records the exact bytes received from client/server, so that
+    // they can be relayed as-is.
+    std::vector<uint8_t> raw_input_;
+
+    Request request_;
+    Response response_;
 };
 
 ProxyTransaction::impl::impl(
@@ -88,95 +105,251 @@ ProxyTransaction::impl::impl(
     , remote_(nullptr)
     , connection_pool_(connectionPool)
     , state_(TransactionState::Start)
-    , parser_(shared_from_this())
+    , parser_()
     , parent_(parent)
+    , read_buffer_()
+    , raw_input_()
+    , request_()
+    , response_()
 {
+}
+
+ProxyTransaction::impl::~impl()
+{
+
 }
 
 void ProxyTransaction::impl::begin()
 {
-    // TODO
-}
-
-#define ASSERT_STATE(expected) do { \
-    if (state_ != (expected)) { \
-        notify_failure(); \
-        return; \
-    } \
-} while (0)
-
-void ProxyTransaction::impl::request_method_read(const std::string &method)
-{
-    ASSERT_STATE(TransactionState::RequestLine);
-    buffer_ = method;
-}
-
-void ProxyTransaction::impl::request_uri_read(const std::string &uri)
-{
-    ASSERT_STATE(TransactionState::RequestLine);
-    parent_->notify_listeners([this, &uri](auto &listener)
-    {
-        listener->request_line_read(*parent_, buffer_, uri);
-    });
-
-    buffer_.clear();
-    state_ = TransactionState::RequestHeaders;
-}
-
-void ProxyTransaction::impl::response_code_read(int code)
-{
-    ASSERT_STATE(TransactionState::ResponseStatus);
-    response_code_ = code;
-}
-
-void ProxyTransaction::impl::response_message_read(const std::string &message)
-{
-    ASSERT_STATE(TransactionState::ResponseStatus);
-    parent_->notify_listeners([this, &message](auto &listener)
-    {
-        listener->response_status_read(*parent_, response_code_, message);
-    });
-    state_ = TransactionState::ResponseHeaders;
-}
-
-void ProxyTransaction::impl::header_read(const std::string &name, const std::string &value)
-{
-    switch (state_)
-    {
-    case TransactionState::RequestHeaders:
-
-        break;
-    case TransactionState::ResponseHeaders:
-
-        break;
-    default:
-        notify_failure();
-        break;
-    }
-}
-
-void ProxyTransaction::impl::body_chunk_read(const std::string &buffer, size_t len)
-{
-    switch (state_)
-    {
-    case TransactionState::RequestHeaders:
-
-        break;
-    case TransactionState::ResponseHeaders:
-
-        break;
-    default:
-        notify_failure();
-        break;
-    }
-}
-
-void ProxyTransaction::impl::notify_failure()
-{
+    auto tx = parent_->shared_from_this();
     parent_->notify_listeners([this](auto &listener)
     {
-        listener->transaction_failed(*parent_);
+        listener->on_transaction_start(*parent_);
     });
+
+    raw_input_.clear();
+    read_client_request();
+}
+
+void ProxyTransaction::impl::read_client_request()
+{
+    auto self = shared_from_this();
+    auto buffer = std::make_shared<std::array<uint8_t, 8192>>();
+    client_->async_read_some(*buffer, [self, buffer](auto ec, size_t num_read)
+    {
+        if (ec == asio::error::eof)
+        {
+            // unexpected disconnect
+            self->notify_failure(ProxyError::ClientDisconnected);
+            return;
+        }
+
+        if (ec)
+        {
+            self->notify_failure(ec);
+            return;
+        }
+
+        auto start = std::begin(*buffer);
+        auto stop = start + num_read;
+
+        self->raw_input_.insert(self->raw_input_.end(), start, stop);
+
+        auto state = self->parser_.parse(self->request().message(), start, stop);
+        if (state == HttpMessageParser::State::Incomplete)
+        {
+            self->read_client_request();
+            return;
+        }
+
+        if (state == HttpMessageParser::State::Invalid)
+        {
+            self->notify_failure(ProxyError::MalformedRequest);
+            return;
+        }
+
+        if (state == HttpMessageParser::State::Valid)
+        {
+            if (self->request().method() == "CONNECT")
+            {
+
+            }
+            else
+            {
+                self->parent_->notify_listeners([self](auto &listener)
+                {
+                    listener->on_request_read(*self->parent_);
+                });
+
+                self->open_remote_connection();
+                return;
+            }
+        }
+
+        // wtf, this isn't any status we recognize
+        self->notify_failure(ProxyError::NetworkError);
+    });
+}
+
+void ProxyTransaction::impl::open_remote_connection()
+{
+    auto headerValues = request().headers().find_by_name("Host");
+    if (headerValues.empty())
+    {
+        //qWarning() << "Malformed request - no 'Host' header found!";
+        notify_failure(ProxyError::MalformedRequest);
+        return;
+    }
+
+    std::string host = headerValues[0];
+    std::string port = "80";
+
+    size_t separator = host.find(':');
+    if (separator != std::string::npos)
+    {
+        try
+        {
+            port = host.substr(separator + 1);
+            host = host.substr(0, separator);
+        }
+        catch (std::out_of_range)
+        {
+            //qWarning() << "Malformed request - assuming port 80";
+        }
+        catch (std::invalid_argument)
+        {
+            //qWarning() << "Malformed request - assuming port 80";
+        }
+    }
+
+    auto self = shared_from_this();
+    connection_pool_->try_open(host, port, [self](auto conn, auto ec)
+    {
+        if (ec)
+        {
+            self->notify_failure(ec);
+            return;
+        }
+
+        self->remote_ = conn;
+        self->send_client_request_to_remote();
+    });
+}
+
+void ProxyTransaction::impl::send_client_request_to_remote()
+{
+    auto self = shared_from_this();
+    remote_->async_write(asio::buffer(raw_input_), [self](auto ec, size_t num_bytes_written)
+    {
+        UNUSED(num_bytes_written);
+
+        if (ec)
+        {
+            self->notify_failure(ec);
+            return;
+        }
+
+        self->raw_input_.clear();
+        self->parser_.resetForResponse();
+        self->read_remote_response();
+    });
+}
+
+void ProxyTransaction::impl::read_remote_response()
+{
+    auto self = shared_from_this();
+    remote_->async_read_some(read_buffer_, [self](auto ec, size_t num_bytes_read)
+    {
+       if (ec == asio::error::eof)
+       {
+           // unexpected disconnect
+           self->notify_failure(ProxyError::RemoteDisconnected);
+           return;
+       }
+
+       if (ec)
+       {
+           // some other error
+           self->notify_failure(ec);
+           return;
+       }
+
+       auto begin = std::begin(self->read_buffer_);
+       auto end = begin + num_bytes_read;
+
+       self->raw_input_.insert(self->raw_input_.end(), begin, end);
+
+       switch (self->parser_.parse(self->response().message(), begin, end))
+       {
+       case HttpMessageParser::State::Incomplete:
+           self->read_remote_response();
+           break;
+
+       case HttpMessageParser::State::Invalid:
+           self->notify_failure(ProxyError::MalformedResponse);
+           break;
+
+       case HttpMessageParser::Valid:
+           self->parent_->notify_listeners([self](auto &listener)
+           {
+               listener->on_response_read(*self->parent_);
+           });
+
+           self->send_remote_response_to_client();
+           break;
+
+       default:
+           // wtf
+           self->notify_failure(ProxyError::MalformedResponse);
+           break;
+       }
+    });
+}
+
+void ProxyTransaction::impl::send_remote_response_to_client()
+{
+    auto self = shared_from_this();
+    client_->async_write(asio::buffer(raw_input_), [self](auto ec, size_t num_bytes_written)
+    {
+        UNUSED(num_bytes_written);
+
+        if (ec == asio::error::eof)
+        {
+            self->notify_failure(ec);
+            return;
+        }
+
+        if (ec)
+        {
+            self->notify_failure(ec);
+            return;
+        }
+
+        // We're done!
+        self->parent_->notify_listeners([self](auto &listener)
+        {
+            listener->on_transaction_complete(*self->parent_);
+        });
+
+        self->release_connections();
+    });
+}
+
+void ProxyTransaction::impl::notify_failure(std::error_code error)
+{
+    release_connections();
+
+    error_ = error;
+    parent_->notify_listeners([this](auto &listener)
+    {
+        listener->on_transaction_failed(*parent_);
+    });
+}
+
+void ProxyTransaction::impl::release_connections()
+{
+    client_.reset();
+    remote_.reset();
 }
 
 /////////////////////////////////
@@ -201,6 +374,16 @@ TransactionState ProxyTransaction::state() const
 std::error_code ProxyTransaction::error() const
 {
     return impl_->error();
+}
+
+Request& ProxyTransaction::request()
+{
+    return impl_->request();
+}
+
+Response& ProxyTransaction::response()
+{
+    return impl_->response();
 }
 
 time_point ProxyTransaction::parse_http_date(const std::string &text)

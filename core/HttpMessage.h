@@ -48,6 +48,7 @@ public:
     int major_version() const;
     int minor_version() const;
 
+    Headers& headers();
     const Headers& headers() const;
 
     const std::vector<uint8_t>& body() const;
@@ -79,6 +80,9 @@ private:
     int minor_version_;
 
     Headers headers_;
+
+    std::vector<std::string> header_names_;
+    std::vector<std::string> header_values_;
 
     std::vector<uint8_t> body_;
 };

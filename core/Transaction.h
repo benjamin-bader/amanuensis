@@ -28,6 +28,8 @@
 #include "global.h"
 
 #include "Listenable.h"
+#include "Request.h"
+#include "Response.h"
 
 namespace ama
 {
@@ -43,19 +45,15 @@ class A_EXPORT TransactionListener
 public:
     virtual ~TransactionListener() {}
 
-    virtual void request_line_read(const Transaction &tx, const std::string &method, const std::string &uri) = 0;
-    virtual void request_header_read(const Transaction &tx, const std::string &name, const std::string &value) = 0;
-    virtual void request_body_chunk_read(const Transaction &tx, const std::array<char, 8192> &buffer, size_t size) = 0;
-    virtual void request_finished(const Transaction &tx) = 0;
+    virtual void on_transaction_start(const Transaction &tx) = 0;
+    virtual void on_request_read(const Transaction &tx) = 0;
 
-    virtual void response_status_read(const Transaction &tx, int statusCode, const std::string &message) = 0;
-    virtual void response_header_read(const Transaction &tx, const std::string &name, const std::string &value) = 0;
-    virtual void response_body_chunk_read(const Transaction &tx, const std::array<char, 8192> &buffer, size_t size) = 0;
-    virtual void response_finished(const Transaction &tx) = 0;
+    virtual void on_response_headers_read(const Transaction &tx) = 0;
+    virtual void on_response_read(const Transaction &tx) = 0;
 
-    virtual void transaction_complete(const Transaction &tx) = 0;
+    virtual void on_transaction_complete(const Transaction &tx) = 0;
 
-    virtual void transaction_failed(const Transaction &tx) = 0;
+    virtual void on_transaction_failed(const Transaction &tx) = 0;
 };
 
 /**
@@ -171,6 +169,9 @@ public:
     // the transaction succeeded!  It merely means that it has
     // not (yet) failed.
     virtual std::error_code error() const = 0;
+
+    virtual Request& request() = 0;
+    virtual Response& response() = 0;
 
 private:
     Transaction(const Transaction&) = delete;

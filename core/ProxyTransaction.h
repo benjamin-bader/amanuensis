@@ -26,6 +26,8 @@
 #include "common.h"
 #include "global.h"
 
+#include "Request.h"
+#include "Response.h"
 #include "Transaction.h"
 
 namespace ama
@@ -43,6 +45,9 @@ public:
     virtual int id() const override;
     virtual TransactionState state() const override;
     virtual std::error_code error() const override;
+
+    virtual Request& request() override;
+    virtual Response& response() override;
 
     /**
      * Parses the given text into a time_point, according

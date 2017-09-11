@@ -52,9 +52,9 @@ public:
     }
 
     template <typename MutableBufferSequence, typename ReadHandler>
-    void async_read_some(const MutableBufferSequence &buffers, ReadHandler &&handler)
+    void async_read_some(MutableBufferSequence &buffers, ReadHandler &&handler)
     {
-        socket_.async_read_some(buffers, std::move(handler));
+        socket_.async_read_some(asio::buffer(buffers), std::move(handler));
     }
 
 private:
@@ -80,7 +80,7 @@ public:
      */
     std::shared_ptr<Conn> find_open_connection(const std::string &host, int port);
 
-    void try_open(const std::string &host, int port, std::function<void(std::shared_ptr<Conn>, std::error_code)> &&callback);
+    void try_open(const std::string &host, const std::string &port, std::function<void(std::shared_ptr<Conn>, std::error_code)> &&callback);
 
 private:
     class impl;

@@ -55,7 +55,10 @@ SOURCES += \
     HttpMessage.cpp \
     HttpMessageParser.cpp \
     ProxyTransaction.cpp \
-    ConnectionPool.cpp
+    ConnectionPool.cpp \
+    Request.cpp \
+    Response.cpp \
+    Errors.cpp
 
 HEADERS += \
     Proxy.h \
@@ -74,7 +77,10 @@ HEADERS += \
     ProxyTransaction.h \
     ConnectionPool.h \
     date.h \
-    common.h
+    common.h \
+    Request.h \
+    Response.h \
+    Errors.h
 
 windows {
     SOURCES += \

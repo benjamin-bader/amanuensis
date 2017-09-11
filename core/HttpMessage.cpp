@@ -67,6 +67,11 @@ int HttpMessage::minor_version() const
     return minor_version_;
 }
 
+Headers& HttpMessage::headers()
+{
+    return headers_;
+}
+
 const Headers& HttpMessage::headers() const
 {
     return headers_;

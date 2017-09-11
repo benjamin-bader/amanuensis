@@ -53,9 +53,9 @@ namespace {
         qDebug() << req.method() << req.uri() << " " << req.major_version() << "/" << req.minor_version();
 
 
-        for (auto& header : req.headers())
+        for (int i = 0; i < req.headers().size(); ++i)
         {
-            qDebug() << header.first << ": " << header.second;
+            qDebug() << req.headers().names()[i] << ": " << req.headers().values()[i];
         }
     }
 
@@ -247,15 +247,15 @@ void Connection::do_read_client_request()
 
 void Connection::lookup_remote_host()
 {
-    Headers::const_iterator iter = impl_->request_.headers().find_by_name("Host");
-    if (iter == impl_->request_.headers().end())
+    auto headerValues = impl_->request_.headers().find_by_name("Host");
+    if (headerValues.empty())
     {
         qWarning() << "Malformed request - no 'Host' header found!";
         impl_->connectionManager_->stop(shared_from_this());
         return;
     }
 
-    std::string host = iter->second;
+    std::string host = headerValues[0];
     std::string port = "80";
 
     size_t separator = host.find(':');

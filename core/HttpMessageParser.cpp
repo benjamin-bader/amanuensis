@@ -136,19 +136,7 @@ HttpMessageParser::HttpMessageParser() :
     state_(method_start),
     remaining_(0),
     buffer_(),
-    value_buffer_(),
-    listener_(nullptr)
-{
-    buffer_.reserve(64);
-    value_buffer_.reserve(64);
-}
-
-HttpMessageParser::HttpMessageParser(std::shared_ptr<HttpMessageParserListener> listener)
-    : state_(method_start)
-    , remaining_(0)
-    , buffer_()
-    , value_buffer_()
-    , listener_(listener)
+    value_buffer_()
 {
     buffer_.reserve(64);
     value_buffer_.reserve(64);
@@ -564,10 +552,9 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
     case newline_3:
         if (input == '\n')
         {
-            Headers::iterator nameAndHeader = message.headers_.find_by_name("Transfer-Encoding");
-            while (nameAndHeader != message.headers_.end())
+            auto headerValues = message.headers_.find_by_name("Transfer-Encoding");
+            for (auto &value : headerValues)
             {
-                std::string &value = nameAndHeader->second;
                 bool is_chunked = false;
 
                 // Is this a simple chunk stream?  If not, do we have a comma-separated list
@@ -609,14 +596,13 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
                     message.body_.clear();
                     return Incomplete;
                 }
-                nameAndHeader++;
             }
 
-            nameAndHeader = message.headers_.find_by_name("Content-Length");
-            if (nameAndHeader != message.headers_.end())
+            headerValues = message.headers_.find_by_name("Content-Length");
+            for (auto &value : headerValues)
             {
                 uint64_t length = 0;
-                if (! parse_uint64_t(nameAndHeader->second, length))
+                if (! parse_uint64_t(value, length))
                 {
                     return Invalid;
                 }
