@@ -59,8 +59,5 @@ When a `Proxy` is initialized, it opens a listening socket and sets up a pool of
 
 When all response data is completely relayed to the client, the transaction is finished, and the `ProxyTransaction` cleans itself up.  This involves deciding whether either `Connection` objects should remain open, and returning them to the pool (or destroying them) as appropriate.
 
-TODO:
-- Refactor HttpMessageParser to expose parse events necessary to implement TransactionListener
-
 ----------------------
 Copyright (C) 2017 Benjamin Bader
