@@ -12,9 +12,7 @@ before_install:
   - sudo apt-get install qt59-meta-minimal
 
 script:
-  - qmake "CONFIG+=test" amanuensis.pro
-  - make
-  - ./core-test
+  - .ci/test
 
 addons:
   apt:
@@ -24,5 +22,7 @@ addons:
       - cmake
       - clang-5.0
   env:
+    - QMAKE_CXX=clang++-5.0
+    - QMAKE_LINK=clang++-5.0
     - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
 

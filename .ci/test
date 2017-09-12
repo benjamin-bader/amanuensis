@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -x
+
+qmake "CONFIG+=test" amanuensis.pro
+make
+LD_LIBRARY_PATH="${TRAVIS_BUILD_DIR}/core" core-test/core-test
