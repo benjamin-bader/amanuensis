@@ -2,6 +2,6 @@
 
 set -x
 
-qmake "CONFIG+=test" "QMAKE_CXX=clang++-5.0" "QMAKE_LINK=clang++-5.0"  amanuensis.pro
+qmake "CONFIG+=test" "CONFIG+=c++14"  "QMAKE_CXX=clang++-5.0" "QMAKE_LINK=clang++-5.0"  amanuensis.pro
 make
 LD_LIBRARY_PATH="${TRAVIS_BUILD_DIR}/core" core-test/core-test
