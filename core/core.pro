@@ -48,9 +48,7 @@ DEFINES += \
 SOURCES += \
     Proxy.cpp \
     Server.cpp \
-    Connection.cpp \
     Headers.cpp \
-    ConnectionManager.cpp \
     ProxyFactory.cpp \
     HttpMessage.cpp \
     HttpMessageParser.cpp \
@@ -64,9 +62,7 @@ HEADERS += \
     Proxy.h \
     global.h \
     Server.h \
-    Connection.h \
     Headers.h \
-    ConnectionManager.h \
     ProxyFactory.h \
     ObjectPool.h \
     HttpMessage.h \

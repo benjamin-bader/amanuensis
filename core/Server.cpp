@@ -24,8 +24,6 @@
 
 #include <asio.hpp>
 
-#include "Connection.h"
-#include "ConnectionManager.h"
 #include "ConnectionPool.h"
 #include "ProxyTransaction.h"
 
@@ -41,7 +39,6 @@ public:
         acceptor_(io_service_),
         socket_(io_service_),
         workers_(),
-        connectionManager_(std::make_shared<ConnectionManager>(io_service_)),
         connection_pool_(std::make_shared<ConnectionPool>(io_service_))
     {}
 
@@ -53,7 +50,6 @@ public:
 
     std::vector<std::thread> workers_;
 
-    std::shared_ptr<ConnectionManager> connectionManager_;
     std::shared_ptr<ConnectionPool> connection_pool_;
 };
 
@@ -95,7 +91,7 @@ Server::~Server()
     impl_->acceptor_.close();
     impl_->io_service_.stop();
 
-    impl_->connectionManager_->stop_all();
+    impl_->connection_pool_ = nullptr;
 
     std::for_each(impl_->workers_.begin(), impl_->workers_.end(), [](std::thread &t) {
         if (t.joinable())
@@ -103,11 +99,6 @@ Server::~Server()
             t.join();
         }
     });
-}
-
-std::shared_ptr<ConnectionManager> Server::connection_manager() const
-{
-    return impl_->connectionManager_;
 }
 
 std::shared_ptr<ConnectionPool> Server::connection_pool() const
