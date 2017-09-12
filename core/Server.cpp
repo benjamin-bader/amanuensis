@@ -18,6 +18,7 @@
 #include "Server.h"
 
 #include <algorithm>
+#include <memory>
 #include <thread>
 
 #include <QDebug>
