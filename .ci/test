@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 
+echo "qmake=$(which qmake)"
+echo "qmake5=$(which qmake59)"
+echo "qmake59=$(which qmake59)"
+
+set -e
 set -x
 
+# This will set up our environment to use the freshly-installed
+# QT 5.9 PPA packages
+source /opt/qt59/bin/qt59-env.sh
+
+qmake -v
 qmake "CONFIG+=test" "CONFIG+=c++14"  "QMAKE_CXX=clang++-5.0" "QMAKE_LINK=clang++-5.0"  amanuensis.pro
 make
 LD_LIBRARY_PATH="${TRAVIS_BUILD_DIR}/core" core-test/core-test
