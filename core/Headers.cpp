@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <locale>
+#include <map>
 #include <mutex>
 #include <sstream>
 
@@ -90,28 +91,29 @@ namespace {
                            std::begin(rhs), std::end(rhs),
                            eq_char_instance);
     }
-}
 
-bool Headers::ci_less::operator ()(const std::string &lhs, const std::string &rhs) const
-{
-    std::call_once(lowercase_init_flag, &init_lookup_table);
+    struct ci_less
+    {
+        bool operator()(const std::string &lhs, const std::string &rhs) const
+        {
+            std::call_once(lowercase_init_flag, &init_lookup_table);
 
-    return std::lexicographical_compare(lhs.begin(), lhs.end(),
-                                        rhs.begin(), rhs.end(),
-                                        lt_char());
+            return std::lexicographical_compare(lhs.begin(), lhs.end(),
+                                                rhs.begin(), rhs.end(),
+                                                lt_char());
+        }
+    };
 }
 
 Headers::Headers()
     : names_()
     , values_()
-    , map_()
 {
 }
 
 Headers::Headers(const Headers &headers)
     : names_(headers.names_)
     , values_(headers.values_)
-    , map_(headers.map_)
 {
 }
 

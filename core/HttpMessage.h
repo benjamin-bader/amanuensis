@@ -81,9 +81,6 @@ private:
 
     Headers headers_;
 
-    std::vector<std::string> header_names_;
-    std::vector<std::string> header_values_;
-
     std::vector<uint8_t> body_;
 };
 

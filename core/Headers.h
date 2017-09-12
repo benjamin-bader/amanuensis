@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include <map>
 #include <string>
 #include <vector>
 
@@ -32,28 +31,14 @@ namespace ama
 class A_EXPORT Headers
 {
 private:
-    struct ci_less
-    {
-        bool operator()(const std::string &lhs, const std::string &rhs) const;
-    };
-
     std::vector<std::string> names_;
     std::vector<std::string> values_;
 
-    std::multimap<std::string, std::string, ci_less> map_;
-
 public:
-    typedef std::multimap<std::string, std::string, ci_less> MapType;
-    typedef MapType::iterator iterator;
-    typedef MapType::const_iterator const_iterator;
-
     Headers();
     Headers(const Headers &headers);
 
     std::vector<std::string> find_by_name(const std::string &name) const;
-
-//    iterator find_by_name(const std::string &name);
-//    const_iterator find_by_name(const std::string &name) const;
 
     Headers normalize() const;
 
