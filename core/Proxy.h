@@ -69,10 +69,7 @@ signals:
 private:
     class ProxyImpl;
 
-    std::unique_ptr<ProxyImpl> impl_;
-
-    int port_;
-    Server server_;
+    std::shared_ptr<ProxyImpl> impl_;
 };
 
 } // namespace ama

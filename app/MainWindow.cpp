@@ -20,11 +20,13 @@
 
 #include <sstream>
 
+#include <QDebug>
 #include <QLabel>
 #include <QSettings>
 
 #include "Proxy.h"
 #include "ProxyFactory.h"
+#include "Transaction.h"
 
 using namespace ama;
 
@@ -44,10 +46,14 @@ MainWindow::MainWindow(QWidget *parent) :
     int port = settings.value("Proxy/port", 9999).toInt();
     proxy = ProxyFactory().create(port);
 
-    connections << connect(proxy.get(), &Proxy::connectionEstablished, this, &MainWindow::connectionEstablished);
-    connections << connect(proxy.get(), &Proxy::requestReceived,       this, &MainWindow::requestReceived);
-    connections << connect(proxy.get(), &Proxy::responseReceived,      this, &MainWindow::responseReceived);
-    connections << connect(proxy.get(), &Proxy::connectionClosed,      this, &MainWindow::connectionClosed);
+    connections << connect(proxy.get(), &Proxy::transactionStarted, [this](std::shared_ptr<Transaction> tx) {
+                   qDebug() << "Got a tx! " << tx->id();
+
+    });
+//    connections << connect(proxy.get(), &Proxy::connectionEstablished, this, &MainWindow::connectionEstablished);
+//    connections << connect(proxy.get(), &Proxy::requestReceived,       this, &MainWindow::requestReceived);
+//    connections << connect(proxy.get(), &Proxy::responseReceived,      this, &MainWindow::responseReceived);
+//    connections << connect(proxy.get(), &Proxy::connectionClosed,      this, &MainWindow::connectionClosed);
 
     ui->listView->setModel(model);
     ui->listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -66,40 +72,40 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::connectionEstablished(const std::shared_ptr<Connection> &connection)
-{
-    addRowToListView(connection, "Established");
-}
+//void MainWindow::connectionEstablished(const std::shared_ptr<Connection> &connection)
+//{
+//    addRowToListView(connection, "Established");
+//}
 
-void MainWindow::requestReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &request)
-{
-    std::stringstream ss;
-    ss << ">>> " << request.method() << " " << request.uri();
+//void MainWindow::requestReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &request)
+//{
+//    std::stringstream ss;
+//    ss << ">>> " << request.method() << " " << request.uri();
 
-    addRowToListView(connection, ss.str());
-}
+//    addRowToListView(connection, ss.str());
+//}
 
-void MainWindow::responseReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &response)
-{
-    std::stringstream ss;
-    ss << "<<< " << response.status_code() << " " << response.status_message();
+//void MainWindow::responseReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &response)
+//{
+//    std::stringstream ss;
+//    ss << "<<< " << response.status_code() << " " << response.status_message();
 
-    addRowToListView(connection, ss.str());
-}
+//    addRowToListView(connection, ss.str());
+//}
 
-void MainWindow::connectionClosed(const std::shared_ptr<Connection> &connection)
-{
-    addRowToListView(connection, "Closed");
-}
+//void MainWindow::connectionClosed(const std::shared_ptr<Connection> &connection)
+//{
+//    addRowToListView(connection, "Closed");
+//}
 
-void MainWindow::addRowToListView(const std::shared_ptr<Connection> &connection, const std::string &message)
-{
-    std::stringstream ss;
-    ss << "CONN(" << connection->id() << "): " << message;
-    QString text(ss.str().c_str());
+//void MainWindow::addRowToListView(const std::shared_ptr<Connection> &connection, const std::string &message)
+//{
+////    std::stringstream ss;
+////    ss << "CONN(" << connection->id() << "): " << message;
+////    QString text(ss.str().c_str());
 
-    model->insertRow(model->rowCount());
-    QModelIndex index = model->index(model->rowCount() - 1);
-    model->setData(index, text);
-    ui->listView->setCurrentIndex(index);
-}
+////    model->insertRow(model->rowCount());
+////    QModelIndex index = model->index(model->rowCount() - 1);
+////    model->setData(index, text);
+////    ui->listView->setCurrentIndex(index);
+//}

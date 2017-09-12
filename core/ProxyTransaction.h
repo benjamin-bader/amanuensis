@@ -41,6 +41,7 @@ class A_EXPORT ProxyTransaction : public Transaction
 {
 public:
     ProxyTransaction(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection);
+    ~ProxyTransaction();
 
     virtual int id() const override;
     virtual TransactionState state() const override;
@@ -63,7 +64,7 @@ public:
 
 private:
     class impl;
-    std::unique_ptr<impl> impl_;
+    std::shared_ptr<impl> impl_;
 };
 
 } // namespace ama

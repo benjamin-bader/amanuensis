@@ -42,7 +42,7 @@ Conn::~Conn()
 class ConnectionPool::impl : public std::enable_shared_from_this<ConnectionPool::impl>
 {
 public:
-    impl(asio::io_service &);
+    impl(asio::io_service &, ConnectionPool *);
 
     std::shared_ptr<Conn> make_connection(asio::ip::tcp::socket &&socket);
 
@@ -69,6 +69,7 @@ std::shared_ptr<Conn> ConnectionPool::impl::make_connection(asio::ip::tcp::socke
     {
         listener->on_client_connected(connection);
     });
+    return connection;
 }
 
 std::shared_ptr<Conn> ConnectionPool::impl::find_open_connection(const std::string &host, int port)
@@ -110,8 +111,13 @@ void ConnectionPool::impl::try_open(const std::string &host, const std::string &
 }
 
 ConnectionPool::ConnectionPool(asio::io_service &service)
-    : impl_(std::make_unique<ConnectionPool::impl>(service), this)
+    : impl_(std::make_shared<ConnectionPool::impl>(service, this))
 {}
+
+ConnectionPool::~ConnectionPool()
+{
+
+}
 
 std::shared_ptr<Conn> ConnectionPool::make_connection(asio::ip::tcp::socket &&socket)
 {

@@ -28,8 +28,6 @@
 namespace ama
 {
 class Proxy;
-class Connection;
-class HttpMessage;
 }
 
 namespace Ui {
@@ -44,14 +42,8 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-public slots:
-    void connectionEstablished(const std::shared_ptr<ama::Connection> &connection);
-    void requestReceived(const std::shared_ptr<ama::Connection> &connection, const ama::HttpMessage &request);
-    void responseReceived(const std::shared_ptr<ama::Connection> &connection, const ama::HttpMessage &response);
-    void connectionClosed(const std::shared_ptr<ama::Connection> &connection);
-
 private:
-    void addRowToListView(const std::shared_ptr<ama::Connection> &connection, const std::string &message);
+    //void addRowToListView(const std::shared_ptr<ama::Connection> &connection, const std::string &message);
 
 private:
     Ui::MainWindow *ui;

@@ -17,6 +17,7 @@
 
 #include "Proxy.h"
 
+#include <atomic>
 #include <memory>
 
 #include <QDebug>
@@ -34,19 +35,25 @@ public:
     void init();
     void deinit();
 
+    int port() const { return port_; }
+
     virtual void on_client_connected(std::shared_ptr<Conn> connection) override;
 
 private:
     int port_;
     Server server_;
 
+    std::atomic_int next_id_;
+
     Proxy *proxy_;
 };
 
 Proxy::ProxyImpl::ProxyImpl(const int port, Proxy *proxy) :
+    std::enable_shared_from_this<ProxyImpl>(),
     ConnectionPoolListener(),
     port_(port),
     server_(port),
+    next_id_(ATOMIC_VAR_INIT(1)),
     proxy_(proxy)
 {
 }
@@ -63,14 +70,14 @@ void Proxy::ProxyImpl::deinit()
 
 void Proxy::ProxyImpl::on_client_connected(std::shared_ptr<Conn> connection)
 {
-    auto tx = std::make_shared<ProxyTransaction>(0, server_.connection_pool(), connection);
+    auto tx = std::make_shared<ProxyTransaction>(next_id_++, server_.connection_pool(), connection);
     emit proxy_->transactionStarted(tx);
     tx->begin();
 }
 
 
 Proxy::Proxy(const int port) :
-    impl_(std::make_unique<Proxy::ProxyImpl>(port, this))
+    impl_(std::make_shared<Proxy::ProxyImpl>(port, this))
 {
 }
 
@@ -91,5 +98,5 @@ void Proxy::deinit()
 
 int Proxy::port() const
 {
-    return port_;
+    return impl_->port();
 }

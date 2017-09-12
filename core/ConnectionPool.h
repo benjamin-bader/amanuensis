@@ -79,6 +79,7 @@ class ConnectionPool : public Listenable<ConnectionPoolListener>
 {
 public:
     ConnectionPool(asio::io_service &service);
+    ~ConnectionPool();
 
     std::shared_ptr<Conn> make_connection(asio::ip::tcp::socket &&socket);
 
@@ -94,7 +95,7 @@ public:
 
 private:
     class impl;
-    const std::unique_ptr<impl> impl_;
+    const std::shared_ptr<impl> impl_;
 };
 
 } // namespace ama

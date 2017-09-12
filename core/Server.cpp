@@ -110,6 +110,11 @@ std::shared_ptr<ConnectionManager> Server::connection_manager() const
     return impl_->connectionManager_;
 }
 
+std::shared_ptr<ConnectionPool> Server::connection_pool() const
+{
+    return impl_->connection_pool_;
+}
+
 void Server::do_accept()
 {
     impl_->acceptor_.async_accept(impl_->socket_, [this] (asio::error_code ec) {
@@ -121,7 +126,7 @@ void Server::do_accept()
 
         if (!ec)
         {
-            impl_->connectionManager_->start(std::make_shared<Connection>(std::move(impl_->socket_), impl_->connectionManager_));
+            //impl_->connectionManager_->start(std::make_shared<Connection>(std::move(impl_->socket_), impl_->connectionManager_));
             impl_->connection_pool_->make_connection(std::move(impl_->socket_));
 
             do_accept();

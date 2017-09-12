@@ -28,6 +28,8 @@
 #include <sstream>
 #include <vector>
 
+#include <QDebug>
+
 #include <asio.hpp>
 
 #include "common.h"
@@ -42,14 +44,14 @@ using namespace ama;
 class ProxyTransaction::impl : public std::enable_shared_from_this<ProxyTransaction::impl>
 {
 public:
-    impl(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection, ProxyTransaction *parent);
+    impl(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection);
     ~impl();
 
     int id() const { return id_; }
     TransactionState state() const { return state_; }
     std::error_code error() const { return error_; }
 
-    void begin();
+    void begin(std::shared_ptr<ProxyTransaction> parent);
 
     Request& request() { return request_; }
     Response& response() { return response_; }
@@ -82,7 +84,7 @@ private:
     TransactionState state_;
 
     HttpMessageParser parser_;
-    ProxyTransaction *parent_;
+    std::shared_ptr<ProxyTransaction> parent_;
 
     std::array<uint8_t, 8192> read_buffer_;
     std::unique_ptr<std::array<uint8_t, 8192>> remote_buffer_;
@@ -98,8 +100,7 @@ private:
 ProxyTransaction::impl::impl(
         int id,
         std::shared_ptr<ConnectionPool> connectionPool,
-        std::shared_ptr<Conn> clientConnection,
-        ProxyTransaction *parent)
+        std::shared_ptr<Conn> clientConnection)
     : id_(id)
     , error_()
     , client_(clientConnection)
@@ -107,9 +108,9 @@ ProxyTransaction::impl::impl(
     , connection_pool_(connectionPool)
     , state_(TransactionState::Start)
     , parser_()
-    , parent_(parent)
+    , parent_(nullptr)
     , read_buffer_()
-    , remote_buffer_()
+    , remote_buffer_(nullptr)
     , raw_input_()
     , request_()
     , response_()
@@ -118,12 +119,12 @@ ProxyTransaction::impl::impl(
 
 ProxyTransaction::impl::~impl()
 {
-
+    qDebug() << "ProxyTransaction::impl::~impl() id=" << id_;
 }
 
-void ProxyTransaction::impl::begin()
+void ProxyTransaction::impl::begin(std::shared_ptr<ProxyTransaction> parent)
 {
-    auto tx = parent_->shared_from_this();
+    parent_ = parent;
     parent_->notify_listeners([this](auto &listener)
     {
         listener->on_transaction_start(*parent_);
@@ -135,10 +136,12 @@ void ProxyTransaction::impl::begin()
 
 void ProxyTransaction::impl::read_client_request()
 {
+    qDebug() << "ProxyTransaction::impl::read_client_request() id=" << id_;
+
     auto self = shared_from_this();
-    auto buffer = std::make_shared<std::array<uint8_t, 8192>>();
-    client_->async_read_some(*buffer, [self, buffer](auto ec, size_t num_read)
+    client_->async_read_some(read_buffer_, [self](asio::error_code ec, size_t num_read)
     {
+        qDebug() << "ProxyTransaction::impl::read_client_request()#async_read_some id=" << self->id_ << " ec=" << ec.message().c_str() << " num_read=" << num_read;
         if (ec == asio::error::eof)
         {
             // unexpected disconnect
@@ -152,7 +155,7 @@ void ProxyTransaction::impl::read_client_request()
             return;
         }
 
-        auto start = std::begin(*buffer);
+        auto start = std::begin(self->read_buffer_);
         auto stop = start + num_read;
 
         self->raw_input_.insert(self->raw_input_.end(), start, stop);
@@ -160,20 +163,26 @@ void ProxyTransaction::impl::read_client_request()
         auto state = self->parser_.parse(self->request(), start, stop);
         if (state == HttpMessageParser::State::Incomplete)
         {
+            qDebug() << "ProxyTransaction::impl::read_client_request() (parse: Incomplete) id=" << self->id_;
             self->read_client_request();
+            return;
         }
         else if (state == HttpMessageParser::State::Invalid)
         {
+            qDebug() << "ProxyTransaction::impl::read_client_request() (parse: Invalid) id=" << self->id_;
             self->notify_failure(ProxyError::MalformedRequest);
         }
         else if (state == HttpMessageParser::State::Valid)
         {
+            qDebug() << "ProxyTransaction::impl::read_client_request() (parse: Valid) id=" << self->id_;
             if (self->request().method() == "CONNECT")
             {
+                qDebug() << "ProxyTransaction::impl::read_client_request() (do TLS tunnel) id=" << self->id_;
                 self->establish_tls_tunnel();
             }
             else
             {
+                qDebug() << "ProxyTransaction::impl::read_client_request() (do notify and relay request) id=" << self->id_;
                 self->parent_->notify_listeners([self](auto &listener)
                 {
                     listener->on_request_read(*self->parent_);
@@ -381,8 +390,12 @@ void ProxyTransaction::impl::establish_tls_tunnel()
         }
 
         auto responseBuffer = std::make_shared<std::string>(responseText);
-        self->client_->async_write(asio::buffer(*responseBuffer), [self, ec, success](auto ec2, auto num_bytes_written)
+        self->client_->async_write(asio::buffer(*responseBuffer),
+                                   [self, ec, success, responseBuffer]
+                                   (auto ec2, auto num_bytes_written)
         {
+            UNUSED(num_bytes_written);
+
             if (ec2)
             {
                 // (double?) fail
@@ -519,9 +532,12 @@ void ProxyTransaction::impl::release_connections()
 
 ProxyTransaction::ProxyTransaction(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection)
     : Transaction()
-    , impl_(std::make_unique<impl>(id, connectionPool, clientConnection, this))
+    , impl_(std::make_shared<impl>(id, connectionPool, clientConnection))
 {
-    impl_->begin();
+}
+
+ProxyTransaction::~ProxyTransaction()
+{
 }
 
 int ProxyTransaction::id() const
@@ -551,7 +567,7 @@ Response& ProxyTransaction::response()
 
 void ProxyTransaction::begin()
 {
-    impl_->begin();
+    impl_->begin(shared_from_this());
 }
 
 time_point ProxyTransaction::parse_http_date(const std::string &text)
