@@ -52,17 +52,23 @@ public:
 
 private:
     asio::ip::tcp::resolver resolver_;
+    ConnectionPool *pool_;
 }; // class ConnectionPool::impl
 
-ConnectionPool::impl::impl(asio::io_service &service)
+ConnectionPool::impl::impl(asio::io_service &service, ConnectionPool *pool)
     : resolver_(service)
+    , pool_(pool)
 {
 
 }
 
 std::shared_ptr<Conn> ConnectionPool::impl::make_connection(asio::ip::tcp::socket &&socket)
 {
-    return std::make_shared<Conn>(std::move(socket));
+    auto connection = std::make_shared<Conn>(std::move(socket));
+    pool_->notify_listeners([connection](auto &listener)
+    {
+        listener->on_client_connected(connection);
+    });
 }
 
 std::shared_ptr<Conn> ConnectionPool::impl::find_open_connection(const std::string &host, int port)
@@ -104,7 +110,7 @@ void ConnectionPool::impl::try_open(const std::string &host, const std::string &
 }
 
 ConnectionPool::ConnectionPool(asio::io_service &service)
-    : impl_(std::make_unique<ConnectionPool::impl>(service))
+    : impl_(std::make_unique<ConnectionPool::impl>(service), this)
 {}
 
 std::shared_ptr<Conn> ConnectionPool::make_connection(asio::ip::tcp::socket &&socket)

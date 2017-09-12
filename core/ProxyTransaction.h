@@ -49,6 +49,8 @@ public:
     virtual Request& request() override;
     virtual Response& response() override;
 
+    void begin();
+
     /**
      * Parses the given text into a time_point, according
      * to RFC 7231's Date/Time Formats spec in section 7.1.1.1.

@@ -37,6 +37,7 @@ public:
     ~Server();
 
     std::shared_ptr<ConnectionManager> connection_manager() const;
+    std::shared_ptr<ConnectionPool> connection_pool() const;
 
 private:
     void do_accept();

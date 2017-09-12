@@ -27,8 +27,7 @@
 
 #include <memory>
 
-#include "Connection.h"
-#include "ConnectionManager.h"
+#include "ConnectionPool.h"
 #include "Server.h"
 #include "Transaction.h"
 
@@ -38,9 +37,7 @@ namespace ama
 class HttpMessage;
 
 class A_EXPORT Proxy : public QObject,
-                       public std::enable_shared_from_this<Proxy>,
-                       public ConnectionManagerListener,
-                       public ConnectionListener
+                       public std::enable_shared_from_this<Proxy>
 {
     Q_OBJECT
 
@@ -53,22 +50,21 @@ public:
     void init();
     void deinit();
 
-    virtual void on_connected(const std::shared_ptr<Connection> &connetion) override;
-
-    virtual void client_request_received(const std::shared_ptr<Connection> connection, const HttpMessage &request) override;
-    virtual void server_response_received(const std::shared_ptr<Connection> connection, const HttpMessage &request) override;
-    virtual void on_error(const std::shared_ptr<Connection> connection, const std::error_code &error) override;
-    virtual void connection_closing(const std::shared_ptr<Connection> connection) override;
-
 signals:
-    void connectionEstablished(const std::shared_ptr<Connection> &connection);
-
+    /**
+     * @brief Emitted when a client transaction is about to begin.
+     *
+     * Subscribers should note that this signal is always emitted on a
+     * background thread.  They should not do anything _except_ register
+     * themselves as a listener on the new transaction!
+     *
+     * Connections _should not_ be QUEUED; when this method completes,
+     * the transaction will be started and any queued listeners may
+     * miss transaction events.
+     *
+     * @param tx the new transaction.
+     */
     void transactionStarted(std::shared_ptr<Transaction> tx);
-
-    void requestReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &message);
-    void responseReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &message);
-
-    void connectionClosed(const std::shared_ptr<Connection> &connection);
 
 private:
     class ProxyImpl;

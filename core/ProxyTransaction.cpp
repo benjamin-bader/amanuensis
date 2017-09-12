@@ -85,6 +85,7 @@ private:
     ProxyTransaction *parent_;
 
     std::array<uint8_t, 8192> read_buffer_;
+    std::unique_ptr<std::array<uint8_t, 8192>> remote_buffer_;
 
     // Records the exact bytes received from client/server, so that
     // they can be relayed as-is.
@@ -108,6 +109,7 @@ ProxyTransaction::impl::impl(
     , parser_()
     , parent_(parent)
     , read_buffer_()
+    , remote_buffer_()
     , raw_input_()
     , request_()
     , response_()
@@ -159,20 +161,16 @@ void ProxyTransaction::impl::read_client_request()
         if (state == HttpMessageParser::State::Incomplete)
         {
             self->read_client_request();
-            return;
         }
-
-        if (state == HttpMessageParser::State::Invalid)
+        else if (state == HttpMessageParser::State::Invalid)
         {
             self->notify_failure(ProxyError::MalformedRequest);
-            return;
         }
-
-        if (state == HttpMessageParser::State::Valid)
+        else if (state == HttpMessageParser::State::Valid)
         {
             if (self->request().method() == "CONNECT")
             {
-
+                self->establish_tls_tunnel();
             }
             else
             {
@@ -182,12 +180,13 @@ void ProxyTransaction::impl::read_client_request()
                 });
 
                 self->open_remote_connection();
-                return;
             }
         }
-
-        // wtf, this isn't any status we recognize
-        self->notify_failure(ProxyError::NetworkError);
+        else
+        {
+            // wtf, this isn't any status we recognize
+            self->notify_failure(ProxyError::NetworkError);
+        }
     });
 }
 
@@ -335,6 +334,170 @@ void ProxyTransaction::impl::send_remote_response_to_client()
     });
 }
 
+void ProxyTransaction::impl::establish_tls_tunnel()
+{
+    std::string host = request().uri();
+    std::string port = "443";
+
+    size_t separator = host.find(':');
+    if (separator != std::string::npos)
+    {
+        try
+        {
+            port = host.substr(separator + 1);
+            host = host.substr(0, separator);
+        }
+        catch (std::out_of_range)
+        {
+            //qWarning() << "Malformed request - assuming port 443";
+        }
+        catch (std::invalid_argument)
+        {
+            //qWarning() << "Malformed request - assuming port 443";
+        }
+    }
+
+    asio::ip::tcp::resolver::query query(host, port);
+
+    auto self = shared_from_this();
+    connection_pool_->try_open(host, port, [self](auto conn, auto ec)
+    {
+        bool success = true;
+        if (ec)
+        {
+            success = false;
+        }
+
+        std::string responseText;
+        if (success) {
+            self->remote_ = conn;
+            responseText = "HTTP/1.1 200 OK\r\n"
+                           "Proxy-Agent: amanuensis 0.1.0\r\n"
+                           "\r\n";
+        } else {
+            responseText = "HTTP/1.1 400 Bad Request\r\n"
+                           "Proxy-Agent: amanuensis 0.1.0\r\n"
+                           "\r\n";
+        }
+
+        auto responseBuffer = std::make_shared<std::string>(responseText);
+        self->client_->async_write(asio::buffer(*responseBuffer), [self, ec, success](auto ec2, auto num_bytes_written)
+        {
+            if (ec2)
+            {
+                // (double?) fail
+            }
+
+            if (success)
+            {
+                // Time to start acting like a dumb pipe.
+                // We'll need a second buffer.
+                self->remote_buffer_ = std::make_unique<std::array<uint8_t, 8192>>();
+
+                self->send_client_request_via_tunnel();
+                self->send_server_response_via_tunnel();
+            }
+            else
+            {
+                // Failed to establish a remote tunnel, so fail.
+                self->notify_failure(ec);
+            }
+        });
+    });
+}
+
+void ProxyTransaction::impl::send_client_request_via_tunnel()
+{
+    if (client_ == nullptr || remote_ == nullptr)
+    {
+        return;
+    }
+
+    auto self = shared_from_this();
+    client_->async_read_some(read_buffer_, [self](auto ec, size_t num_bytes_read)
+    {
+       if (ec == asio::error::eof || num_bytes_read == 0)
+       {
+           // finished normally?
+           self->release_connections();
+           return;
+       }
+
+       if (ec)
+       {
+           // finish abnormally.
+           self->notify_failure(ec);
+           return;
+       }
+
+       auto sendBuffer = asio::buffer(self->read_buffer_, num_bytes_read);
+       self->remote_->async_write(sendBuffer, [self, num_bytes_read](auto ec, size_t num_bytes_written)
+       {
+           if (ec)
+           {
+               // Fail
+               self->notify_failure(ec);
+               return;
+           }
+
+           if (num_bytes_read != num_bytes_written)
+           {
+               self->notify_failure(ProxyError::NetworkError);
+               return;
+           }
+
+           // loop
+           self->send_client_request_via_tunnel();
+       });
+    });
+}
+
+void ProxyTransaction::impl::send_server_response_via_tunnel()
+{
+    if (client_ == nullptr || remote_ == nullptr)
+    {
+        return;
+    }
+
+    auto self = shared_from_this();
+    remote_->async_read_some(*remote_buffer_, [self](auto ec, size_t num_bytes_read)
+    {
+       if (ec == asio::error::eof || num_bytes_read == 0)
+       {
+           // finished normally?
+           self->release_connections();
+           return;
+       }
+
+       if (ec)
+       {
+           // finish abnormally.
+           self->notify_failure(ec);
+           return;
+       }
+
+       auto sendBuffer = asio::buffer(*self->remote_buffer_, num_bytes_read);
+       self->client_->async_write(sendBuffer, [self, num_bytes_read](auto ec, size_t num_bytes_written)
+       {
+           if (ec)
+           {
+               // Fail
+               self->notify_failure(ec);
+               return;
+           }
+
+           if (num_bytes_read != num_bytes_written)
+           {
+               self->notify_failure(ProxyError::NetworkError);
+               return;
+           }
+
+           // loop
+           self->send_server_response_via_tunnel();
+       });
+    });
+}
+
 void ProxyTransaction::impl::notify_failure(std::error_code error)
 {
     release_connections();
@@ -384,6 +547,11 @@ Request& ProxyTransaction::request()
 Response& ProxyTransaction::response()
 {
     return impl_->response();
+}
+
+void ProxyTransaction::begin()
+{
+    impl_->begin();
 }
 
 time_point ProxyTransaction::parse_http_date(const std::string &text)

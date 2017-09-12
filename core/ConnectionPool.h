@@ -11,6 +11,8 @@
 #include "common.h"
 #include "global.h"
 
+#include "Listenable.h"
+
 #include <asio.hpp>
 
 namespace ama
@@ -65,7 +67,15 @@ private:
     friend class ConnectionPool;
 };
 
-class ConnectionPool
+
+
+class A_EXPORT ConnectionPoolListener
+{
+public:
+    virtual void on_client_connected(std::shared_ptr<Conn> connection) = 0;
+};
+
+class ConnectionPool : public Listenable<ConnectionPoolListener>
 {
 public:
     ConnectionPool(asio::io_service &service);
