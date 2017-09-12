@@ -3,10 +3,13 @@ language: cpp
 dist: trusty
 sudo: required
 
-compiler: gcc
+compiler: clang
 
 before_install:
+  - eval "${MATRIX_EVAL}"
+  - sudo add-apt-repository ppa:beineri/opt-qt591-trusty -y
   - sudo apt-get -qq update
+  - sudo apt-get install qt59-meta-minimal
 
 script:
   - qmake "CONFIG+=test" amanuensis.pro
@@ -15,6 +18,11 @@ script:
 
 addons:
   apt:
+    sources:
+      - llvm-toolchain-trusty-5.0
     packages:
       - cmake
-      - 
+      - clang-5.0
+  env:
+    - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+
