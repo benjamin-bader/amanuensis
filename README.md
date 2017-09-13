@@ -1,5 +1,6 @@
 Amanuensis
 ----------
+[![Build Status](https://travis-ci.org/benjamin-bader/amanuensis.svg?branch=master)](https://travis-ci.org/benjamin-bader/amanuensis)
 
 A faithful assistant to your various network applications, scrupulously copying all that they say and preserving it for the ages.
 
