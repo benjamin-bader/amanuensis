@@ -18,6 +18,7 @@
 #include "Headers.h"
 
 #include <algorithm>
+#include <climits>
 #include <locale>
 #include <map>
 #include <mutex>
