@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui widgets testlib
+QT       += core testlib
 
 TARGET = core-test
 CONFIG   += console testcase
@@ -27,14 +27,14 @@ CONFIG += c++14
 
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
-HEADERS += RequestParserTests.h
-
 HEADERS += \
-    HttpMessageParserTests.h
+    HttpMessageParserTests.h \
+    ProxyTransactionTests.h
 
 SOURCES += \
     main.cpp \
-    HttpMessageParserTests.cpp
+    HttpMessageParserTests.cpp \
+    ProxyTransactionTests.cpp
 
 DEFINES += SRCDIR=\\\"$$PWD/\\\"
 

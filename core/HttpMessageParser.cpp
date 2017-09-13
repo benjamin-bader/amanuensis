@@ -29,6 +29,8 @@
 #include "Headers.h"
 #include "HttpMessage.h"
 
+using namespace ama;
+
 class ResponseBuilder {};
 
 #if defined(Q_OS_WIN)
@@ -550,10 +552,9 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
     case newline_3:
         if (input == '\n')
         {
-            Headers::iterator nameAndHeader = message.headers_.find_by_name("Transfer-Encoding");
-            while (nameAndHeader != message.headers_.end())
+            auto headerValues = message.headers_.find_by_name("Transfer-Encoding");
+            for (auto &value : headerValues)
             {
-                std::string &value = nameAndHeader->second;
                 bool is_chunked = false;
 
                 // Is this a simple chunk stream?  If not, do we have a comma-separated list
@@ -595,14 +596,13 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
                     message.body_.clear();
                     return Incomplete;
                 }
-                nameAndHeader++;
             }
 
-            nameAndHeader = message.headers_.find_by_name("Content-Length");
-            if (nameAndHeader != message.headers_.end())
+            headerValues = message.headers_.find_by_name("Content-Length");
+            for (auto &value : headerValues)
             {
                 uint64_t length = 0;
-                if (! parse_uint64_t(nameAndHeader->second, length))
+                if (! parse_uint64_t(value, length))
                 {
                     return Invalid;
                 }
@@ -615,7 +615,7 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
                 TRANSIT(fixed_length_entity);
                 remaining_ = length;
                 message.body_.clear();
-                message.body_.reserve(static_cast<size_t>(length));
+                message.body_.reserve(static_cast<size_t>(length));  // TODO: can length be bigger than a size_t?
                 return Incomplete;
             }
 
@@ -741,11 +741,11 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
     return Invalid;
 }
 
-QDebug operator<<(QDebug d, const HttpMessageParser &parser)
-{
-    return d << "RequestParser{state="
-             << parser.state_
-             << ", buffer=" << QString(parser.buffer_.c_str())
-             << ", value_buffer= " << QString(parser.value_buffer_.c_str())
-             << "}";
-}
+//QDebug operator<<(QDebug d, const HttpMessageParser &parser)
+//{
+//    return d << "RequestParser{state="
+//             << parser.state_
+//             << ", buffer=" << QString(parser.buffer_.c_str())
+//             << ", value_buffer= " << QString(parser.value_buffer_.c_str())
+//             << "}";
+//}

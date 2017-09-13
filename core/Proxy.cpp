@@ -17,15 +17,67 @@
 
 #include "Proxy.h"
 
+#include <atomic>
 #include <memory>
 
 #include <QDebug>
 
-Proxy::Proxy(const int port) :
-    ConnectionManagerListener(),
-    ConnectionListener(),
+#include "ProxyTransaction.h"
+
+using namespace ama;
+
+class Proxy::ProxyImpl : public std::enable_shared_from_this<ProxyImpl>,
+                         public ConnectionPoolListener
+{
+public:
+    ProxyImpl(const int port, Proxy *proxy);
+
+    void init();
+    void deinit();
+
+    int port() const { return port_; }
+
+    virtual void on_client_connected(std::shared_ptr<Conn> connection) override;
+
+private:
+    int port_;
+    Server server_;
+
+    std::atomic_int next_id_;
+
+    Proxy *proxy_;
+};
+
+Proxy::ProxyImpl::ProxyImpl(const int port, Proxy *proxy) :
+    std::enable_shared_from_this<ProxyImpl>(),
+    ConnectionPoolListener(),
     port_(port),
-    server_(port)
+    server_(port),
+    next_id_(ATOMIC_VAR_INIT(1)),
+    proxy_(proxy)
+{
+}
+
+void Proxy::ProxyImpl::init()
+{
+    server_.connection_pool()->add_listener(shared_from_this());
+}
+
+void Proxy::ProxyImpl::deinit()
+{
+    server_.connection_pool()->remove_listener(shared_from_this());
+}
+
+void Proxy::ProxyImpl::on_client_connected(std::shared_ptr<Conn> connection)
+{
+    auto tx = std::make_shared<ProxyTransaction>(next_id_++, server_.connection_pool(), connection);
+    emit proxy_->transactionStarted(tx);
+    tx->begin();
+}
+
+
+Proxy::Proxy(const int port) :
+    impl_(std::make_shared<Proxy::ProxyImpl>(port, this))
 {
 }
 
@@ -35,43 +87,16 @@ Proxy::~Proxy()
 
 void Proxy::init()
 {
-    server_.connection_manager()->add_listener(shared_from_this());
+    impl_->init();
+
 }
 
 void Proxy::deinit()
 {
-    server_.connection_manager()->remove_listener(shared_from_this());
-}
-
-void Proxy::on_connected(const std::shared_ptr<Connection> &connection)
-{
-    connection->add_listener(shared_from_this());
-    emit connectionEstablished(connection);
-}
-
-void Proxy::client_request_received(const std::shared_ptr<Connection> connection, const HttpMessage &request)
-{
-    emit requestReceived(connection, request);
-}
-
-void Proxy::server_response_received(const std::shared_ptr<Connection> connection, const HttpMessage &response)
-{
-    emit responseReceived(connection, response);
-}
-
-void Proxy::on_error(const std::shared_ptr<Connection> connection, const std::error_code &error)
-{
-    Q_UNUSED(connection);
-    Q_UNUSED(error);
-}
-
-void Proxy::connection_closing(const std::shared_ptr<Connection> connection)
-{
-    connection->remove_listener(shared_from_this());
-    emit connectionClosed(connection);
+    impl_->deinit();
 }
 
 int Proxy::port() const
 {
-    return port_;
+    return impl_->port();
 }

@@ -18,8 +18,13 @@
 #include "Headers.h"
 
 #include <algorithm>
+#include <climits>
 #include <locale>
+#include <map>
 #include <mutex>
+#include <sstream>
+
+using namespace ama;
 
 namespace {
     char lowercase_lookup_table[256];
@@ -61,58 +66,126 @@ namespace {
             return lower_x < lower_y;
         }
     };
+
+    struct eq_char
+    {
+        eq_char()
+        {
+            std::call_once(lowercase_init_flag, &init_lookup_table);
+        }
+
+        bool operator()(char x, char y) const
+        {
+            char lower_x = lookup_lower(x);
+            char lower_y = lookup_lower(y);
+
+            return lower_x == lower_y;
+        }
+    };
+
+    const eq_char eq_char_instance = {};
+
+    bool equals_case_insensitive(const std::string &lhs, const std::string &rhs)
+    {
+        return lhs.size() == rhs.size() &&
+                std::equal(std::begin(lhs), std::end(lhs),
+                           std::begin(rhs), std::end(rhs),
+                           eq_char_instance);
+    }
+
+    struct ci_less
+    {
+        bool operator()(const std::string &lhs, const std::string &rhs) const
+        {
+            std::call_once(lowercase_init_flag, &init_lookup_table);
+
+            return std::lexicographical_compare(lhs.begin(), lhs.end(),
+                                                rhs.begin(), rhs.end(),
+                                                lt_char());
+        }
+    };
 }
 
-bool Headers::ci_less::operator ()(const std::string &lhs, const std::string &rhs) const
-{
-    std::call_once(lowercase_init_flag, &init_lookup_table);
-
-    return std::lexicographical_compare(lhs.begin(), lhs.end(),
-                                        rhs.begin(), rhs.end(),
-                                        lt_char());
-}
-
-Headers::Headers() :
-    map_()
+Headers::Headers()
+    : names_()
+    , values_()
 {
 }
 
-Headers::Headers(const Headers &headers) :
-    map_(headers.map_)
+Headers::Headers(const Headers &headers)
+    : names_(headers.names_)
+    , values_(headers.values_)
 {
-}
-
-Headers::const_iterator  Headers::begin() const
-{
-    return map_.begin();
-}
-
-Headers::const_iterator Headers::end() const
-{
-    return map_.end();
 }
 
 size_t Headers::size() const
 {
-    return map_.size();
+    return names_.size();
 }
 
 bool Headers::empty() const
 {
-    return map_.empty();
+    return names_.empty();
 }
 
 void Headers::insert(const std::string &name, const std::string &value)
 {
-    map_.insert(MapType::value_type {name, value});
+    names_.push_back(name);
+    values_.push_back(value);
 }
 
-Headers::iterator Headers::find_by_name(const std::string &name)
+std::vector<std::string> Headers::find_by_name(const std::string &name) const
 {
-    return map_.find(name);
+    std::vector<std::string> result;
+
+    for (int i = 0; i < names_.size(); ++i)
+    {
+        auto header_name  = names_[i];
+        auto header_value = values_[i];
+
+        if (equals_case_insensitive(name, header_name))
+        {
+            result.push_back(header_value);
+        }
+    }
+
+    return result;
 }
 
-Headers::const_iterator Headers::find_by_name(const std::string &name) const
+Headers Headers::normalize() const
 {
-    return map_.find(name);
+    std::multimap<std::string, std::string, ci_less> map;
+
+    for (int i = 0; i < size(); ++i)
+    {
+        map.insert(std::make_pair(names_[i], values_[i]));
+    }
+
+    Headers copy;
+
+    std::vector<std::string> names;
+    for (auto it = map.begin(); it != map.end(); it = map.upper_bound(it->first)) // iterate each key once;
+    {
+        names.push_back(it->first);
+    }
+
+    for (auto &name : names)
+    {
+        bool appended = false;
+        std::stringstream ss;
+        for (auto it = map.find(name); it != map.end(); ++it)
+        {
+            if (appended)
+            {
+                ss << ", ";
+            }
+
+            ss << it->second;
+            appended = true;
+        }
+
+        copy.insert(name, ss.str());
+    }
+
+    return copy;
 }

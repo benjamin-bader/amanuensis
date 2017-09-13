@@ -20,6 +20,8 @@
 
 #include "win/WindowsProxy.h"
 
+using namespace ama::win;
+
 WindowsProxy::WindowsProxy(int port) :
     Proxy(port)
 {    

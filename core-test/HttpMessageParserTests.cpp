@@ -27,6 +27,8 @@
 #include "HttpMessage.h"
 #include "HttpMessageParser.h"
 
+using namespace ama;
+
 HttpMessageParserTests::HttpMessageParserTests()
 {
 }
@@ -57,14 +59,14 @@ void HttpMessageParserTests::simpleGet()
 
     auto headers = request.headers();
     auto headerFindResult = headers.find_by_name("accept"); // case-insensitive find
-    if (headerFindResult == headers.end())
+
+    if (headerFindResult.empty())
     {
         QFAIL("Expected an Accept header, but none was found");
     }
 
-    auto header = *headerFindResult;
-    QCOMPARE(header.first, {"Accept"});
-    QCOMPARE(header.second, {"application/html"});
+    auto value = headerFindResult[0];
+    QCOMPARE(value, {"application/html"});
 }
 
 void HttpMessageParserTests::fixedLengthSimplePost()
@@ -133,9 +135,9 @@ void HttpMessageParserTests::chunkedSimplePost()
     QCOMPARE(request.method(), {"POST"});
     QCOMPARE(request.uri(), {"/foo/bar"});
 
-    QCOMPARE(request.headers().find_by_name("Accept")->second, {"application/html"});
-    QCOMPARE(request.headers().find_by_name("Content-Type")->second, {"text/plain"});
-    QCOMPARE(request.headers().find_by_name("Transfer-Encoding")->second, {"gzip, chunked"});
+    QCOMPARE(request.headers().find_by_name("Accept")[0], {"application/html"});
+    QCOMPARE(request.headers().find_by_name("Content-Type")[0], {"text/plain"});
+    QCOMPARE(request.headers().find_by_name("Transfer-Encoding")[0], {"gzip, chunked"});
 }
 
 void HttpMessageParserTests::simpleOkResponse()

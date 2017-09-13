@@ -27,6 +27,9 @@
 
 #include "global.h"
 
+namespace ama
+{
+
 template <typename Listener>
 class A_EXPORT_ONLY Listenable
 {
@@ -48,15 +51,17 @@ private:
     std::vector<std::weak_ptr<Listener>> listeners_;
 };
 
+} // namespace ama
+
 template <typename Listener>
-void Listenable<Listener>::add_listener(const std::shared_ptr<Listener> &listener)
+void ama::Listenable<Listener>::add_listener(const std::shared_ptr<Listener> &listener)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     listeners_.push_back(listener);
 }
 
 template <typename Listener>
-void Listenable<Listener>::remove_listener(const std::shared_ptr<Listener> &listener)
+void ama::Listenable<Listener>::remove_listener(const std::shared_ptr<Listener> &listener)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -77,7 +82,7 @@ void Listenable<Listener>::remove_listener(const std::shared_ptr<Listener> &list
 
 template <typename Listener>
 template <typename ListenerAction>
-void Listenable<Listener>::notify_listeners(const ListenerAction &action)
+void ama::Listenable<Listener>::notify_listeners(const ListenerAction &action)
 {
     std::vector<std::shared_ptr<Listener>> toNotify;
     {

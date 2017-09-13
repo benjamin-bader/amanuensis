@@ -18,14 +18,17 @@
 #include "Server.h"
 
 #include <algorithm>
+#include <memory>
 #include <thread>
 
 #include <QDebug>
 
 #include <asio.hpp>
 
-#include "Connection.h"
-#include "ConnectionManager.h"
+#include "ConnectionPool.h"
+#include "ProxyTransaction.h"
+
+using namespace ama;
 
 class Server::impl
 {
@@ -37,7 +40,7 @@ public:
         acceptor_(io_service_),
         socket_(io_service_),
         workers_(),
-        connectionManager_(std::make_shared<ConnectionManager>(io_service_))
+        connection_pool_(std::make_shared<ConnectionPool>(io_service_))
     {}
 
     int port_;
@@ -48,7 +51,7 @@ public:
 
     std::vector<std::thread> workers_;
 
-    std::shared_ptr<ConnectionManager> connectionManager_;
+    std::shared_ptr<ConnectionPool> connection_pool_;
 };
 
 Server::Server(const int port) :
@@ -89,7 +92,7 @@ Server::~Server()
     impl_->acceptor_.close();
     impl_->io_service_.stop();
 
-    impl_->connectionManager_->stop_all();
+    impl_->connection_pool_ = nullptr;
 
     std::for_each(impl_->workers_.begin(), impl_->workers_.end(), [](std::thread &t) {
         if (t.joinable())
@@ -99,9 +102,9 @@ Server::~Server()
     });
 }
 
-std::shared_ptr<ConnectionManager> Server::connection_manager() const
+std::shared_ptr<ConnectionPool> Server::connection_pool() const
 {
-    return impl_->connectionManager_;
+    return impl_->connection_pool_;
 }
 
 void Server::do_accept()
@@ -115,7 +118,8 @@ void Server::do_accept()
 
         if (!ec)
         {
-            impl_->connectionManager_->start(std::make_shared<Connection>(std::move(impl_->socket_), impl_->connectionManager_));
+            //impl_->connectionManager_->start(std::make_shared<Connection>(std::move(impl_->socket_), impl_->connectionManager_));
+            impl_->connection_pool_->make_connection(std::move(impl_->socket_));
 
             do_accept();
         }

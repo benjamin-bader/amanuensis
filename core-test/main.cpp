@@ -20,18 +20,20 @@
 #include <string>
 #include <unordered_map>
 
-#include <QApplication>
+#include <QCoreApplication>
 #include <QtTest>
 
 #include "HttpMessageParserTests.h"
+#include "ProxyTransactionTests.h"
 
 int main(int argc, char **argv)
 {
-    QApplication application(argc, argv);
+    QCoreApplication application(argc, argv);
     QStringList arguments = QCoreApplication::arguments();
 
     std::unordered_map<std::string, std::unique_ptr<QObject>> tests;
     tests.emplace("RequestParser", std::make_unique<HttpMessageParserTests>());
+    tests.emplace("ProxyTransaction", std::make_unique<ProxyTransactionTests>());
 
     int status = 0;
     for (auto& kvp : tests)

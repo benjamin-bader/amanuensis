@@ -23,6 +23,8 @@
 #include "win/WindowsProxy.h"
 #endif
 
+using namespace ama;
+
 ProxyFactory::ProxyFactory()
 {
 
@@ -31,7 +33,7 @@ ProxyFactory::ProxyFactory()
 std::shared_ptr<Proxy> ProxyFactory::create(const int port)
 {
 #if defined(Q_OS_WIN)
-    return std::make_shared<WindowsProxy>(port);
+    return std::make_shared<ama::win::WindowsProxy>(port);
 #else
 #warning No platform support implemented for this OS, returning generic proxy.
     return std::make_shared<Proxy>(port);

@@ -26,18 +26,24 @@
 #include <mutex>
 #include <stack>
 
-// An object that owns a pool of resources, for example buffers of memory.
-// Consumers can acquire a shared pointer to a resource; when the pointer
-// goes out of scope, the resource is returned to the pool rather than being
-// deallocated.
-//
-// Resource types must have a public default constructor.
-//
-// A pool can be configured with min and max values.  The Min value
-// determines how many resources are initially contained in the pool; resources
-// over that number will be allocated as needed.  The Max value indicates the
-// largest number of resources to keep in the pool at a given time; objects
-// returned over that number will be deallocated instead of being pooled.
+namespace ama
+{
+
+/**
+ * @brief An object that owns a pool of resources, for example buffers of memory.
+ *
+ * Consumers can acquire a shared pointer to a resource; when the pointer
+ * goes out of scope, the resource is returned to the pool rather than being
+ * deallocated.
+ *
+ * Resource types must have a public default constructor.
+ *
+ * A pool can be configured with min and max values.  The Min value
+ * determines how many resources are initially contained in the pool; resources
+ * over that number will be allocated as needed.  The Max value indicates the
+ * largest number of resources to keep in the pool at a given time; objects
+ * returned over that number will be deallocated instead of being pooled.
+ */
 template <typename T>
 class ObjectPool
 {
@@ -160,5 +166,7 @@ private:
     std::atomic<size_t> num_borrowed_ = ATOMIC_VAR_INIT(0);
     std::atomic<size_t> num_idle_     = ATOMIC_VAR_INIT(0);
 };
+
+} // namespace ama
 
 #endif // OBJECTPOOL_H

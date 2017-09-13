@@ -32,6 +32,9 @@
 #include "Listenable.h"
 #include "ObjectPool.h"
 
+namespace ama
+{
+
 class Connection;
 
 typedef std::array<char, 8192> BufferType;
@@ -69,5 +72,7 @@ private:
     class impl;
     const std::unique_ptr<impl> impl_;
 };
+
+} // namespace ama
 
 #endif // CONNECTIONMANAGER_H

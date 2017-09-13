@@ -15,32 +15,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef WINDOWSPROXY_H
-#define WINDOWSPROXY_H
+#ifndef PROXYTRANSACTIONTESTS_H
+#define PROXYTRANSACTIONTESTS_H
 
-#pragma once
+#include <QObject>
 
-#include "global.h"
-
-#include "Proxy.h"
-
-#include <windows.h>
-#include <wininet.h>
-
-namespace ama { namespace win {
-
-class A_EXPORT WindowsProxy : public Proxy
+class ProxyTransactionTests : public QObject
 {
-public:
-    WindowsProxy(const int port = 9999);
-    virtual ~WindowsProxy();
+    Q_OBJECT
 
-private:
-    INTERNET_PER_CONN_OPTION_LIST originalOptionList;
-    INTERNET_PER_CONN_OPTION originalOptions[5];
+public:
+    ProxyTransactionTests();
+
+private Q_SLOTS:
+    void parseModernDate();
+    void parseLegacyDate();
+    void parseAsctimeDate();
+
+    void parseInvalidInputThrowsInvalidArgument();
 };
 
-} // namespace ama::win
-} // namespace ama
 
-#endif // WINDOWSPROXY_H
+#endif // PROXYTRANSACTIONTESTS_H

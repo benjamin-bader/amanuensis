@@ -25,9 +25,10 @@
 #include <QStringListModel>
 #include <QVector>
 
+namespace ama
+{
 class Proxy;
-class Connection;
-class HttpMessage;
+}
 
 namespace Ui {
 class MainWindow;
@@ -41,18 +42,12 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-public slots:
-    void connectionEstablished(const std::shared_ptr<Connection> &connection);
-    void requestReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &request);
-    void responseReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &response);
-    void connectionClosed(const std::shared_ptr<Connection> &connection);
-
 private:
-    void addRowToListView(const std::shared_ptr<Connection> &connection, const std::string &message);
+    //void addRowToListView(const std::shared_ptr<ama::Connection> &connection, const std::string &message);
 
 private:
     Ui::MainWindow *ui;
-    std::shared_ptr<Proxy> proxy;
+    std::shared_ptr<ama::Proxy> proxy;
     QVector<QMetaObject::Connection> connections;
 
     QStringListModel *model;

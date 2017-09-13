@@ -39,31 +39,47 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 INCLUDEPATH += $$PWD/../include
 
-DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
+DEFINES += \
+    ONLY_C_LOCALE
+
+DEFINES += \
+    ASIO_STANDALONE \
+    ASIO_HAS_STD_CHRONO \
+    ASIO_HAS_MOVE \
+    ASIO_HAS_STD_SYSTEM_ERROR
 
 SOURCES += \
     Proxy.cpp \
     Server.cpp \
-    Connection.cpp \
     Headers.cpp \
-    ConnectionManager.cpp \
     ProxyFactory.cpp \
     HttpMessage.cpp \
-    HttpMessageParser.cpp
+    HttpMessageParser.cpp \
+    ProxyTransaction.cpp \
+    ConnectionPool.cpp \
+    Request.cpp \
+    Response.cpp \
+    Errors.cpp
 
 HEADERS += \
     Proxy.h \
     global.h \
     Server.h \
-    Connection.h \
     Headers.h \
-    ConnectionManager.h \
     ProxyFactory.h \
     ObjectPool.h \
     HttpMessage.h \
     HttpMessageParser.h \
     Listenable.h \
-    asiofwd.h
+    asiofwd.h \
+    Transaction.h \
+    ProxyTransaction.h \
+    ConnectionPool.h \
+    date.h \
+    common.h \
+    Request.h \
+    Response.h \
+    Errors.h
 
 windows {
     SOURCES += \

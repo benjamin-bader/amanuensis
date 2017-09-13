@@ -24,7 +24,11 @@
 
 #include "global.h"
 
+namespace ama
+{
+
 class ConnectionManager;
+class ConnectionPool;
 
 class A_EXPORT Server : public std::enable_shared_from_this<Server>
 {
@@ -33,6 +37,7 @@ public:
     ~Server();
 
     std::shared_ptr<ConnectionManager> connection_manager() const;
+    std::shared_ptr<ConnectionPool> connection_pool() const;
 
 private:
     void do_accept();
@@ -40,5 +45,7 @@ private:
     class impl;
     std::unique_ptr<impl> impl_;
 };
+
+} // namespace ama
 
 #endif // SERVER_H

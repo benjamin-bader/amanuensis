@@ -29,6 +29,9 @@
 
 #include "global.h"
 
+namespace ama
+{
+
 class A_EXPORT HttpMessage
 {
 public:
@@ -45,6 +48,7 @@ public:
     int major_version() const;
     int minor_version() const;
 
+    Headers& headers();
     const Headers& headers() const;
 
     const std::vector<uint8_t>& body() const;
@@ -79,5 +83,7 @@ private:
 
     std::vector<uint8_t> body_;
 };
+
+} // namespace ama
 
 #endif // HTTPMESSAGE_H
