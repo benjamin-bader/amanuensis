@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui widgets testlib
+QT       += core testlib
 
 TARGET = core-test
 CONFIG   += console testcase
