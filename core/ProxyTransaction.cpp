@@ -587,7 +587,7 @@ time_point ProxyTransaction::parse_http_date(const std::string &text)
         time_point tp = {};
 
         std::istringstream input(text);
-        input.imbue(std::locale("C"));
+        //input.imbue(std::locale("C"));
 
         input >> date::parse(format, tp);
 
