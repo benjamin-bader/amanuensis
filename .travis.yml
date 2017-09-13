@@ -18,11 +18,10 @@ addons:
   apt:
     sources:
       - llvm-toolchain-trusty-5.0
+      - ubuntu-toolchain-r-test
     packages:
       - cmake
-      - clang-5.0
+      - g++-6
   env:
-    - QMAKE_CXX=clang++-5.0
-    - QMAKE_LINK=clang++-5.0
-    - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+    - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
 
