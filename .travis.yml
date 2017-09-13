@@ -1,9 +1,7 @@
-language: cpp
+language: generic
 
 dist: trusty
 sudo: required
-
-compiler: clang
 
 before_install:
   - eval "${MATRIX_EVAL}"
@@ -23,6 +21,7 @@ addons:
       - cmake
       - g++-6
       - clang-5.0
+      - libstdc++6
   env:
-    - MATRIX_EVAL="CC=clang++-5.0 && CXX=clang++-5.0"
+    - MATRIX_EVAL="CC=g++-6 && CXX=g++-6"
 
