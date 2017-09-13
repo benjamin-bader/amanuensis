@@ -1,37 +1,34 @@
+// Amanuensis - Web Traffic Inspector
+//
+// Copyright (C) 2017 Benjamin Bader
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #include "ConnectionPool.h"
 
-#include <unordered_map>
-
 using namespace ama;
-
-namespace std
-{
-
-template <>
-struct hash<std::pair<std::string, int>>
-{
-    std::size_t operator()(const std::pair<std::string, int> &pair)
-    {
-        std::size_t const h1 (std::hash<std::string>{}(pair.first));
-        std::size_t const h2 (std::hash<int>{}(pair.second));
-        return h1 ^ (h2 << 1);
-    }
-};
-
-} // namespace std
 
 Conn::Conn(asio::ip::tcp::socket &&socket)
     : socket_(std::move(socket))
     , expires_at_(time_point::max())
     , should_close_(false)
-//    , pool_(nullptr)
 {}
 
 Conn::Conn(asio::io_service &service)
     : socket_(service)
     , expires_at_(time_point::max())
     , should_close_(false)
-//    , pool_(nullptr)
 {}
 
 Conn::~Conn()

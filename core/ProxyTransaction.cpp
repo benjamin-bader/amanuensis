@@ -204,7 +204,7 @@ void ProxyTransaction::impl::open_remote_connection()
     auto headerValues = request().headers().find_by_name("Host");
     if (headerValues.empty())
     {
-        //qWarning() << "Malformed request - no 'Host' header found!";
+        qWarning() << "Malformed request - no 'Host' header found!";
         notify_failure(ProxyError::MalformedRequest);
         return;
     }
@@ -222,11 +222,11 @@ void ProxyTransaction::impl::open_remote_connection()
         }
         catch (std::out_of_range)
         {
-            //qWarning() << "Malformed request - assuming port 80";
+            qWarning() << "Malformed request - assuming port 80";
         }
         catch (std::invalid_argument)
         {
-            //qWarning() << "Malformed request - assuming port 80";
+            qWarning() << "Malformed request - assuming port 80";
         }
     }
 
@@ -358,11 +358,11 @@ void ProxyTransaction::impl::establish_tls_tunnel()
         }
         catch (std::out_of_range)
         {
-            //qWarning() << "Malformed request - assuming port 443";
+            qWarning() << "Malformed request - assuming port 443";
         }
         catch (std::invalid_argument)
         {
-            //qWarning() << "Malformed request - assuming port 443";
+            qWarning() << "Malformed request - assuming port 443";
         }
     }
 
@@ -396,12 +396,15 @@ void ProxyTransaction::impl::establish_tls_tunnel()
         {
             UNUSED(num_bytes_written);
 
+            bool localSuccess = success;
             if (ec2)
             {
                 // (double?) fail
+                qWarning() << "Failed to send CONNECT reply to client: " << ec2.message().c_str();
+                localSuccess = false;
             }
 
-            if (success)
+            if (localSuccess)
             {
                 // Time to start acting like a dumb pipe.
                 // We'll need a second buffer.
@@ -585,9 +588,7 @@ time_point ProxyTransaction::parse_http_date(const std::string &text)
     for (auto &format : { IMF_FIXDATE, RFC_850, ASCTIME })
     {
         time_point tp = {};
-
         std::istringstream input(text);
-        //input.imbue(std::locale("C"));
 
         input >> date::parse(format, tp);
 
