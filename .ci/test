@@ -10,4 +10,4 @@ set -x
 qmake -v
 qmake "CONFIG+=test" "QMAKE_CXX=g++-6" "QMAKE_LINK=g++-6" -spec linux-g++  amanuensis.pro
 make
-LD_LIBRARY_PATH="${TRAVIS_BUILD_DIR}/core" core-test/core-test
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core" core-test/core-test
