@@ -40,7 +40,7 @@ void ProxyTransactionTests::parseModernDate()
 {
     try
     {
-        auto ignored = ProxyTransaction::parse_http_date("Sun, 06 Nov 1994 08:49:37 GMT");
+        ProxyTransaction::parse_http_date("Sun, 06 Nov 1994 08:49:37 GMT");
     }
     catch (std::exception &ex)
     {
@@ -50,19 +50,19 @@ void ProxyTransactionTests::parseModernDate()
 
 void ProxyTransactionTests::parseLegacyDate()
 {
-    auto ignored = ProxyTransaction::parse_http_date("Sunday, 06-Nov-94 08:49:37 GMT");
+    ProxyTransaction::parse_http_date("Sunday, 06-Nov-94 08:49:37 GMT");
 }
 
 void ProxyTransactionTests::parseAsctimeDate()
 {
-    auto ignored = ProxyTransaction::parse_http_date("Sun Nov  6 08:49:37 1994");
+    ProxyTransaction::parse_http_date("Sun Nov  6 08:49:37 1994");
 }
 
 void ProxyTransactionTests::parseInvalidInputThrowsInvalidArgument()
 {
     try
     {
-        auto ignored = ProxyTransaction::parse_http_date("ceci n'est pas un date");
+        ProxyTransaction::parse_http_date("ceci n'est pas un date");
         QFAIL("Expected an invalid_argument exception, but none was thrown");
     }
     catch (std::invalid_argument &ex)

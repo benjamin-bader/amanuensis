@@ -53,7 +53,7 @@ Proxy::ProxyImpl::ProxyImpl(const int port, Proxy *proxy) :
     ConnectionPoolListener(),
     port_(port),
     server_(port),
-    next_id_(ATOMIC_VAR_INIT(1)),
+    next_id_(1),
     proxy_(proxy)
 {
 }
