@@ -51,3 +51,9 @@ INCLUDEPATH += $$PWD/../core $$PWD/../include
 DEPENDPATH += $$PWS/../core
 
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
+
+macx {
+    QMAKE_CXXFLAGS += \
+        -Wno-unused-local-typedef \ # ASIO has unused typedefs, which is unfortunate.
+        -isystem $$PWD/../include/
+}

@@ -42,6 +42,8 @@ public:
     Headers& headers() { return message_.headers(); }
     const Headers& headers() const { return message_.headers(); }
 
+    std::vector<uint8_t>& body() { return message_.body(); }
+
     friend class HttpMessageParser;
 
 private:

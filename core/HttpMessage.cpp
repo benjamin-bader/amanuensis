@@ -82,6 +82,11 @@ const std::vector<uint8_t>& HttpMessage::body() const
     return body_;
 }
 
+std::vector<uint8_t>& HttpMessage::body()
+{
+    return body_;
+}
+
 void HttpMessage::set_method(const std::string &method)
 {
     method_ = method;

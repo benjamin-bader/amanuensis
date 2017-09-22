@@ -51,8 +51,6 @@ public:
     Headers& headers();
     const Headers& headers() const;
 
-    const std::vector<uint8_t>& body() const;
-
     void set_method(const std::string &method);
     void set_uri(const std::string &uri);
     void set_major_version(int major_version);
@@ -67,6 +65,9 @@ public:
     // Return the body as a string, using any specified Content-Encoding
     // if present.
     const std::string body_as_string() const;
+
+    std::vector<uint8_t>& body();
+    const std::vector<uint8_t>& body() const;
 private:
     // Request-specific data
     std::string method_;

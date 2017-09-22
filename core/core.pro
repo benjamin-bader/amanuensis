@@ -95,9 +95,11 @@ windows {
 
 macx {
     # Silence Clang warnings about ASIO by marking it as a "system" include.
-    QMAKE_CXXFLAGS += -isystem $$PWD/../include
-}
+    QMAKE_CXXFLAGS += \
+        -isystem $$PWD/../include
 
+    QMAKE_CXXFLAGS += -Wno-unused-local-typedef
+}
 
 unix {
     target.path = /usr/lib
