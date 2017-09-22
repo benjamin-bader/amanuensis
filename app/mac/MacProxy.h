@@ -30,7 +30,7 @@
 
 #include "TrustyCommon.h"
 
-class MacProxy : public Proxy
+class MacProxy : public ama::Proxy
 {
 public:
     MacProxy(int port);

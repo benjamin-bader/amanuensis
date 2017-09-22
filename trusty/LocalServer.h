@@ -15,6 +15,10 @@ public:
     void run();
 
 private:
+    virtual void set_http_proxy_host(const std::string &host) override;
+    virtual void set_http_proxy_port(const int port) override;
+
+private:
     struct impl;
     const std::shared_ptr<impl> impl_;
 };

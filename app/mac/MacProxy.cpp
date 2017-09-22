@@ -24,6 +24,8 @@
 #include <Security/Security.h>
 #include <ServiceManagement/ServiceManagement.h>
 
+using namespace ama;
+
 MacProxy::MacProxy(int port) :
     Proxy(port),
     enabled_(false)

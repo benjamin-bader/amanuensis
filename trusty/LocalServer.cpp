@@ -1,16 +1,19 @@
-#include "TrustyServer.h"
+#include "LocalServer.h"
 
 #include <asio.hpp>
 
-struct TrustyServer::impl :
+struct LocalServer::impl :
         public IService,
-        public std::enable_shared_from_this<TrustyServer::impl>
+        public std::enable_shared_from_this<LocalServer::impl>
 {
 public:
     impl(const std::shared_ptr<SystemLogger> &logger, int fd);
     ~impl();
 
     void run();
+
+    virtual void set_http_proxy_host(const std::string &host) override;
+    virtual void set_http_proxy_port(int port) override;
 
 private:
     void do_accept();
@@ -23,7 +26,7 @@ private:
     asio::local::stream_protocol::socket socket_;
 };
 
-TrustyServer::impl::impl(const std::shared_ptr<SystemLogger> &logger, int fd) :
+LocalServer::impl::impl(const std::shared_ptr<SystemLogger> &logger, int fd) :
     logger_(logger),
     io_service_(),
     signal_set_(io_service_),
@@ -34,42 +37,54 @@ TrustyServer::impl::impl(const std::shared_ptr<SystemLogger> &logger, int fd) :
     do_accept();
 }
 
-TrustyServer::impl::~impl()
+LocalServer::impl::~impl()
 {
 
 }
 
-void TrustyServer::impl::do_accept()
+void LocalServer::impl::do_accept()
 {
-    auto self = shared_from_this()
+    auto self = shared_from_this();
 }
 
-void TrustyServer::impl::run()
+void LocalServer::impl::run()
 {
     io_service_.run();
 }
 
-TrustyServer::TrustyServer(int socket_fd) :
+void LocalServer::impl::set_http_proxy_host(const std::string &host)
+{
+    (void)host;
+}
+
+void LocalServer::impl::set_http_proxy_port(int port)
+{
+    (void)port;
+}
+
+////////////
+
+LocalServer::LocalServer(int socket_fd) :
     OSLoggable("com.bendb.amanuensis.Trusty", "TrustyServer"),
     impl_(std::make_shared<impl>(this->logger(), socket_fd))
 {
 }
 
-TrustyServer::~TrustyServer()
+LocalServer::~LocalServer()
 {
 }
 
-void TrustyServer::run()
+void LocalServer::run()
 {
     impl_->run();
 }
 
-void TrustyServer::set_http_proxy_host(const std::string &host)
+void LocalServer::set_http_proxy_host(const std::string &host)
 {
-
+    impl_->set_http_proxy_host(host);
 }
 
-void TrustyServer::set_http_proxy_port(int port)
+void LocalServer::set_http_proxy_port(int port)
 {
-
+    impl_->set_http_proxy_port(port);;
 }
