@@ -1,5 +1,5 @@
-#ifndef TRUSTYSERVER_H
-#define TRUSTYSERVER_H
+#ifndef LOCALSERVER_H
+#define LOCALSERVER_H
 
 #pragma once
 
@@ -23,4 +23,4 @@ private:
     const std::shared_ptr<impl> impl_;
 };
 
-#endif // TRUSTYSERVER_H
+#endif // LOCALSERVER_H

@@ -1,5 +1,7 @@
 #include "LocalServer.h"
 
+#include <system_error>
+
 #include <asio.hpp>
 
 struct LocalServer::impl :
@@ -34,6 +36,18 @@ LocalServer::impl::impl(const std::shared_ptr<SystemLogger> &logger, int fd) :
     socket_(io_service_)
 {
     acceptor_.assign(asio::local::stream_protocol(), fd);
+
+    signal_set_.add(SIGTERM);
+    signal_set_.add(SIGHUP);
+    signal_set_.add(SIGQUIT);
+
+    signal_set_.async_wait([this](std::error_code ec, int signum)
+    {
+        (void) ec;
+        (void) signum;
+        acceptor_.close();
+    });
+
     do_accept();
 }
 

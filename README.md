@@ -34,6 +34,28 @@ Qt Creator is adequate for running the unit tests.  If you decide that you'd lik
 0. `qmake -r "M=2"`
 0. `nmake check`
 
+### Code Signing
+
+On macOS, we make use of a launchd "Privileged Helper" to effect system changes - namely, to enable or disable a system-wide HTTP proxy service.  Currently, this requires both the helper and the main application to be cryptographically signed.  You _do not_ need an Apple Developer ID, at least not on Sierra, contrary to at least some of Apple's developer documentation.  A self-signed certificate will suffice; we provide tools to generate and install such a certificate in the `keygen` directory.  To install a suitable code-signing certificate:
+
+```bash
+cd keygen
+./install_codesigning_cert.sh
+```
+
+Be sure to enter a non-empty passcode, otherwise Keychain Access will not be able to import the cert.
+
+This script installs a signing identity named "Amanuensis Developers"; you can use this identity to sign arbitrary things, and as of 22 September 2017, launchd will accept privileged helpers signed with it.
+
+Note that you may need to do a dance with SMJobBlessUtil.py, in the form of:
+0. build
+0. SMJobBlessUtil.py setreq path/to/packaged/app path/to/app/info.plist path/to/helper/info.plist
+0. rebuild
+0. SMJobBlessUtil.py check path/to/packaged/app
+
+SMJobBlessUtil.py is available as a download from Apple; we haven't yet implemented packaging up a distribution.  **These steps are both speculative and aspirational**.
+
+It is our intention that this process will fulfill our obligations under GPLv3 § 6.
 
 ### Design
 

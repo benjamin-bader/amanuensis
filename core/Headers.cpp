@@ -138,7 +138,7 @@ std::vector<std::string> Headers::find_by_name(const std::string &name) const
 {
     std::vector<std::string> result;
 
-    for (int i = 0; i < names_.size(); ++i)
+    for (size_t i = 0; i < names_.size(); ++i)
     {
         auto header_name  = names_[i];
         auto header_value = values_[i];
@@ -156,7 +156,7 @@ Headers Headers::normalize() const
 {
     std::multimap<std::string, std::string, ci_less> map;
 
-    for (int i = 0; i < size(); ++i)
+    for (size_t i = 0; i < size(); ++i)
     {
         map.insert(std::make_pair(names_[i], values_[i]));
     }
