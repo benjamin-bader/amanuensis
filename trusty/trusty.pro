@@ -15,6 +15,7 @@ DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
 QMAKE_CXXFLAGS += \
     -isystem $$PWD/../include
+    -Wno-unused-local-typedef
 
 INCLUDEPATH += \
     $$PWD/../include \
