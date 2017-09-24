@@ -19,8 +19,8 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = Amanuensis
 TEMPLATE = app
+TARGET = Amanuensis
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked as deprecated (the exact warnings
@@ -47,22 +47,23 @@ win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../core/release/ -lcor
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../core/debug/ -lcore
 else:unix: LIBS += -L$$OUT_PWD/../core/ -lcore
 
-INCLUDEPATH += $$PWD/../core $$PWD/../include $$PWD/../trusty-interface
+INCLUDEPATH += $$PWD/../core $$PWD/../include
 DEPENDPATH += $$PWS/../core
 
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
 macx {
+    QMAKE_TARGET_BUNDLE_PREFIX=com.bendb.amanuensis
+
     QMAKE_CXXFLAGS += \
         -Wno-unused-local-typedef \ # ASIO has unused typedefs, which is unfortunate.
         -isystem $$PWD/../include/
-}
 
-mac {
     include($$PWD/../trusty-constants.pri)
     include($$PWD/../trusty-libs.pri)
 
     LIBS += -L$${OUT_PWD}/../trusty-interface/ -ltrusty-interface
+    INCLUDEPATH += $$PWD/../trusty-interface
 
     HEADERS += \
         mac/MacProxy.h
@@ -73,15 +74,15 @@ mac {
     DISTFILES += \
         Info.plist
 
-    DESTDIR = $$PWD/../
+    APP_PATH = $$shell_quote($${DESTDIR}$${TARGET}.app)
 
-    INFO_PLIST_PATH = $$shell_quote($${DESTDIR}$${TARGET}.app/Contents/Info.plist)
+    INFO_PLIST_PATH = $$shell_quote($$APP_PATH/Contents/Info.plist)
 
     HELPER_IDENTIFIER = com.bendb.amanuensis.Trusty
 
     plist.commands += $(COPY) $$PWD/Info.plist $${INFO_PLIST_PATH};
     plist.commands += /usr/libexec/PlistBuddy -c \"Set :CFBundleIdentifier com.bendb.amanuensis.$${TARGET}\" $${INFO_PLIST_PATH};
-    plist.commands += /usr/libexec/PlistBuddy -c \'Set :SMPrivilegedExecutables:$${HELPER_IDENTIFIER} 'anchor apple generic and identifier \\\"$${HELPER_IDENTIFIER}\\\" and (certificate leaf[field.1.2.840.113635.100.6.1.9] /* exists */ or certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = $${CERT_OU})'\' $${INFO_PLIST_PATH};
+    plist.commands += /usr/libexec/PlistBuddy -c \'Set :SMPrivilegedExecutables:$${HELPER_IDENTIFIER} 'identifier \\\"$${HELPER_IDENTIFIER}\\\" and certificate leaf = H\\\"$${CERTSHA1}\\\"'\' $${INFO_PLIST_PATH};
 
     first.depends = $(first) plist
 

@@ -27,7 +27,7 @@ SUBDIRS += \
 app.depends = core
 core-test.depends = core
 
-mac {
+macx {
     SUBDIRS += \
         trusty \
         trusty-interface
@@ -40,25 +40,51 @@ mac {
     HELPERAPP_INFO = trusty-Info.plist
     HELPER_APP_LAUNCHD_INFO = trusty-Launchd.plist
 
+    BUNDLE_DIR = $$OUT_PWD/$${BUNDLEAPP}.app
+
+    QMAKE_EXTRA_VARIABLES += MACDEPLOYQT
+
+    TEMPNAME = $$dirname(QMAKE_QMAKE)
+    MACDEPLOYQT = $${TEMPNAME}/macdeployqt
+
+    # 'organizer' will place all build output into an application bundle directory
     organizer.depends += app trusty
-    organizer.commands += $(MKDIR) $$OUT_PWD/$${BUNDLEAPP}.app/Contents/Library/LaunchServices;
-    organizer.commands += $(MKDIR) $$OUT_PWD/$${BUNDLEAPP}.app/Contents/Resources;
-    organizer.commands += $(MOVE) $$OUT_PWD/$${HELPERAPP} $$OUT_PWD/$${BUNDLEAPP}.app/Contents/Library/LaunchServices;
-    organizer.commands += $(COPY) $$PWD/trusty/$${HELPERAPP_INFO} $$OUT_PWD/$${BUNDLEAPP}.app/Contents/Resources;
-    organizer.commands += $(COPY) $$PWD/trusty/$${HELPER_APP_LAUNCHD_INFO} $$OUT_PWD/$${BUNDLEAPP}.app/Contents/Resources;
+
+    organizer.commands += rm -rf $${BUNDLE_DIR};
+
+    # Move the built .app from the app subdir to the root
+    organizer.commands += $(MOVE) $$OUT_PWD/app/$${BUNDLEAPP}.app $${BUNDLE_DIR};
+
+    # Move the core lib to the bundle
+    organizer.commands += $(MKDIR) $${BUNDLE_DIR}/Contents/Frameworks;
+    organizer.commands += $(MOVE) $$OUT_PWD/core/libcore.1.0.0.dylib $${BUNDLE_DIR}/Contents/Frameworks;
+
+    # Set up the trusted-helper files in the bundle
+    organizer.commands += $(MKDIR) $${BUNDLE_DIR}/Contents/Library/LaunchServices;
+    organizer.commands += $(MKDIR) $${BUNDLE_DIR}/Contents/Resources;
+    organizer.commands += $(MOVE) $$OUT_PWD/trusty/$${HELPERAPP} $${BUNDLE_DIR}/Contents/Library/LaunchServices;
+    organizer.commands += $(COPY) $$PWD/trusty/$${HELPERAPP_INFO} $${BUNDLE_DIR}/Contents/Resources;
+    organizer.commands += $(COPY) $$PWD/trusty/$${HELPER_APP_LAUNCHD_INFO} $${BUNDLE_DIR}/Contents/Resources;
 
     include(trusty-constants.pri)
 
     BUNDLEID = com.bendb.amanuensis.$${BUNDLEAPP}
 
-    codesigner.commands += dsymutil $${OUT_PWD}/$${BUNDLEAPP}.app/Contents/MacOS/$${BUNDLEAPP} -o $${OUT_PWD}/$${BUNDLEAPP}.app.dSYM;
-    codesigner.commands += $(COPY_DIR) $${OUT_PWD}/$${BUNDLEAPP}.app.dSYM $${OUT_PWD}/$${BUNDLEAPP}.app/Contents/MacOS/$${BUNDLEAPP}.dSYM;
-    codesigner.commands += macdeployqt $${OUT_PWD}/$${BUNDLEAPP}.app -always-overwrite -codesign=$${CERTSHA1};
-    codesigner.commands += touch -c $${OUT_PWD}/$${BUNDLEAPP}.app;
+    # The 'codesigner' target does a few things that are intertwined with codesigning:
+    # - debug symbols are generated for the app
+    # - the executable is patched to link to libcore in the correct location
+    # - macdeployqt is invoked to both copy and sign the QT frameworks
+    #
+    # After all that, we sign the bundle again.
+    codesigner.commands += dsymutil $${BUNDLE_DIR}/Contents/MacOS/$${BUNDLEAPP} -o $${OUT_PWD}/$${BUNDLEAPP}.app.dSYM;
+    codesigner.commands += $(COPY_DIR) $${BUNDLE_DIR}.dSYM $${BUNDLE_DIR}/Contents/MacOS/$${BUNDLEAPP}.dSYM;
+    codesigner.commands += install_name_tool -change libcore.1.dylib @executable_path/../Frameworks/libcore.1.0.0.dylib $${BUNDLE_DIR}/Contents/MacOS/$${BUNDLEAPP};
+    codesigner.commands += $(EXPORT_MACDEPLOYQT) $${BUNDLE_DIR} -always-overwrite -codesign=$${CERTSHA1};
+    codesigner.commands += touch -c $${BUNDLE_DIR};
 
     CODESIGN_ALLOCATE_PATH=$$system(xcrun -find codesign_allocate)
     codesigner.commands += export CODESIGN_ALLOCATE=$${CODESIGN_ALLOCATE_PATH};
-    codesigner.commands += codesign --force --sign $${CERTSHA1} -r=\'designated => anchor apple generic and identifier \"$${BUNDLEID}\" and ((cert leaf[field.1.2.840.113635.100.6.1.9] exists) or (certificate 1[field.1.2.840.113635.100.6.2.6] exists and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and certificate leaf[subject.OU]=$${CERT_OU}))\' --timestamp=none $$OUT_PWD/$${BUNDLEAPP}.app;
+    codesigner.commands += codesign --verbose --force --sign $${CERTSHA1} -r=\'designated => identifier \"$${BUNDLEID}\" and certificate leaf = H\"$${CERTSHA1}\"\' --timestamp=none $${BUNDLE_DIR};
 
     first.depends = $(first) organizer # codesigner
     export(first.depends)

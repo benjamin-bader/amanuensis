@@ -17,7 +17,10 @@
 
 #include "MacProxy.h"
 
+#include <QDebug>
 #include <QSettings>
+
+#include <syslog.h>
 
 #include <CoreFoundation/CFDictionary.h>
 #include <CoreFoundation/CFError.h>
@@ -45,7 +48,7 @@ bool MacProxy::is_enabled() const
 
 void MacProxy::enable(std::error_code &ec)
 {
-
+    bless_helper_program(ec);
 }
 
 void MacProxy::disable(std::error_code &ec)
@@ -67,21 +70,29 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
     AuthorizationRef authRef = nullptr;
 
     OSStatus status = AuthorizationCreate(authRightsArray, kAuthorizationEmptyEnvironment, authFlags, &authRef);
+
+    qDebug() << "AuthorizationCreate returned: " << static_cast<int>(status);
     if (status == errAuthorizationSuccess)
     {
+        syslog(LOG_NOTICE, "AuthorizationCreate succeeded");
+
         CFErrorRef error;
         if (! SMJobBless(kSMDomainSystemLaunchd, CFSTR(kPRIVILEGED_HELPER_LABEL), authRef, &error))
         {
+            syslog(LOG_NOTICE, "SMJobBless failed!  %d", CFErrorGetCode(error));
+
             ec.assign(CFErrorGetCode(error), std::system_category());
             CFRelease(error);
         }
+
+        AuthorizationFree(authRef, kAuthorizationFlagDefaults);
     }
     else
     {
+        syslog(LOG_NOTICE, "AuthorizationCreate failed!");
+
         ec.assign(static_cast<int>(status), std::system_category());
     }
-
-    CFRelease(authRef);
 }
 
 bool MacProxy::get_installed_helper_info(CFDictionaryRef *pRef) const

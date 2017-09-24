@@ -1,0 +1,11 @@
+Steps to package a complete app:
+
+- qmake
+- make clean && make all
+- copy app/Amanuensis.app contents to ./Amanuensis.app
+- copy trusty files into relevant places in Amanuensis.app
+- copy libcore into Amanuensis.app/Contents/MacOS
+- install_name_util stuff
+- macdeployqt
+- ...
+- profit?

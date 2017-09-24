@@ -5,7 +5,7 @@
         <key>Label</key>
         <string>com.bendb.amanuensis.Trusty</string>
         <key>StandardErrorPath</key>
-        <string>/var/log/com.bendb.amanuensis.trusty.log</string>
+        <string>/var/log/com.bendb.amanuensis.Trusty.log</string>
         <key>MachServices</key>
         <dict>
             <key>com.bendb.amanuensis.Trusty</key>

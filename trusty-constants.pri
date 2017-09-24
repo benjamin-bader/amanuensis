@@ -1,12 +1,12 @@
 # Name of the application signing certificate
-APPCERT = "\"3rd Party Mac Developer Application: App Developer (XXXXXXXXXX)\""
+CERT_CN = "\"Amanuensis Authors\""
 
 # Cert OU
-CERT_OU = XXXXXXXXXX
+CERT_OU = bendb.com
 
 # Sha1 of the siging certificate
 CERTSHA1 = 1234567890ABCDEFFEDCBA098765432112345678
 
-DEFINES += kSigningCertCommonName=\\\"$${APPCERT}\\\"
+DEFINES += kSigningCertCommonName=\\\"$${CERT_CN}\\\"
 
 
