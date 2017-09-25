@@ -67,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent) :
         static_cast<MacProxy*>(proxy.get())->say_hi();
     }
 #else
-    proxy = ProxyFactory::create(port);
+    proxy = ProxyFactory().create(port);
 #endif
 
     connections << connect(proxy.get(), &Proxy::transactionStarted, [this](std::shared_ptr<Transaction> tx) {
