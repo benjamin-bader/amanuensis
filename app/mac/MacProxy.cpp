@@ -41,6 +41,11 @@ using namespace ama;
 
 namespace
 {
+    inline CFStringRef make_cfstring(const std::string &str)
+    {
+        return CFStringCreateWithCStringNoCopy(NULL, str.c_str(), kCFStringEncodingASCII, NULL);
+    }
+
     int read_bytes(int size, int fd, char *buffer)
     {
         int remaining = size;
@@ -103,7 +108,7 @@ void MacProxy::enable(std::error_code &ec)
 
 void MacProxy::disable(std::error_code &ec)
 {
-
+    Q_UNUSED(ec);
 }
 
 void MacProxy::bless_helper_program(std::error_code &ec) const
@@ -121,13 +126,12 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
 
     OSStatus status = AuthorizationCreate(authRightsArray, kAuthorizationEmptyEnvironment, authFlags, &authRef);
 
-    qDebug() << "AuthorizationCreate returned: " << static_cast<int>(status);
     if (status == errAuthorizationSuccess)
     {
-        syslog(LOG_NOTICE, "AuthorizationCreate succeeded");
+        CFStringRef helperLabel = make_cfstring(ama::kHelperLabel);
 
         CFErrorRef error;
-        if (! SMJobBless(kSMDomainSystemLaunchd, CFSTR(kPRIVILEGED_HELPER_LABEL), authRef, &error))
+        if (! SMJobBless(kSMDomainSystemLaunchd, helperLabel, authRef, &error))
         {
             syslog(LOG_NOTICE, "SMJobBless failed!  %ld", CFErrorGetCode(error));
 
@@ -147,7 +151,7 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
 
 bool MacProxy::get_installed_helper_info(CFDictionaryRef *pRef) const
 {
-    CFErrorRef error = nullptr;
+    Q_UNUSED(pRef);
     pRef = nullptr;
 
     //CFDictionaryRef = SMJobCopyDictionary(kSMDomainSystemLaunchd, CFSTR(kPRIVILEGED_HELPER_LABEL));

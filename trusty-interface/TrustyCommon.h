@@ -20,8 +20,13 @@
 
 #pragma once
 
-#define kPRIVILEGED_HELPER_LABEL            "com.bendb.amanuensis.Trusty"
-#define kHostAppRightName                   "Amanuensis.app"
-#define HELPER_SOCKET_PATH                  "/var/run/com.bendb.amanuensis.Trusty.socket"
+#include <string>
+
+namespace ama
+{
+    const std::string kHelperLabel = "com.bendb.amanuensis.Trusty";
+    const std::string kHostAppRightName = "Amanuensis.app";
+    const std::string kHelperSocketPath = "/var/run/com.bendb.amanuensis.Trusty.socket";
+}
 
 #endif

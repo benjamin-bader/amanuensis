@@ -29,8 +29,10 @@
 #include "ProxyFactory.h"
 #include "Transaction.h"
 
+#ifdef Q_OS_MAC
 #include "mac/MacProxy.h"
 #include "CommandRegistry.h"
+#endif
 
 using namespace ama;
 
@@ -52,6 +54,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     std::error_code ec;
 
+#ifdef Q_OS_MAC
     static_cast<MacProxy*>(proxy.get())->enable(ec);
 
     if (ec)
@@ -63,6 +66,7 @@ MainWindow::MainWindow(QWidget *parent) :
     {
         static_cast<MacProxy*>(proxy.get())->say_hi();
     }
+#endif
 
     connections << connect(proxy.get(), &Proxy::transactionStarted, [this](std::shared_ptr<Transaction> tx) {
                    qDebug() << "Got a tx! " << tx->id();
