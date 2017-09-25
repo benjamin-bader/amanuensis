@@ -23,6 +23,9 @@
 class IService
 {
 public:
+    virtual const std::string get_http_proxy_host() const = 0;
+    virtual int get_http_proxy_port() const = 0;
+
     virtual void set_http_proxy_host(const std::string &host) = 0;
     virtual void set_http_proxy_port(int port) = 0;
 };

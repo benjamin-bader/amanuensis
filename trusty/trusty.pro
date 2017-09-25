@@ -11,8 +11,6 @@ TEMPLATE = app
 include($$PWD/../trusty-constants.pri)
 include($$PWD/../trusty-libs.pri)
 
-DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
-
 QMAKE_CXXFLAGS += \
     -isystem $$PWD/../include
     -Wno-unused-local-typedef
@@ -31,20 +29,14 @@ LIBS += \
 
 LIBS += -L$${OUT_PWD}/../trusty-interface/ -ltrusty-interface
 
-SOURCES += main.cpp \
-    OSLoggable.cpp \
-    TrustyService.cpp \
-    LocalServer.cpp
+SOURCES += main.cpp
 
 DISTFILES += \
     trusty-info.plist \
     trusty-launchd.plist
 
 HEADERS += \
-    ../TrustyCommon.h \
-    OSLoggable.h \
-    TrustyService.h \
-    LocalServer.h
+    ../TrustyCommon.h
 
 DISTFILES += \
     trusty-info.plist \

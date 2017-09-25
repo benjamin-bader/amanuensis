@@ -44,6 +44,8 @@ public:
     // Attempts to disable system-wide proxy settings.
     void disable(std::error_code &ec);
 
+    void say_hi();
+
 private:
     void bless_helper_program(std::error_code &ec) const;
 
