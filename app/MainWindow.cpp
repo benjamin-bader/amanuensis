@@ -50,11 +50,11 @@ MainWindow::MainWindow(QWidget *parent) :
                        QCoreApplication::applicationName());
 
     int port = settings.value("Proxy/port", 9999).toInt();
+
+#ifdef Q_OS_MAC
     proxy = std::make_shared<MacProxy>(port);
 
     std::error_code ec;
-
-#ifdef Q_OS_MAC
     static_cast<MacProxy*>(proxy.get())->enable(ec);
 
     if (ec)
@@ -66,6 +66,8 @@ MainWindow::MainWindow(QWidget *parent) :
     {
         static_cast<MacProxy*>(proxy.get())->say_hi();
     }
+#else
+    proxy = ProxyFactory::create(port);
 #endif
 
     connections << connect(proxy.get(), &Proxy::transactionStarted, [this](std::shared_ptr<Transaction> tx) {
