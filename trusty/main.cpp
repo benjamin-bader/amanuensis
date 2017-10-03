@@ -15,21 +15,39 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * This file contains the trusted helper ("Trusty") for Amanuensis,
+ * which handles
+ */
+
 // Apple stuff
 #include <launch.h>
 
+// UNIX stuff
 #include <syslog.h>
 
-#include <errno.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <sys/socket.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+// cpp stuff
 #include <iostream>
+#include <memory>
 #include <string>
+
+// our stuff
+#include "Server.h"
+#include "TrustyService.h"
+
+using namespace ama::trusty;
+
+namespace
+{
+
+const std::unique_ptr<IService> g_service = std::make_unique<TrustyService>();
+
+}
 
 // I wish ASIO would have worked out, but it just couldn't
 // seem to handle UNIX sockets on macOS.  Pity, because
@@ -57,107 +75,40 @@ int lookup_socket_endpoint(std::error_code &ec)
     return result;
 }
 
-int accept_client(int listen_fd)
+void serve_client(int client_fd)
 {
-    socklen_t size = sizeof(struct sockaddr) + 128;
-    char addr_data[size];
-    struct sockaddr *addr = (struct sockaddr *) &addr_data;
-
-    struct pollfd fds;
-    fds.fd = listen_fd;
-    fds.events = POLLIN;
-
-    int ready_count = poll(&fds, 1, 10000); // wait 10s for a connection
-
-    if (ready_count == -1)
+    try
     {
-        // womp womp
-        std::cerr << "poll() failed: errno=" << errno << std::endl;
-        return -2;
+        Server server(g_service.get(), client_fd);
+        server.serve();
     }
-
-    if (ready_count == 0)
+    catch (std::exception &ex)
     {
-        std::cerr << "poll(): No connection?" << std::endl;
-        return -1;
+        std::cerr << ex.what() << std::endl;
     }
-
-    int connection_fd = ::accept(listen_fd, addr, &size);
-    if (connection_fd < 0)
-    {
-        std::cerr << "accept(): failed; errno=" << errno << std::endl;
-        return -2;
-    }
-
-    return connection_fd;
 }
-
-/*
- return 0 for success, 1 for failure
- */
-int readBytes(int size, int fd, unsigned char * buffer) {
-    int left = size;
-    unsigned char* pointer = buffer;
-    struct pollfd fds;
-    fds.fd = fd;
-    fds.events = POLLIN;
-
-    while (0 < left) {
-        int readyCount = poll(&fds, 1, 1000);  // wait one second for data
-        if (readyCount == -1) {
-            std::cerr << "readBytes#poll() error = " << errno << std::endl;
-            return 1;
-        }
-        if (readyCount == 0) {
-            std::cerr << "readBytes(): no bytes available on socket, waiting on " << left << " more!" << std::endl;
-            return 1;
-        }
-        int numberRead = read(fd, pointer, left);
-        if (numberRead == 0) {
-            std::cerr << "poll() said that data was available but we didn't get any!" << std::endl;
-            return 1;
-        }
-        left -= numberRead;
-        pointer += numberRead;
-    }
-    return 0;
-}
-
 
 int main(int argc, char *argv[])
 {
     (void) argc;
     (void) argv;
 
-    syslog(LOG_INFO, "SHH I AM STARTING");
-
-    //Log log;
-
     std::error_code ec;
     int fd = lookup_socket_endpoint(ec);
     if (ec)
     {
         syslog(LOG_INFO, "Failed to open launchd socket list: %d", ec.value());
-        //log.error() << "Failed to open launchd socket list (" << ec.value() << " " << ec.message() << ")";
         return -1;
     }
 
-    int client_fd;
-    while ((client_fd = accept_client(fd)) >= 0)
+    Server server(g_service.get(), fd);
+    try
     {
-        unsigned char msg[12];
-        if (readBytes(3, client_fd, msg) != 0)
-        {
-            std::cerr << "Error reading message; closing socket" << std::endl;
-            close(client_fd);
-            break;
-        }
-
-        msg[3] = 0;
-        std::string payload((const char *) msg);
-        std::cerr << "Received: " << payload << std::endl;
-
-        close(client_fd);
+        server.serve();
+    }
+    catch (std::exception &ex)
+    {
+        std::cerr << "Failed, somehow: " << ex.what() << std::endl;
     }
 
     std::cerr << "Hanging up now!" << std::endl;

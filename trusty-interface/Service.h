@@ -18,16 +18,40 @@
 #ifndef ISERVICE_H
 #define ISERVICE_H
 
+#include <memory>
 #include <string>
 
+namespace ama {
+namespace trusty {
+
+
+/*!
+ *
+ */
 class IService
 {
 public:
-    virtual const std::string get_http_proxy_host() const = 0;
-    virtual int get_http_proxy_port() const = 0;
+    virtual ~IService() {}
+
+    virtual const std::string get_http_proxy_host() = 0;
+    virtual int get_http_proxy_port() = 0;
 
     virtual void set_http_proxy_host(const std::string &host) = 0;
     virtual void set_http_proxy_port(int port) = 0;
+
+    virtual void reset_proxy_settings() = 0;
 };
+
+/*! Creates an IService implementation, and connects it to
+ *  the server listening on the given UNIX socket @p path.
+ *
+ * @param path an absolute path to a UNIX socket.
+ * @return a unique pointer to the connected IService.
+ * @throws throws an exception if creating or connecting fails.
+ */
+std::unique_ptr<IService> create_client(const std::string &path);
+
+} // namespace trusty
+} // namespace ama
 
 #endif // ISERVICE_H

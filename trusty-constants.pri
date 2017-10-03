@@ -5,8 +5,4 @@ CERT_CN = "\"Amanuensis Authors\""
 CERT_OU = bendb.com
 
 # Sha1 of the siging certificate
-CERTSHA1 = 1234567890ABCDEFFEDCBA098765432112345678
-
-DEFINES += kSigningCertCommonName=\\\"$${CERT_CN}\\\"
-
-
+CERTSHA1 = 1eb56b3549184241a3fba3b687b4ef9e6b612c14

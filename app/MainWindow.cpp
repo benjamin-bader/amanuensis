@@ -31,7 +31,6 @@
 
 #ifdef Q_OS_MAC
 #include "mac/MacProxy.h"
-#include "CommandRegistry.h"
 #endif
 
 using namespace ama;

@@ -29,14 +29,18 @@ LIBS += \
 
 LIBS += -L$${OUT_PWD}/../trusty-interface/ -ltrusty-interface
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    TrustyService.cpp \
+    Server.cpp
 
 DISTFILES += \
     trusty-info.plist \
     trusty-launchd.plist
 
 HEADERS += \
-    ../TrustyCommon.h
+    ../TrustyCommon.h \
+    TrustyService.h \
+    Server.h
 
 DISTFILES += \
     trusty-info.plist \

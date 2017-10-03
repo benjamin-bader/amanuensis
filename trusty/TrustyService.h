@@ -15,17 +15,32 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef COMMAND_H
-#define COMMAND_H
+#ifndef TRUSTYSERVICE_H
+#define TRUSTYSERVICE_H
 
-#include <cstdint>
-#include <vector>
+#include <string>
 
-class Command
+#include "Service.h"
+
+namespace ama {
+namespace trusty {
+
+class TrustyService : public IService
 {
 public:
-    Command();
-    virtual std::vector<uint8_t> serialize() const = 0;
+    TrustyService();
+    virtual ~TrustyService();
+
+    virtual void set_http_proxy_host(const std::string &host) override;
+    virtual void set_http_proxy_port(int port) override;
+
+    virtual const std::string get_http_proxy_host() override;
+    virtual int get_http_proxy_port() override;
+
+    virtual void reset_proxy_settings() override;
 };
 
-#endif // COMMAND_H
+}
+}
+
+#endif // TRUSTYSERVICE_H
