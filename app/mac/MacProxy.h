@@ -51,6 +51,8 @@ private:
 
     bool get_installed_helper_info(CFDictionaryRef *pRef) const;
 
+    void install_default_auth_rules() const;
+
 private:
     bool enabled_;
 };

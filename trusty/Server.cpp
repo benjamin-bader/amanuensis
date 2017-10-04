@@ -27,6 +27,9 @@
 #include <iostream>
 #include <system_error>
 
+#include <Security/Security.h>
+
+#include "ClientConnection.h"
 #include "MessageProcessor.h"
 #include "Service.h" // for IService
 
@@ -103,78 +106,13 @@ int Server::accept_next_client()
 
 void Server::handle_client_session(int client_fd)
 {
-    MessageProcessor processor(client_fd);
-
-    static const Message kAck { MessageType::Ack, {} };
-
-    Message msg;
-    do
+    try
     {
-        msg = processor.recv();
-
-        switch (msg.type)
-        {
-        case MessageType::SetProxyHost:
-        {
-            std::string requested_host(msg.payload.begin(), msg.payload.end());
-            service_->set_http_proxy_host(requested_host);
-            processor.send(kAck);
-            break;
-        }
-
-        case MessageType::SetProxyPort:
-        {
-            int port = *((int*) msg.payload.data());
-            service_->set_http_proxy_port(port);
-            processor.send(kAck);
-            break;
-        }
-
-        case MessageType::GetProxyHost:
-        {
-            auto host = service_->get_http_proxy_host();
-
-            Message reply;
-            reply.type = MessageType::Ack;
-            reply.payload.assign(host.begin(), host.end());
-
-            processor.send(reply);
-            break;
-        }
-
-        case MessageType::GetProxyPort:
-        {
-            auto port = service_->get_http_proxy_port();
-
-            uint8_t *result_bytes = (uint8_t *) &port;
-
-            Message reply;
-            reply.type = MessageType::Ack;
-            reply.payload.assign(result_bytes, result_bytes + sizeof(port));
-
-            processor.send(reply);
-            break;
-        }
-
-        case MessageType::ClearProxySettings:
-        {
-            service_->reset_proxy_settings();
-            processor.send(kAck);
-            break;
-        }
-
-        case MessageType::Disconnect:
-        {
-            // Done!
-            break;
-        }
-
-        default:
-        {
-            std::cerr << "ERROR: Received response message-type from a client!  type=" << msg.type << std::endl;
-            break;
-        }
-
-        }; // switch
-    } while (msg.type != MessageType::Disconnect);
+        ClientConnection conn(service_, client_fd);
+        conn.handle();
+    }
+    catch (const std::exception &ex)
+    {
+        std::cerr << "Client error: " << ex.what() << std::endl;
+    }
 }

@@ -31,7 +31,8 @@ LIBS += -L$${OUT_PWD}/../trusty-interface/ -ltrusty-interface
 
 SOURCES += main.cpp \
     TrustyService.cpp \
-    Server.cpp
+    Server.cpp \
+    ClientConnection.cpp
 
 DISTFILES += \
     trusty-info.plist \
@@ -40,7 +41,8 @@ DISTFILES += \
 HEADERS += \
     ../TrustyCommon.h \
     TrustyService.h \
-    Server.h
+    Server.h \
+    ClientConnection.h
 
 DISTFILES += \
     trusty-info.plist \

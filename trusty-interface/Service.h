@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace ama {
 namespace trusty {
@@ -49,7 +50,7 @@ public:
  * @return a unique pointer to the connected IService.
  * @throws throws an exception if creating or connecting fails.
  */
-std::unique_ptr<IService> create_client(const std::string &path);
+std::unique_ptr<IService> create_client(const std::string &path, const std::vector<uint8_t> &auth);
 
 } // namespace trusty
 } // namespace ama

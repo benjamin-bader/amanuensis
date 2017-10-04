@@ -45,11 +45,13 @@ void TrustyService::set_http_proxy_port(int port)
 const std::string TrustyService::get_http_proxy_host()
 {
     std::cerr << "TrustyService::get_http_proxy_host()" << std::endl;
+    return "";
 }
 
 int TrustyService::get_http_proxy_port()
 {
     std::cerr << "TrustyService::get_http_proxy_port()" << std::endl;
+    return 0;
 }
 
 void TrustyService::reset_proxy_settings()

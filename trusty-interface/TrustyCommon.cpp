@@ -15,24 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef TRUSTYCOMMON_H
-#define TRUSTYCOMMON_H
+#include "TrustyCommon.h"
 
-#pragma once
+const std::string ama::kHelperLabel = "com.bendb.amanuensis.Trusty";
+const std::string ama::kHostAppRightName = "Amanuensis.app";
+const std::string ama::kHelperSocketPath = "/var/run/com.bendb.amanuensis.Trusty.socket";
 
-#include <string>
-
-namespace ama
-{
-    extern const std::string kHelperLabel;
-    extern const std::string kHostAppRightName;
-    extern const std::string kHelperSocketPath;
-
-    extern const char * kSetHostRightName;
-    extern const char * kSetPortRightName;
-    extern const char * kGetHostRightName;
-    extern const char * kGetPortRightName;
-    extern const char * kClearSettingsRightName;
-}
-
-#endif
+const char * ama::kSetHostRightName = "com.bendb.amanuensis.trusty.SetHost";
+const char * ama::kSetPortRightName = "com.bendb.amanuensis.trusty.SetPort";
+const char * ama::kGetHostRightName = "com.bendb.amanuensis.trusty.GetHost";
+const char * ama::kGetPortRightName = "com.bendb.amanuensis.trusty.GetPort";
+const char * ama::kClearSettingsRightName = "com.bendb.amanuensis.trusty.ClearSettings";

@@ -43,13 +43,22 @@ enum class MessageType : uint8_t
     Error = 1,
 
     /**
+     * The first message sent by a connected client; establishes client
+     * authorization.
+     *
+     * The payload is 32 bytes long, consisting of an AuthorizationExternalForm
+     * struct.
+     */
+    Hello = 2,
+
+    /**
      * Tells the recipient to set the system's proxy host to the
      * hostname specified in the payload.
      *
      * The payload is a length-prefixed string containing the proxy
      * hostname.
      */
-    SetProxyHost = 2,
+    SetProxyHost = 3,
 
     /**
      * Tells the recipient to set the system's proxy port to the number
@@ -57,22 +66,22 @@ enum class MessageType : uint8_t
      *
      * The payload is a uint16_t.
      */
-    SetProxyPort = 3,
+    SetProxyPort = 4,
 
     /**
      *
      */
-    GetProxyHost = 4,
+    GetProxyHost = 5,
 
     /**
      *
      */
-    GetProxyPort = 5,
+    GetProxyPort = 6,
 
     /**
      * Clears all custom proxy settings, restoring system defaults.
      */
-    ClearProxySettings = 6,
+    ClearProxySettings = 7,
 
     /**
      * Signals that the sender will terminate the connection, and the

@@ -15,24 +15,33 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef TRUSTYCOMMON_H
-#define TRUSTYCOMMON_H
+#ifndef CLIENTCONNECTION_H
+#define CLIENTCONNECTION_H
 
-#pragma once
+#include "MessageProcessor.h"
 
-#include <string>
+#include <memory>
 
-namespace ama
+
+namespace ama {
+namespace trusty {
+
+class IService;
+
+class ClientConnection
 {
-    extern const std::string kHelperLabel;
-    extern const std::string kHostAppRightName;
-    extern const std::string kHelperSocketPath;
+public:
+    ClientConnection(IService *service, int client_fd);
+    ~ClientConnection();
 
-    extern const char * kSetHostRightName;
-    extern const char * kSetPortRightName;
-    extern const char * kGetHostRightName;
-    extern const char * kGetPortRightName;
-    extern const char * kClearSettingsRightName;
+    void handle();
+
+private:
+    class impl;
+    std::unique_ptr<impl> impl_;
+};
+
+}
 }
 
-#endif
+#endif // CLIENTCONNECTION_H

@@ -17,4 +17,5 @@ HEADERS += \
 
 SOURCES += \
     MessageProcessor.cpp \
-    Service.cpp
+    Service.cpp \
+    TrustyCommon.cpp

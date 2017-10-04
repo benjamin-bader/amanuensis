@@ -38,6 +38,9 @@ public:
 
     virtual void reset_proxy_settings() override;
 
+public:
+    void authenticate(const std::vector<uint8_t> &auth);
+
 private:
     MessageProcessor processor;
 };
@@ -153,9 +156,25 @@ void MessageProcessorServiceClient::reset_proxy_settings()
     }
 }
 
+void MessageProcessorServiceClient::authenticate(const std::vector<uint8_t> &auth)
+{
+    Message hello = { MessageType::Hello, auth };
+    processor.send(hello);
+
+    Message ack = processor.recv();
+    if (ack.type != MessageType::Ack)
+    {
+        // auth failed!
+        throw std::invalid_argument("Authorization failed");
+    }
 }
 
-std::unique_ptr<IService> ama::trusty::create_client(const std::string &address)
+}
+
+std::unique_ptr<IService> ama::trusty::create_client(const std::string &address, const std::vector<uint8_t> &auth)
 {
-    return std::make_unique<MessageProcessorServiceClient>(address);
+    std::unique_ptr<MessageProcessorServiceClient> svc = std::make_unique<MessageProcessorServiceClient>(address);
+    svc->authenticate(auth);
+
+    return std::move(svc);
 }

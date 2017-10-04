@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include <QDebug>
 #include <QSettings>
@@ -100,7 +101,11 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
         CFStringRef helperLabel = make_cfstring(ama::kHelperLabel);
 
         CFErrorRef error;
-        if (! SMJobBless(kSMDomainSystemLaunchd, helperLabel, authRef, &error))
+        if (SMJobBless(kSMDomainSystemLaunchd, helperLabel, authRef, &error))
+        {
+            install_default_auth_rules();
+        }
+        else
         {
             syslog(LOG_NOTICE, "SMJobBless failed!  %ld", CFErrorGetCode(error));
 
@@ -128,9 +133,88 @@ bool MacProxy::get_installed_helper_info(CFDictionaryRef *pRef) const
     return false;
 }
 
+void MacProxy::install_default_auth_rules() const
+{
+    AuthorizationRef ref;
+    OSStatus status;
+
+    status = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &ref);
+    if (status != errAuthorizationSuccess)
+    {
+        // If the authorization framework can't even set up an auth ref, then
+        // nothing will work at all.
+        //
+        // This should probably never happen.
+        throw std::system_error(static_cast<int>(status), std::system_category());
+    }
+
+    std::vector<const char*> rights = { ama::kSetHostRightName, ama::kSetPortRightName,
+                                        ama::kGetHostRightName, ama::kGetPortRightName,
+                                        ama::kClearSettingsRightName };
+
+    for (const char *right : rights)
+    {
+        status = AuthorizationRightGet(right, (CFDictionaryRef *) nullptr);
+        if (status == noErr)
+        {
+            // The right already exists; nothing to do here.
+            continue;
+        }
+
+        Q_ASSERT(status == errAuthorizationDenied);
+
+        CFStringRef ruleName = CFSTR(kAuthorizationRuleAuthenticateAsAdmin);
+
+        status = AuthorizationRightSet(ref, right, ruleName, NULL, NULL, NULL);
+        if (status != noErr)
+        {
+            // wha happen?
+            throw std::system_error(static_cast<int>(status), std::system_category());
+        }
+
+        CFRelease(ruleName);
+    }
+
+    AuthorizationFree(ref, kAuthorizationFlagDefaults);
+}
+
 void MacProxy::say_hi()
 {
-    auto client = ama::trusty::create_client(ama::kHelperSocketPath);
+    AuthorizationItem items[5];
+    items[0] = { ama::kSetHostRightName, 0, NULL, 0 };
+    items[1] = { ama::kSetPortRightName, 0, NULL, 0 };
+    items[2] = { ama::kGetHostRightName, 0, NULL, 0 };
+    items[3] = { ama::kGetPortRightName, 0, NULL, 0 };
+    items[4] = { ama::kClearSettingsRightName, 0, NULL, 0 };
+
+    AuthorizationRights rights = {5, items};
+
+    AuthorizationRef auth;
+    AuthorizationCreate(NULL, NULL, kAuthorizationFlagDefaults, &auth);
+
+    OSStatus authStatus = AuthorizationCopyRights(
+                auth,
+                &rights,
+                kAuthorizationEmptyEnvironment,
+                kAuthorizationFlagExtendRights
+                    | kAuthorizationFlagInteractionAllowed
+                    | kAuthorizationFlagPreAuthorize,
+                NULL);
+
+    if (authStatus != errAuthorizationSuccess)
+    {
+        AuthorizationFree(auth, kAuthorizationFlagDefaults);
+        throw new std::invalid_argument("User denied admin rights");
+    }
+
+    AuthorizationExternalForm authExt;
+    AuthorizationMakeExternalForm(auth, &authExt);
+
+    uint8_t *authExtPtr = (uint8_t *) &authExt;
+
+    std::vector<uint8_t> authBytes(authExtPtr, authExtPtr + sizeof(authExt));
+
+    auto client = ama::trusty::create_client(ama::kHelperSocketPath, authBytes);
 
     auto host = client->get_http_proxy_host();
     auto port = client->get_http_proxy_port();
