@@ -76,10 +76,25 @@ Server::Server(const int port) :
 
     do_accept();
 
-    // TODO(ben): This is a total stab in the dark.  Do we need
-    //            fewer threads?  More?  A dynamic adjustment based
-    //            on usage?
-    for (int i = 0; i < 8; ++i)
+    // We will multiplex running the io_service across multiple threads.
+    // The number of threads ideally will be one less than the STL's
+    // self-reported hardware_concurrency amount, so that the main thread
+    // remains free even if we're getting slammed with requests.  Practically
+    // speaking, the threads will be asleep 99% of the time, waiting on IO.
+    //
+    // std::thread::hardware_concurrency() is documented to return 0 if it
+    // cannot settle on a good number.  If it does, we'll assume a value of
+    // four - dual-core with hyperthreading is a low bar to meet in 2017.
+
+    int numSupportedThreads = static_cast<int>(std::thread::hardware_concurrency());
+    if (numSupportedThreads == 0)
+    {
+        numSupportedThreads = 4;
+    }
+
+    numSupportedThreads = std::max(numSupportedThreads - 1, 4);
+
+    for (int i = 0; i < numSupportedThreads; ++i)
     {
         auto thread = std::thread([this] { impl_->io_service_.run(); });
         impl_->workers_.push_back(std::move(thread));
@@ -100,6 +115,8 @@ Server::~Server()
             t.join();
         }
     });
+
+    impl_ = nullptr;
 }
 
 std::shared_ptr<ConnectionPool> Server::connection_pool() const
@@ -118,14 +135,12 @@ void Server::do_accept()
 
         if (!ec)
         {
-            //impl_->connectionManager_->start(std::make_shared<Connection>(std::move(impl_->socket_), impl_->connectionManager_));
             impl_->connection_pool_->make_connection(std::move(impl_->socket_));
-
             do_accept();
         }
         else
         {
-            qWarning() << QString(ec.message().c_str());
+            qWarning() << "Server::do_accept caught: " << QString(ec.message().c_str());
         }
     });
 }

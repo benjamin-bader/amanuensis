@@ -33,12 +33,12 @@
 #include "MessageProcessor.h"
 #include "Service.h" // for IService
 
-using namespace ama::trusty;
+namespace ama { namespace trusty {
 
 Server::Server(IService *service, int server_fd)
     : service_(service)
     , server_fd_(server_fd)
-    , accept_timeout_(std::chrono::seconds(10))
+    , accept_timeout_(std::chrono::seconds(60))
 {
     // no-op
 }
@@ -48,22 +48,8 @@ void Server::serve()
     int client_fd;
     while ((client_fd = accept_next_client()) >= 0)
     {
-        validate_client(client_fd);
         handle_client_session(client_fd);
     }
-}
-
-void Server::validate_client(int client_fd)
-{
-    uid_t euid;
-    uid_t egid;
-
-    if (::getpeereid(client_fd, &euid, &egid) == -1)
-    {
-        throw std::system_error(errno, std::system_category());
-    }
-
-    std::cerr << "euid=" << euid << " egid=" << egid << std::endl;
 }
 
 int Server::accept_next_client()
@@ -77,7 +63,6 @@ int Server::accept_next_client()
     fds.events = POLLIN;
 
     auto timeout_millis = std::chrono::duration_cast<std::chrono::milliseconds>(accept_timeout_);
-
 
     int ready_count = ::poll(&fds, 1, timeout_millis.count());
 
@@ -116,3 +101,5 @@ void Server::handle_client_session(int client_fd)
         std::cerr << "Client error: " << ex.what() << std::endl;
     }
 }
+
+}} // ama::trusty

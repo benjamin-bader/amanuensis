@@ -83,7 +83,7 @@ namespace {
         }
     };
 
-    const eq_char eq_char_instance = {};
+    const eq_char eq_char_instance{};
 
     bool equals_case_insensitive(const std::string &lhs, const std::string &rhs)
     {

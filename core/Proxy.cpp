@@ -81,10 +81,6 @@ Proxy::Proxy(const int port) :
 {
 }
 
-Proxy::~Proxy()
-{
-}
-
 void Proxy::init()
 {
     impl_->init();

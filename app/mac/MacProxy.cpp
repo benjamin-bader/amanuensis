@@ -17,53 +17,191 @@
 
 #include "MacProxy.h"
 
-#include <array>
 #include <cstdint>
 #include <iostream>
+#include <map>
+#include <mutex> // for once_flag
 #include <string>
 #include <vector>
 
-#include <QDebug>
-#include <QSettings>
-
 #include <errno.h>
-#include <poll.h>
+#include <os/log.h>
 #include <syslog.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
-
-#include <asio.hpp>
 
 #include <CoreFoundation/CFDictionary.h>
 #include <CoreFoundation/CFError.h>
+#include <CoreFoundation/CFString.h>
+
 #include <Security/Security.h>
 #include <ServiceManagement/ServiceManagement.h>
 
 #include "TrustyCommon.h"
 #include "Service.h"
 
-using namespace ama;
+namespace ama {
 
-namespace
+namespace {
+
+std::once_flag auth_init_flag;
+
+AuthorizationRef g_auth = nullptr;
+
+inline CFStringRef make_cfstring(const std::string &str)
 {
-    inline CFStringRef make_cfstring(const std::string &str)
+    return CFStringCreateWithCString(kCFAllocatorDefault, str.c_str(), kCFStringEncodingASCII);
+}
+
+inline void assert_success(OSStatus status)
+{
+    if (status != errAuthorizationSuccess)
     {
-        return CFStringCreateWithCStringNoCopy(NULL, str.c_str(), kCFStringEncodingASCII, NULL);
+        throw std::system_error(static_cast<int>(status), std::system_category());
+    }
+}
+
+void init_auth()
+{
+    OSStatus status = AuthorizationCreate(NULL, NULL, 0, &g_auth);
+    assert_success(status);
+
+    // Next, ensure all of the helper rights are installed.
+    std::map<std::string, std::string> auth_names_and_rules = {
+        { ama::kClearSettingsRightName,  kAuthorizationRuleAuthenticateAsAdmin },
+        { ama::kSetProxyStateRightName,  kAuthorizationRuleAuthenticateAsAdmin },
+        { ama::kGetProxyStateRightName,  kAuthorizationRuleClassAllow },
+        { ama::kGetToolVersionRightName, kAuthorizationRuleClassAllow },
+    };
+
+    for (const auto &pair : auth_names_and_rules)
+    {
+        // TODO: AuthorizationRightSet for all of these.
+        // TODO: If we create these, do we also need to extend them?
+        status = AuthorizationRightGet(pair.first.c_str(), nullptr);
+        if (status == errAuthorizationDenied)
+        {
+            CFStringRef rule = CFSTR(kAuthorizationRuleClassAllow);
+
+            status = AuthorizationRightSet(
+                        g_auth,
+                        pair.first.c_str(),
+                        rule,
+                        nullptr,
+                        nullptr,
+                        nullptr); // TODO: string tables for rights descriptions
+
+            CFRelease(rule);
+            assert_success(status);
+        }
+        else
+        {
+            // If AuthorizationRightGet succeeded, then great, the rule already
+            // existed, and there's nothing else to do.
+            // If not, then fail.
+            assert_success(status);
+        }
+    }
+}
+
+void acquire_rights(std::vector<const char *> &vector)
+{
+    std::vector<AuthorizationItem> auth_items;
+    for (const char *name : vector)
+    {
+        auth_items.emplace_back(AuthorizationItem{ name, 0, NULL, 0 });
     }
 
+    AuthorizationRights rights = { static_cast<UInt32>(auth_items.size()), auth_items.data() };
 
+    AuthorizationRights *pResultRights;
+
+    OSStatus status = AuthorizationCopyRights(
+                g_auth,
+                &rights,
+                kAuthorizationEmptyEnvironment,
+                kAuthorizationFlagDefaults
+                    | kAuthorizationFlagExtendRights
+                    | kAuthorizationFlagInteractionAllowed
+                    | kAuthorizationFlagPreAuthorize,
+                &pResultRights);
+
+    for (UInt32 i = 0; i < pResultRights->count; ++i)
+    {
+        AuthorizationItem item = pResultRights->items[i];
+        if (item.flags & kAuthorizationFlagCanNotPreAuthorize)
+        {
+            os_log_error(OS_LOG_DEFAULT, "can not preauthorize right %{public}s", item.name);
+        }
+    }
+
+    AuthorizationFreeItemSet(pResultRights);
+
+    assert_success(status);
 }
+
+bool should_install_helper_tool()
+{
+    struct stat stat_data;
+    int stat_result = ::stat(ama::kHelperSocketPath.c_str(), &stat_data);
+
+    if (stat_result < 0)
+    {
+        int error_code = errno;
+        if (error_code == ENOENT || error_code == ENOTDIR)
+        {
+            os_log_info(OS_LOG_DEFAULT, "Helper socket file not found");
+            return true;
+        }
+
+        throw std::system_error(error_code, std::system_category());
+    }
+
+    //
+    if (! S_ISSOCK(stat_data.st_mode))
+    {
+        os_log_info(OS_LOG_DEFAULT, "Helper socket file exists but isn't a socket?");
+        return true;
+    }
+
+    std::vector<const char *> rights { ama::kGetToolVersionRightName };
+    acquire_rights(rights);
+
+    AuthorizationExternalForm authExt;
+    AuthorizationMakeExternalForm(g_auth, &authExt);
+
+    uint8_t *authExtPtr = (uint8_t *) &authExt;
+
+    std::vector<uint8_t> authBytes(authExtPtr, authExtPtr + sizeof(authExt));
+
+    try
+    {
+        auto client = ama::trusty::create_client(ama::kHelperSocketPath, authBytes);
+        auto version = client->get_current_version();
+
+        os_log_error(OS_LOG_DEFAULT, "Installed tool reports version %{public}d; current version is %{public}d", version, ama::kToolVersion);
+
+        return version != ama::kToolVersion;
+    }
+    catch (const std::exception &ex)
+    {
+        // Let's assume, for now, that an exception here means that
+        // we can't understand the protocol of the existing tool, and
+        // treat connection failures as such - reinstalling won't hurt,
+        // and we can do this better, later.
+        os_log_error(OS_LOG_DEFAULT, "Error connecting to helper: %{public}s", ex.what());
+        return true;
+    }
+}
+
+} // anonymous namespace
 
 MacProxy::MacProxy(int port) :
     Proxy(port),
     enabled_(false)
 {
-
-}
-
-MacProxy::~MacProxy()
-{
-
+    std::call_once(auth_init_flag, init_auth);
 }
 
 bool MacProxy::is_enabled() const
@@ -73,12 +211,32 @@ bool MacProxy::is_enabled() const
 
 void MacProxy::enable(std::error_code &ec)
 {
-    bless_helper_program(ec);
+    if (should_install_helper_tool())
+    {
+        for (int attempts = 0; attempts < 3; attempts++)
+        {
+            ec.clear();
+            bless_helper_program(ec);
+
+            if (! ec)
+            {
+                break;
+            }
+        }
+
+        if (ec)
+        {
+            throw std::system_error(ec.value(), ec.category());
+        }
+    }
+
+    enabled_ = true;
 }
 
 void MacProxy::disable(std::error_code &ec)
 {
     Q_UNUSED(ec);
+    enabled_ = false;
 }
 
 void MacProxy::bless_helper_program(std::error_code &ec) const
@@ -92,123 +250,57 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
             | kAuthorizationFlagExtendRights
             | kAuthorizationFlagPreAuthorize;
 
-    AuthorizationRef authRef = nullptr;
-
-    OSStatus status = AuthorizationCreate(authRightsArray, kAuthorizationEmptyEnvironment, authFlags, &authRef);
+    OSStatus status = AuthorizationCopyRights(g_auth, authRightsArray, kAuthorizationEmptyEnvironment, authFlags, NULL);
 
     if (status == errAuthorizationSuccess)
     {
         CFStringRef helperLabel = make_cfstring(ama::kHelperLabel);
 
         CFErrorRef error;
-        if (SMJobBless(kSMDomainSystemLaunchd, helperLabel, authRef, &error))
-        {
-            install_default_auth_rules();
-        }
-        else
+        if (! SMJobBless(kSMDomainSystemLaunchd, helperLabel, g_auth, &error))
         {
             syslog(LOG_NOTICE, "SMJobBless failed!  %ld", CFErrorGetCode(error));
 
+            CFStringRef desc = CFErrorCopyDescription(error);
+
+            char buffer[256];
+            buffer[255] = '\0';
+            if (CFStringGetCString(desc, buffer, 255, kCFStringEncodingUTF8))
+            {
+                syslog(LOG_NOTICE, "SMJobBless error: %s", buffer);
+            }
+
             ec.assign(CFErrorGetCode(error), std::system_category());
+            CFRelease(desc);
+        }
+
+        if (error)
+        {
             CFRelease(error);
         }
 
-        AuthorizationFree(authRef, kAuthorizationFlagDefaults);
+        CFRelease(helperLabel);
     }
     else
     {
-        syslog(LOG_NOTICE, "AuthorizationCreate failed!");
+        syslog(LOG_NOTICE, "AuthorizationCopyRights failed!");
 
         ec.assign(static_cast<int>(status), std::system_category());
     }
 }
 
-bool MacProxy::get_installed_helper_info(CFDictionaryRef *pRef) const
-{
-    Q_UNUSED(pRef);
-    pRef = nullptr;
-
-    //CFDictionaryRef = SMJobCopyDictionary(kSMDomainSystemLaunchd, CFSTR(kPRIVILEGED_HELPER_LABEL));
-
-    return false;
-}
-
-void MacProxy::install_default_auth_rules() const
-{
-    AuthorizationRef ref;
-    OSStatus status;
-
-    status = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &ref);
-    if (status != errAuthorizationSuccess)
-    {
-        // If the authorization framework can't even set up an auth ref, then
-        // nothing will work at all.
-        //
-        // This should probably never happen.
-        throw std::system_error(static_cast<int>(status), std::system_category());
-    }
-
-    std::vector<const char*> rights = { ama::kSetHostRightName, ama::kSetPortRightName,
-                                        ama::kGetHostRightName, ama::kGetPortRightName,
-                                        ama::kClearSettingsRightName };
-
-    for (const char *right : rights)
-    {
-        status = AuthorizationRightGet(right, (CFDictionaryRef *) nullptr);
-        if (status == noErr)
-        {
-            // The right already exists; nothing to do here.
-            continue;
-        }
-
-        Q_ASSERT(status == errAuthorizationDenied);
-
-        CFStringRef ruleName = CFSTR(kAuthorizationRuleAuthenticateAsAdmin);
-
-        status = AuthorizationRightSet(ref, right, ruleName, NULL, NULL, NULL);
-        if (status != noErr)
-        {
-            // wha happen?
-            throw std::system_error(static_cast<int>(status), std::system_category());
-        }
-
-        CFRelease(ruleName);
-    }
-
-    AuthorizationFree(ref, kAuthorizationFlagDefaults);
-}
-
 void MacProxy::say_hi()
 {
-    AuthorizationItem items[5];
-    items[0] = { ama::kSetHostRightName, 0, NULL, 0 };
-    items[1] = { ama::kSetPortRightName, 0, NULL, 0 };
-    items[2] = { ama::kGetHostRightName, 0, NULL, 0 };
-    items[3] = { ama::kGetPortRightName, 0, NULL, 0 };
-    items[4] = { ama::kClearSettingsRightName, 0, NULL, 0 };
-
-    AuthorizationRights rights = {5, items};
-
-    AuthorizationRef auth;
-    AuthorizationCreate(NULL, NULL, kAuthorizationFlagDefaults, &auth);
-
-    OSStatus authStatus = AuthorizationCopyRights(
-                auth,
-                &rights,
-                kAuthorizationEmptyEnvironment,
-                kAuthorizationFlagExtendRights
-                    | kAuthorizationFlagInteractionAllowed
-                    | kAuthorizationFlagPreAuthorize,
-                NULL);
-
-    if (authStatus != errAuthorizationSuccess)
-    {
-        AuthorizationFree(auth, kAuthorizationFlagDefaults);
-        throw new std::invalid_argument("User denied admin rights");
-    }
+    std::vector<const char *> rights = {
+        ama::kGetProxyStateRightName,
+        ama::kSetProxyStateRightName,
+        ama::kClearSettingsRightName,
+        ama::kGetToolVersionRightName,
+    };
+    acquire_rights(rights);
 
     AuthorizationExternalForm authExt;
-    AuthorizationMakeExternalForm(auth, &authExt);
+    AuthorizationMakeExternalForm(g_auth, &authExt);
 
     uint8_t *authExtPtr = (uint8_t *) &authExt;
 
@@ -216,10 +308,12 @@ void MacProxy::say_hi()
 
     auto client = ama::trusty::create_client(ama::kHelperSocketPath, authBytes);
 
-    auto host = client->get_http_proxy_host();
-    auto port = client->get_http_proxy_port();
+    auto state = client->get_http_proxy_state();
 
-    client->set_http_proxy_host("hello I am an argument");
-    client->set_http_proxy_port(9999);
+    os_log_info(OS_LOG_DEFAULT, "host=%{public}s port=%d enabled=%B", state.get_host().c_str(), state.get_port(), state.is_enabled());
+
+    client->set_http_proxy_state(ama::trusty::ProxyState{ true, "127.0.0.1", port() });
     client->reset_proxy_settings();
 }
+
+} // ama

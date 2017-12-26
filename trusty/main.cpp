@@ -26,11 +26,6 @@
 // UNIX stuff
 #include <syslog.h>
 
-
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
 // cpp stuff
 #include <iostream>
 #include <memory>
@@ -38,32 +33,31 @@
 
 // our stuff
 #include "Server.h"
+#include "TrustyCommon.h"
 #include "TrustyService.h"
-
-using namespace ama::trusty;
-
-namespace
-{
-
-const std::unique_ptr<IService> g_service = std::make_unique<TrustyService>();
-
-}
 
 // I wish ASIO would have worked out, but it just couldn't
 // seem to handle UNIX sockets on macOS.  Pity, because
 // writing socket code the old way works, but is endlessly
 // tedious.
 
-int lookup_socket_endpoint(std::error_code &ec)
+std::error_code lookup_socket_endpoint(int *fd)
 {
-    int result = 0;
+    std::error_code ec;
+
+    if (fd == nullptr)
+    {
+        return std::make_error_code(std::errc::invalid_argument);
+    }
+
+    *fd = -1;
 
     int *fds = nullptr;
     size_t num_sockets;
-    int err = launch_activate_socket("com.bendb.amanuensis.Trusty", &fds, &num_sockets);
-    if (err == 0)
+    int err = launch_activate_socket(ama::kPlistLaunchdSocketName, &fds, &num_sockets);
+    if (err == 0 && num_sockets > 0)
     {
-        result = fds[0];
+        *fd = fds[0];
     }
     else
     {
@@ -72,20 +66,7 @@ int lookup_socket_endpoint(std::error_code &ec)
 
     free(fds);
 
-    return result;
-}
-
-void serve_client(int client_fd)
-{
-    try
-    {
-        Server server(g_service.get(), client_fd);
-        server.serve();
-    }
-    catch (std::exception &ex)
-    {
-        std::cerr << ex.what() << std::endl;
-    }
+    return ec;
 }
 
 int main(int argc, char *argv[])
@@ -93,15 +74,18 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
-    std::error_code ec;
-    int fd = lookup_socket_endpoint(ec);
+    std::cerr << "Our amazing journey begins" << std::endl;
+
+    int fd;
+    std::error_code ec = lookup_socket_endpoint(&fd);
     if (ec)
     {
         syslog(LOG_INFO, "Failed to open launchd socket list: %d", ec.value());
         return -1;
     }
 
-    Server server(g_service.get(), fd);
+    ama::trusty::TrustyService service;
+    ama::trusty::Server server(&service, fd);
     try
     {
         server.serve();

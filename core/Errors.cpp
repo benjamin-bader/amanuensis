@@ -19,8 +19,7 @@
 
 using namespace ama;
 
-namespace
-{
+namespace {
 
 class ProxyErrorCategory : public std::error_category
 {

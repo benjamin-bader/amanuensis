@@ -18,13 +18,9 @@
 #ifndef CLIENTCONNECTION_H
 #define CLIENTCONNECTION_H
 
-#include "MessageProcessor.h"
-
 #include <memory>
 
-
-namespace ama {
-namespace trusty {
+namespace ama { namespace trusty {
 
 class IService;
 
@@ -41,7 +37,6 @@ private:
     std::unique_ptr<impl> impl_;
 };
 
-}
-}
+}} // ama::trusty
 
 #endif // CLIENTCONNECTION_H

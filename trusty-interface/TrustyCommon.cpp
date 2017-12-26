@@ -17,12 +17,15 @@
 
 #include "TrustyCommon.h"
 
+const uint32_t ama::kToolVersion = 1;
+
 const std::string ama::kHelperLabel = "com.bendb.amanuensis.Trusty";
 const std::string ama::kHostAppRightName = "Amanuensis.app";
 const std::string ama::kHelperSocketPath = "/var/run/com.bendb.amanuensis.Trusty.socket";
 
-const char * ama::kSetHostRightName = "com.bendb.amanuensis.trusty.SetHost";
-const char * ama::kSetPortRightName = "com.bendb.amanuensis.trusty.SetPort";
-const char * ama::kGetHostRightName = "com.bendb.amanuensis.trusty.GetHost";
-const char * ama::kGetPortRightName = "com.bendb.amanuensis.trusty.GetPort";
+const char * ama::kGetProxyStateRightName = "com.bendb.amanuensis.trusty.GetProxyState";
+const char * ama::kSetProxyStateRightName = "com.bendb.amanuensis.trusty.SetProxyState";
 const char * ama::kClearSettingsRightName = "com.bendb.amanuensis.trusty.ClearSettings";
+const char * ama::kGetToolVersionRightName = "com.bendb.amanuensis.trusty.GetToolVersion";
+
+const char * ama::kPlistLaunchdSocketName = "com.bendb.amanuensis.Trusty";

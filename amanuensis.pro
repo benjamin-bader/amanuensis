@@ -28,6 +28,8 @@ app.depends = core
 core-test.depends = core
 
 macx {
+    QMAKE_MAC_SDK = macosx10.13
+
     SUBDIRS += \
         trusty \
         trusty-interface
@@ -40,7 +42,7 @@ macx {
     HELPERAPP_INFO = trusty-Info.plist
     HELPER_APP_LAUNCHD_INFO = trusty-Launchd.plist
 
-    BUNDLE_DIR = $$OUT_PWD/$${BUNDLEAPP}.app
+    BUNDLE_DIR = $$OUT_PWD/app/$${BUNDLEAPP}.app
 
     QMAKE_EXTRA_VARIABLES += MACDEPLOYQT
 
@@ -50,10 +52,10 @@ macx {
     # 'organizer' will place all build output into an application bundle directory
     organizer.depends += app trusty
 
-    organizer.commands += rm -rf $${BUNDLE_DIR};
+    # organizer.commands += rm -rf $${BUNDLE_DIR};
 
     # Move the built .app from the app subdir to the root
-    organizer.commands += $(MOVE) $$OUT_PWD/app/$${BUNDLEAPP}.app $${BUNDLE_DIR};
+    # organizer.commands += $(MOVE) $$OUT_PWD/app/$${BUNDLEAPP}.app $${BUNDLE_DIR};
 
     # Move the core lib to the bundle
     organizer.commands += $(MKDIR) $${BUNDLE_DIR}/Contents/Frameworks;
@@ -76,7 +78,7 @@ macx {
     # - macdeployqt is invoked to both copy and sign the QT frameworks
     #
     # After all that, we sign the bundle again.
-    codesigner.commands += dsymutil $${BUNDLE_DIR}/Contents/MacOS/$${BUNDLEAPP} -o $${OUT_PWD}/$${BUNDLEAPP}.app.dSYM;
+    codesigner.commands += dsymutil $${BUNDLE_DIR}/Contents/MacOS/$${BUNDLEAPP} -o $${OUT_PWD}/app/$${BUNDLEAPP}.app.dSYM;
     codesigner.commands += $(COPY_DIR) $${BUNDLE_DIR}.dSYM $${BUNDLE_DIR}/Contents/MacOS/$${BUNDLEAPP}.dSYM;
     codesigner.commands += install_name_tool -change libcore.1.dylib @executable_path/../Frameworks/libcore.1.0.0.dylib $${BUNDLE_DIR}/Contents/MacOS/$${BUNDLEAPP};
     codesigner.commands += $(EXPORT_MACDEPLOYQT) $${BUNDLE_DIR} -always-overwrite -codesign=$${CERTSHA1};
@@ -84,12 +86,12 @@ macx {
 
     CODESIGN_ALLOCATE_PATH=$$system(xcrun -find codesign_allocate)
     codesigner.commands += export CODESIGN_ALLOCATE=$${CODESIGN_ALLOCATE_PATH};
-    codesigner.commands += codesign --verbose --force --sign $${CERTSHA1} -r=\'designated => identifier \"$${BUNDLEID}\" and certificate leaf = H\"$${CERTSHA1}\"\' --timestamp=none $${BUNDLE_DIR};
+    codesigner.commands += codesign --verbose --force --sign $${CERTSHA1} -r=\'designated => identifier \"$${BUNDLEID}\" and certificate leaf = H\"$${CERTSHA1}\"\' --timestamp=none $${BUNDLE_DIR} 2>&1;
 
-    first.depends = $(first) organizer # codesigner
+    first.depends = $(first) organizer codesigner
     export(first.depends)
     export(organizer.commands)
-    #export(codesigner.commands)
+    export(codesigner.commands)
 
     QMAKE_EXTRA_TARGETS += first organizer codesigner
 }

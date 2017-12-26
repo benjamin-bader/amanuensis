@@ -20,8 +20,7 @@
 
 #include <chrono>
 
-namespace ama {
-namespace trusty {
+namespace ama { namespace trusty {
 
 class IService;
 
@@ -44,7 +43,6 @@ public:
 
 private:
     int accept_next_client();
-    void validate_client(int client_fd);
     void handle_client_session(int client_fd);
 
 private:
@@ -54,7 +52,6 @@ private:
     std::chrono::system_clock::duration accept_timeout_;
 };
 
-}
-}
+}} // ama::trusty
 
 #endif // SERVER_H

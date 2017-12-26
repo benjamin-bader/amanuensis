@@ -37,7 +37,7 @@ namespace ama
 
 class ConnectionPool;
 
-class Conn : public std::enable_shared_from_this<Conn>
+class A_EXPORT Conn : public std::enable_shared_from_this<Conn>
 {
 public:
     Conn(asio::io_service &service);

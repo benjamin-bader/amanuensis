@@ -18,12 +18,13 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
+#pragma once
+
 #include <cstdint>
 #include <vector>
 #include <string>
 
-namespace ama {
-namespace trusty {
+namespace ama { namespace trusty {
 
 enum class MessageType : uint8_t
 {
@@ -55,33 +56,31 @@ enum class MessageType : uint8_t
      * Tells the recipient to set the system's proxy host to the
      * hostname specified in the payload.
      *
-     * The payload is a length-prefixed string containing the proxy
-     * hostname.
+     * The payload is a serialized ama::trusty::ProxyState object.
      */
-    SetProxyHost = 3,
+    GetProxyState = 3,
 
     /**
      * Tells the recipient to set the system's proxy port to the number
      * specified in the payload.
      *
-     * The payload is a uint16_t.
+     * The payload is a serialized ama::trusty::ProxyState object.
      */
-    SetProxyPort = 4,
-
-    /**
-     *
-     */
-    GetProxyHost = 5,
-
-    /**
-     *
-     */
-    GetProxyPort = 6,
+    SetProxyState = 4,
 
     /**
      * Clears all custom proxy settings, restoring system defaults.
      */
-    ClearProxySettings = 7,
+    ClearProxySettings = 5,
+
+    /**
+     * Asks the receipient for its current version.
+     *
+     * The payload is empty.  A successful response will
+     * be an 'Ack' message with a four-byte platform-endian
+     * uint32_t version code.
+     */
+    GetToolVersion = 6,
 
     /**
      * Signals that the sender will terminate the connection, and the
@@ -123,6 +122,15 @@ struct Message
         }
         return *this;
     }
+
+    void assign_u8_payload(uint8_t n);
+    void assign_u32_payload(uint32_t n);
+    void assign_i32_payload(int n);
+    void assign_string_payload(const std::string &str);
+
+    int get_i32_payload() const;
+    uint32_t get_u32_payload() const;
+    std::string get_string_payload() const;
 };
 
 class MessageProcessor
@@ -160,7 +168,6 @@ private:
     uint8_t read_buffer[kBufLen];
 };
 
-} // namespace trusty
-} // namespace ama
+}} // ama::trusty
 
 #endif // COMMAND_H

@@ -1,3 +1,13 @@
+Mac is a weird and special snowflake.  In contrast to Windows, which has a usable (if obtuse) API for modifying system proxy settings, on Mac it is supremely annoying to set such things.  The SystemConfiguration Framework gives a similar API, but it requires privilege escalation.  There are a few ways to acheive privilege escalation, but the modern and recommended approach is to separate out the portion of the app needed elevated privileges, and have launchd run it for you, using a tool called "SMJobBless".  The complications come from both Gatekeeper and launchd, which both require a particular form of code-signing.
+
+Apple's documentiation claims that an Apple-issued Developer ID certificate is necessary for launchd to run a helper tool, but experiments indicate that this is not true; both Keychain Access and openssh can generate self-signed certificates whose signatures are accepted by launchd.  A daemon called `amfid` will log invalid-signature messages in the console, but the privileged tool still runs.  This is probably a bug, or at least is behavior likely to change in the future.  For now, we're taking full advantage.
+
+For the helper to run, many pieces need to be in place:
+- the helper binary must have to data sections, `__info_plist` and `__launchd_plist`
+- the info plist section must enumerate the name of the "host app" as well as the fingerprint of the signing certificate
+- the launchd plist section 
+
+
 Steps to package a complete app:
 
 - qmake

@@ -21,27 +21,29 @@
 
 #include <Security/Security.h>
 
+#include <os/log.h>
+#include <syslog.h>
+
+#include "MessageProcessor.h"
 #include "Service.h"
 #include "TrustyCommon.h"
 
-using namespace ama::trusty;
+namespace ama { namespace trusty {
 
-namespace
-{
+namespace {
 
 class AuthorizedService : public IService
 {
 public:
-    AuthorizedService(IService *delegate, AuthorizationRef auth);
-    virtual ~AuthorizedService();
+    AuthorizedService(IService *delegate, const std::vector<uint8_t>& authExternalForm);
+    ~AuthorizedService() override;
 
-    virtual const std::string get_http_proxy_host() override;
-    virtual int get_http_proxy_port() override;
+    ProxyState get_http_proxy_state() override;
+    virtual void set_http_proxy_state(const ProxyState& endpoint) override;
 
-    virtual void set_http_proxy_host(const std::string &host) override;
-    virtual void set_http_proxy_port(int port) override;
+    void reset_proxy_settings() override;
 
-    virtual void reset_proxy_settings() override;
+    uint32_t get_current_version() override;
 
 private:
     void assert_right(const char *right);
@@ -51,40 +53,40 @@ private:
     AuthorizationRef auth_;
 };
 
-AuthorizedService::AuthorizedService(IService *delegate, AuthorizationRef auth)
-    : delegate_(delegate)
-    , auth_(auth)
+AuthorizedService::AuthorizedService(IService *delegate, const std::vector<uint8_t>& authExternalForm)
+    : IService()
+    , delegate_(delegate)
 {
+    if (authExternalForm.size() != sizeof(AuthorizationExternalForm))
+    {
+        throw std::invalid_argument("Payload isn't the right size");
+    }
 
+    OSStatus status = AuthorizationCreateFromExternalForm((AuthorizationExternalForm *) authExternalForm.data(), &auth_);
+    if (status != errAuthorizationSuccess || auth_ == nullptr)
+    {
+        throw std::invalid_argument("payload couldn't be made into an AuthorizationRef");
+    }
 }
 
 AuthorizedService::~AuthorizedService()
 {
-    AuthorizationFree(auth_, kAuthorizationFlagDefaults);
+    if (auth_ != nullptr)
+    {
+        AuthorizationFree(auth_, kAuthorizationFlagDefaults);
+    }
 }
 
-const std::string AuthorizedService::get_http_proxy_host()
+ProxyState AuthorizedService::get_http_proxy_state()
 {
-    assert_right(ama::kGetHostRightName);
-    return delegate_->get_http_proxy_host();
+    assert_right(ama::kGetProxyStateRightName);
+    return delegate_->get_http_proxy_state();
 }
 
-int AuthorizedService::get_http_proxy_port()
+void AuthorizedService::set_http_proxy_state(const ProxyState &endpoint)
 {
-    assert_right(ama::kGetPortRightName);
-    return delegate_->get_http_proxy_port();
-}
-
-void AuthorizedService::set_http_proxy_host(const std::string &host)
-{
-    assert_right(ama::kSetHostRightName);
-    delegate_->set_http_proxy_host(host);
-}
-
-void AuthorizedService::set_http_proxy_port(int port)
-{
-    assert_right(ama::kSetPortRightName);
-    delegate_->set_http_proxy_port(port);
+    assert_right(ama::kSetProxyStateRightName);
+    delegate_->set_http_proxy_state(endpoint);
 }
 
 void AuthorizedService::reset_proxy_settings()
@@ -93,9 +95,40 @@ void AuthorizedService::reset_proxy_settings()
     delegate_->reset_proxy_settings();
 }
 
+uint32_t AuthorizedService::get_current_version()
+{
+    assert_right(ama::kGetToolVersionRightName);
+    return delegate_->get_current_version();
+}
+
 void AuthorizedService::assert_right(const char *right)
 {
     std::cerr << "Asserting a right: " << right << std::endl;
+    AuthorizationItem item = { right, 0, NULL, 0 };
+    AuthorizationRights rights = { 1, &item };
+
+    OSStatus status = AuthorizationCopyRights(
+                auth_,
+                &rights,
+                kAuthorizationEmptyEnvironment,
+                kAuthorizationFlagDefaults | kAuthorizationFlagExtendRights,
+                nullptr);
+
+    if (status != errAuthorizationSuccess)
+    {
+        status = AuthorizationCopyRights(
+                    auth_,
+                    &rights,
+                    kAuthorizationEmptyEnvironment,
+                    kAuthorizationFlagDefaults | kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed,
+                    nullptr);
+
+        if (status != errAuthorizationSuccess)
+        {
+            syslog(LOG_ERR, "Right not present; status=%d", status);
+            throw std::invalid_argument("Authorization denied");
+        }
+    }
 }
 
 const Message kAck { MessageType::Ack, {} };
@@ -126,23 +159,17 @@ ClientConnection::impl::impl(IService *service, int client_fd)
         throw std::invalid_argument("Didn't get a Hello message");
     }
 
-    if (hello.payload.size() != sizeof(AuthorizationExternalForm))
+    try
     {
-        processor_.send({ MessageType::Error, {} });
-        throw std::invalid_argument("Payload isn't the right size");
+        service_ = std::make_unique<AuthorizedService>(service, hello.payload);
     }
-
-    AuthorizationRef authRef;
-    OSStatus status = AuthorizationCreateFromExternalForm((AuthorizationExternalForm *) hello.payload.data(), &authRef);
-    if (status != errAuthorizationSuccess)
+    catch (...)
     {
         processor_.send({ MessageType::Error, {} });
-        throw std::invalid_argument("payload couldn't be made into an AuthorizationRef");
+        throw;
     }
 
     processor_.send(kAck);
-
-    service_ = std::make_unique<AuthorizedService>(service, authRef);
 }
 
 void ClientConnection::impl::handle()
@@ -154,45 +181,19 @@ void ClientConnection::impl::handle()
 
         switch (msg.type)
         {
-        case MessageType::SetProxyHost:
+        case MessageType::SetProxyState:
         {
-            std::string requested_host(msg.payload.begin(), msg.payload.end());
-            service_->set_http_proxy_host(requested_host);
+            ProxyState state{msg.payload};
+            service_->set_http_proxy_state(state);
             processor_.send(kAck);
             break;
         }
 
-        case MessageType::SetProxyPort:
+        case MessageType::GetProxyState:
         {
-            int port = *((int*) msg.payload.data());
-            service_->set_http_proxy_port(port);
-            processor_.send(kAck);
-            break;
-        }
+            auto state = service_->get_http_proxy_state();
 
-        case MessageType::GetProxyHost:
-        {
-            auto host = service_->get_http_proxy_host();
-
-            Message reply;
-            reply.type = MessageType::Ack;
-            reply.payload.assign(host.begin(), host.end());
-
-            processor_.send(reply);
-            break;
-        }
-
-        case MessageType::GetProxyPort:
-        {
-            auto port = service_->get_http_proxy_port();
-
-            uint8_t *result_bytes = (uint8_t *) &port;
-
-            Message reply;
-            reply.type = MessageType::Ack;
-            reply.payload.assign(result_bytes, result_bytes + sizeof(port));
-
-            processor_.send(reply);
+            processor_.send({ MessageType::Ack, state.serialize() });
             break;
         }
 
@@ -200,6 +201,18 @@ void ClientConnection::impl::handle()
         {
             service_->reset_proxy_settings();
             processor_.send(kAck);
+            break;
+        }
+
+        case MessageType::GetToolVersion:
+        {
+            uint32_t version = service_->get_current_version();
+
+            Message reply;
+            reply.type = MessageType::Ack;
+            reply.assign_u32_payload(version);
+
+            processor_.send(reply);
             break;
         }
 
@@ -235,3 +248,5 @@ void ClientConnection::handle()
 {
     impl_->handle();
 }
+
+}} // ama::trusty

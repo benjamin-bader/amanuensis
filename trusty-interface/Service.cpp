@@ -17,6 +17,9 @@
 
 #include "Service.h"
 
+#include <algorithm>
+#include <utility>
+
 #include "MessageProcessor.h"
 
 using namespace ama::trusty;
@@ -28,15 +31,14 @@ class MessageProcessorServiceClient : public IService
 {
 public:
     MessageProcessorServiceClient(const std::string &address);
-    virtual ~MessageProcessorServiceClient() override;
+    ~MessageProcessorServiceClient() override;
 
-    virtual void set_http_proxy_host(const std::string &host) override;
-    virtual void set_http_proxy_port(int port) override;
+    ProxyState get_http_proxy_state() override;
+    virtual void set_http_proxy_state(const ProxyState& endpoint) override;
 
-    virtual const std::string get_http_proxy_host() override;
-    virtual int get_http_proxy_port() override;
+    void reset_proxy_settings() override;
 
-    virtual void reset_proxy_settings() override;
+    uint32_t get_current_version() override;
 
 public:
     void authenticate(const std::vector<uint8_t> &auth);
@@ -65,79 +67,32 @@ MessageProcessorServiceClient::~MessageProcessorServiceClient()
     }
 }
 
-void MessageProcessorServiceClient::set_http_proxy_host(const std::string &host)
+ProxyState MessageProcessorServiceClient::get_http_proxy_state()
 {
-    Message msg;
-    msg.type = MessageType::SetProxyHost;
-    msg.payload.assign(host.begin(), host.end());
+    Message msg { MessageType::GetProxyState, {} };
 
     processor.send(msg);
 
     msg = processor.recv();
     if (msg.type != MessageType::Ack)
     {
-        std::string error_message(msg.payload.begin(), msg.payload.end());
-        throw std::invalid_argument(error_message);
+        throw std::runtime_error{msg.get_string_payload()};
     }
+
+    return ProxyState{msg.payload};
 }
 
-void MessageProcessorServiceClient::set_http_proxy_port(int port)
+void MessageProcessorServiceClient::set_http_proxy_state(const ProxyState &endpoint)
 {
-    uint8_t *port_bytes = (uint8_t *) &port;
-
-    Message msg;
-    msg.type = MessageType::SetProxyPort;
-    msg.payload.assign(port_bytes, port_bytes + sizeof(int));
+    Message msg { MessageType::SetProxyState, endpoint.serialize() };
 
     processor.send(msg);
 
     msg = processor.recv();
     if (msg.type != MessageType::Ack)
     {
-        std::string error_message(msg.payload.begin(), msg.payload.end());
-        throw std::invalid_argument(error_message);
+        throw std::runtime_error{msg.get_string_payload()};
     }
-}
-
-const std::string MessageProcessorServiceClient::get_http_proxy_host()
-{
-    Message msg;
-    msg.type = MessageType::GetProxyHost;
-    msg.payload.clear();
-
-    processor.send(msg);
-
-    msg = processor.recv();
-    if (msg.type != MessageType::Ack)
-    {
-        std::string error_message(msg.payload.begin(), msg.payload.end());
-        throw std::invalid_argument(error_message);
-    }
-
-    return std::string(msg.payload.begin(), msg.payload.end());
-}
-
-int MessageProcessorServiceClient::get_http_proxy_port()
-{
-    Message msg;
-    msg.type = MessageType::GetProxyPort;
-    msg.payload.clear();
-
-    processor.send(msg);
-
-    msg = processor.recv();
-    if (msg.type != MessageType::Ack)
-    {
-        std::string error_message(msg.payload.begin(), msg.payload.end());
-        throw std::invalid_argument(error_message);
-    }
-
-    if (msg.payload.size() != sizeof(int))
-    {
-        throw std::invalid_argument("Expected a sizeof(int) payload");
-    }
-
-    return *((int*) msg.payload.data());
 }
 
 void MessageProcessorServiceClient::reset_proxy_settings()
@@ -156,10 +111,22 @@ void MessageProcessorServiceClient::reset_proxy_settings()
     }
 }
 
+uint32_t MessageProcessorServiceClient::get_current_version()
+{
+    processor.send({ MessageType::GetToolVersion, {} });
+
+    Message ack = processor.recv();
+    if (ack.type != MessageType::Ack)
+    {
+        throw std::invalid_argument("Unexpected response from helper tool");
+    }
+
+    return ack.get_u32_payload();
+}
+
 void MessageProcessorServiceClient::authenticate(const std::vector<uint8_t> &auth)
 {
-    Message hello = { MessageType::Hello, auth };
-    processor.send(hello);
+    processor.send({ MessageType::Hello, auth });
 
     Message ack = processor.recv();
     if (ack.type != MessageType::Ack)
@@ -169,6 +136,42 @@ void MessageProcessorServiceClient::authenticate(const std::vector<uint8_t> &aut
     }
 }
 
+} // namespace
+
+ProxyState::ProxyState(bool enabled, const std::string &host, int port) noexcept
+    : enabled_(enabled)
+    , host_(host)
+    , port_(port)
+{}
+
+ProxyState::ProxyState(const std::vector<uint8_t> &payload)
+{
+    // Format is:
+    // 0: enabled (0 == disabled, !0 == enabled)
+    // 1-4: port, as int32_t
+    // 5-: host
+
+    if (payload.size() < 5) throw std::invalid_argument{"payload too small to be a ProxyState"};
+
+
+    enabled_ = payload[0] != 0;
+    port_ = *((int32_t*) (payload.data() + 1));
+    host_.assign(reinterpret_cast<const char *>(payload.data() + 5), payload.size() - 5);
+}
+
+std::vector<uint8_t> ProxyState::serialize() const
+{
+    size_t size = 5 + host_.size();
+    std::vector<uint8_t> payload;
+    payload.reserve(size);
+
+    payload.push_back(enabled_ ? 1 : 0);
+    payload.resize(payload.size() + sizeof(int32_t));
+    ::memcpy(payload.data() + 1, &port_, sizeof(int32_t));
+
+    std::copy(host_.begin(), host_.end(), std::back_inserter(payload));
+
+    return payload;
 }
 
 std::unique_ptr<IService> ama::trusty::create_client(const std::string &address, const std::vector<uint8_t> &auth)

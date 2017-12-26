@@ -51,10 +51,10 @@ MainWindow::MainWindow(QWidget *parent) :
     int port = settings.value("Proxy/port", 9999).toInt();
 
 #ifdef Q_OS_MAC
-    proxy = std::make_shared<MacProxy>(port);
+    proxy = std::make_shared<ama::MacProxy>(port);
 
     std::error_code ec;
-    static_cast<MacProxy*>(proxy.get())->enable(ec);
+    static_cast<ama::MacProxy*>(proxy.get())->enable(ec);
 
     if (ec)
     {
@@ -63,7 +63,7 @@ MainWindow::MainWindow(QWidget *parent) :
     }
     else
     {
-        static_cast<MacProxy*>(proxy.get())->say_hi();
+        static_cast<ama::MacProxy*>(proxy.get())->say_hi();
     }
 #else
     proxy = ProxyFactory().create(port);

@@ -20,19 +20,40 @@
 
 #pragma once
 
+#include <cstdint>
+#include <exception>
 #include <string>
 
 namespace ama
 {
+    extern const uint32_t kToolVersion;
+
     extern const std::string kHelperLabel;
     extern const std::string kHostAppRightName;
     extern const std::string kHelperSocketPath;
 
+    extern const char * kGetProxyStateRightName;
+    extern const char * kSetProxyStateRightName;
     extern const char * kSetHostRightName;
     extern const char * kSetPortRightName;
     extern const char * kGetHostRightName;
     extern const char * kGetPortRightName;
     extern const char * kClearSettingsRightName;
+    extern const char * kGetToolVersionRightName;
+
+    extern const char * kPlistLaunchdSocketName;
+
+    class timeout_exception : public std::runtime_error
+    {
+    public:
+        timeout_exception()
+            : std::runtime_error("An operation timed out")
+        {}
+
+        timeout_exception(const timeout_exception &other)
+            : std::runtime_error(other.what())
+        {}
+    };
 }
 
 #endif

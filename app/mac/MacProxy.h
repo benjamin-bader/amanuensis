@@ -22,19 +22,17 @@
 
 #include <system_error>
 
-#include <CoreFoundation/CFDictionary.h>
-#include <CoreFoundation/CFError.h>
-#include <CoreFoundation/CFString.h>
-
 #include "Proxy.h"
 
 #include "TrustyCommon.h"
 
-class MacProxy : public ama::Proxy
+namespace ama {
+
+class MacProxy : public Proxy
 {
 public:
     MacProxy(int port);
-    virtual ~MacProxy();
+    virtual ~MacProxy() = default;
 
     bool is_enabled() const;
 
@@ -49,12 +47,10 @@ public:
 private:
     void bless_helper_program(std::error_code &ec) const;
 
-    bool get_installed_helper_info(CFDictionaryRef *pRef) const;
-
-    void install_default_auth_rules() const;
-
 private:
     bool enabled_;
 };
+
+} // ama
 
 #endif

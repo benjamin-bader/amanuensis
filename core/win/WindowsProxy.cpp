@@ -74,6 +74,7 @@ WindowsProxy::WindowsProxy(int port) :
     {
         DWORD lastError = GetLastError();
         char buffer[256];
+        buffer[255] = 0;
         FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM,
                        NULL,
                        lastError,

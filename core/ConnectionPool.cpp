@@ -19,7 +19,9 @@
 
 using namespace ama;
 
-Conn::Conn(asio::ip::tcp::socket &&socket)
+using tcp = asio::ip::tcp;
+
+Conn::Conn(tcp::socket &&socket)
     : socket_(std::move(socket))
     , expires_at_(time_point::max())
     , should_close_(false)
@@ -41,14 +43,14 @@ class ConnectionPool::impl : public std::enable_shared_from_this<ConnectionPool:
 public:
     impl(asio::io_service &, ConnectionPool *);
 
-    std::shared_ptr<Conn> make_connection(asio::ip::tcp::socket &&socket);
+    std::shared_ptr<Conn> make_connection(tcp::socket &&socket);
 
     std::shared_ptr<Conn> find_open_connection(const std::string &host, int port);
 
     void try_open(const std::string &host, const std::string &port, std::function<void (std::shared_ptr<Conn>, std::error_code)> &&callback);
 
 private:
-    asio::ip::tcp::resolver resolver_;
+    tcp::resolver resolver_;
     ConnectionPool *pool_;
 }; // class ConnectionPool::impl
 
@@ -59,7 +61,7 @@ ConnectionPool::impl::impl(asio::io_service &service, ConnectionPool *pool)
 
 }
 
-std::shared_ptr<Conn> ConnectionPool::impl::make_connection(asio::ip::tcp::socket &&socket)
+std::shared_ptr<Conn> ConnectionPool::impl::make_connection(tcp::socket &&socket)
 {
     auto connection = std::make_shared<Conn>(std::move(socket));
     pool_->notify_listeners([connection](auto &listener)
@@ -81,10 +83,10 @@ void ConnectionPool::impl::try_open(const std::string &host, const std::string &
     auto self = shared_from_this();
     auto conn = std::make_shared<Conn>(resolver_.get_io_service());
 
-    asio::ip::tcp::resolver::query query(host, port);
+    tcp::resolver::query query(host, port);
 
     resolver_.async_resolve(query, [this, self, conn, callback]
-                            (asio::error_code ec, asio::ip::tcp::resolver::iterator result)
+                            (asio::error_code ec, tcp::resolver::iterator result)
     {
         if (ec)
         {
@@ -94,7 +96,7 @@ void ConnectionPool::impl::try_open(const std::string &host, const std::string &
 
         asio::async_connect(conn->socket_, result,
                             [this, self, conn, callback]
-                            (asio::error_code ec, asio::ip::tcp::resolver::iterator /* i */)
+                            (asio::error_code ec, tcp::resolver::iterator /* i */)
         {
             if (ec)
             {

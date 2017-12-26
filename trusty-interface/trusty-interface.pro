@@ -13,7 +13,8 @@ include(../trusty-constants.pri)
 HEADERS += \
     TrustyCommon.h \
     MessageProcessor.h \
-    Service.h
+    Service.h \
+    CFRef.h
 
 SOURCES += \
     MessageProcessor.cpp \
