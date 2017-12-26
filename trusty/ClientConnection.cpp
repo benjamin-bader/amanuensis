@@ -141,6 +141,7 @@ public:
     impl(IService *service, int client_fd);
 
     void handle();
+    MessageType handle_one();
 
 private:
     std::unique_ptr<AuthorizedService> service_;
@@ -174,62 +175,91 @@ ClientConnection::impl::impl(IService *service, int client_fd)
 
 void ClientConnection::impl::handle()
 {
-    Message msg;
+    MessageType clientMessageType;
     do
     {
-        msg = processor_.recv();
+        try
+        {
+            clientMessageType = handle_one();
+        }
+        catch (const std::exception& ex)
+        {
+            Message err;
+            err.type = MessageType::Error;
+            err.assign_string_payload(std::string{ex.what()});
 
-        switch (msg.type)
-        {
-        case MessageType::SetProxyState:
-        {
-            ProxyState state{msg.payload};
-            service_->set_http_proxy_state(state);
-            processor_.send(kAck);
+            try
+            {
+                processor_.send(err);
+            }
+            catch (const std::exception& ex2)
+            {
+                // don't crash while reporting an error
+                std::cerr << "Error while sending error reply: " << ex2.what() << std::endl;
+            }
+
             break;
         }
+    }
+    while (clientMessageType != MessageType::Disconnect);
+}
 
-        case MessageType::GetProxyState:
-        {
-            auto state = service_->get_http_proxy_state();
+MessageType ClientConnection::impl::handle_one()
+{
+    Message msg = processor_.recv();
 
-            processor_.send({ MessageType::Ack, state.serialize() });
-            break;
-        }
+    switch (msg.type)
+    {
+    case MessageType::SetProxyState:
+    {
+        ProxyState state{msg.payload};
+        service_->set_http_proxy_state(state);
+        processor_.send(kAck);
+        break;
+    }
 
-        case MessageType::ClearProxySettings:
-        {
-            service_->reset_proxy_settings();
-            processor_.send(kAck);
-            break;
-        }
+    case MessageType::GetProxyState:
+    {
+        auto state = service_->get_http_proxy_state();
 
-        case MessageType::GetToolVersion:
-        {
-            uint32_t version = service_->get_current_version();
+        processor_.send({ MessageType::Ack, state.serialize() });
+        break;
+    }
 
-            Message reply;
-            reply.type = MessageType::Ack;
-            reply.assign_u32_payload(version);
+    case MessageType::ClearProxySettings:
+    {
+        service_->reset_proxy_settings();
+        processor_.send(kAck);
+        break;
+    }
 
-            processor_.send(reply);
-            break;
-        }
+    case MessageType::GetToolVersion:
+    {
+        uint32_t version = service_->get_current_version();
 
-        case MessageType::Disconnect:
-        {
-            // Done!
-            break;
-        }
+        Message reply;
+        reply.type = MessageType::Ack;
+        reply.assign_u32_payload(version);
 
-        default:
-        {
-            std::cerr << "ERROR: Received response message-type from a client!  type=" << msg.type << std::endl;
-            break;
-        }
+        processor_.send(reply);
+        break;
+    }
 
-        }; // switch
-    } while (msg.type != MessageType::Disconnect);
+    case MessageType::Disconnect:
+    {
+        // Done!
+        break;
+    }
+
+    default:
+    {
+        std::cerr << "ERROR: Received response message-type from a client!  type=" << msg.type << std::endl;
+        break;
+    }
+
+    }; // switch
+
+    return msg.type;
 }
 
 ////////////

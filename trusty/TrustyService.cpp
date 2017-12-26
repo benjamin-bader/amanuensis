@@ -22,6 +22,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <sstream>
 
 #include "TrustyCommon.h"
 
@@ -34,35 +35,66 @@ template <> class is_cfref<SCNetworkProtocolRef> : public std::true_type {};
 
 namespace {
 
-class LockingSCPreferencesRef : public CFRef<SCPreferencesRef>
+/*! The PreferencesLocker class is an RAII wrapper around SCPreferencesLock
+ *  and SCPreferencesUnlock.
+ *
+ *  It does _not_ acquire any ownership interest in its SCPreferencesRef.
+ */
+class PreferencesLocker
 {
 public:
-    LockingSCPreferencesRef(SCPreferencesRef ref) : CFRef<SCPreferencesRef>(ref)
+    PreferencesLocker(SCPreferencesRef ref, bool wait = false) : ref_(ref), locked_(false)
     {
         if (ref == nullptr)
         {
-            throw std::invalid_argument{"SCPreferencesRef cannot be null"};
+            throw std::invalid_argument{"null SCPreferencesRef"};
         }
 
-        if (! SCPreferencesLock(ref, true))
+        if (! SCPreferencesLock(ref, wait))
         {
-            std::cerr << "FATAL ERROR: Could not lock SystemConfiguration preferences! " << SCErrorString(SCError()) << std::endl;
-            throw std::runtime_error{"Could not lock SystemConfiguration preferences"};
+            std::stringstream ss;
+            ss << SCErrorString(SCError());
+            throw std::runtime_error{ss.str()};
         }
+
+        locked_ = true;
     }
 
-    void reset() override
+    ~PreferencesLocker() noexcept
     {
-        if (get() != nullptr)
+        try
         {
-            if (! SCPreferencesUnlock(get()))
-            {
-                std::cerr << "FATAL ERROR: Could not unlock SystemConfiguration preferences! " << SCErrorString(SCError()) << std::endl;
-            }
+            unlock();
         }
-
-        CFRef<SCPreferencesRef>::reset();
+        catch (const std::exception& ex)
+        {
+            std::cerr << "Exception in dtor: " << ex.what() << std::endl;
+            // ignore exceptions in dtor
+        }
     }
+
+    void unlock()
+    {
+        if (is_locked())
+        {
+            if (! SCPreferencesUnlock(ref_))
+            {
+                std::stringstream ss;
+                ss << SCErrorString(SCError());
+                throw std::runtime_error{ss.str()};
+            }
+            locked_ = false;
+        }
+    }
+
+    bool is_locked() const noexcept
+    {
+        return locked_;
+    }
+
+private:
+    SCPreferencesRef ref_;
+    bool locked_;
 };
 
 const CFStringRef kGlobalIPv4Config = CFSTR("State:/Network/Global/IPv4");
@@ -158,11 +190,7 @@ ProxyState get_current_proxy_state(SCDynamicStoreRef /* storeRef */)
 void set_current_proxy_state(SCDynamicStoreRef /* storeRef */, const ProxyState& state)
 {
     CFRef<SCPreferencesRef> prefs = SCPreferencesCreate(kCFAllocatorDefault, CFSTR("com.bendb.amanuensis.Trusty"), nullptr);
-    if (! SCPreferencesLock(prefs, false))
-    {
-        std::cerr << "FATAL ERROR: Could not lock SystemConfiguration preferences! " << SCErrorString(SCError()) << std::endl;
-        return;
-    }
+    PreferencesLocker locker{prefs, /* wait */ true};
 
     CFRef<SCNetworkSetRef> netset = SCNetworkSetCopyCurrent(prefs);
 
@@ -212,6 +240,8 @@ void set_current_proxy_state(SCDynamicStoreRef /* storeRef */, const ProxyState&
             didUpdate = true;
             break;
         }
+
+        locker.unlock();
     }
 
     if (didUpdate)
@@ -228,8 +258,6 @@ void set_current_proxy_state(SCDynamicStoreRef /* storeRef */, const ProxyState&
     {
         std::cerr << "Active network set did not contain any proxy-enabled service" << std::endl;
     }
-
-    SCPreferencesUnlock(prefs);
 }
 
 
@@ -251,7 +279,7 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
               << "enabled=" << state.is_enabled()
               << ", host=" << state.get_host()
               << ", port=" << state.get_port()
-              << ")";
+              << ")" << std::endl;
 
     set_current_proxy_state(ref_, state);
 }

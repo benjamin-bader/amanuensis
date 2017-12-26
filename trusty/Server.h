@@ -24,6 +24,10 @@ namespace ama { namespace trusty {
 
 class IService;
 
+/*!
+ * A single-threaded socket server implementing an IService
+ * via a MessageProcessor.
+ */
 class Server
 {
 public:

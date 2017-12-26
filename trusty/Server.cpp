@@ -18,20 +18,14 @@
 #include "Server.h"
 
 #include <errno.h>
-#include <fcntl.h>
 #include <poll.h>
+#include <string.h>     // for strerror
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 #include <iostream>
 #include <system_error>
 
-#include <Security/Security.h>
-
 #include "ClientConnection.h"
-#include "MessageProcessor.h"
-#include "Service.h" // for IService
 
 namespace ama { namespace trusty {
 
@@ -69,7 +63,7 @@ int Server::accept_next_client()
     if (ready_count == -1)
     {
         // womp womp
-        std::cerr << "poll() failed: errno=" << errno << std::endl;
+        std::cerr << "poll() failed: errno=" << errno << " (" << ::strerror(errno) << ")" << std::endl;
         return -2;
     }
 
@@ -82,7 +76,7 @@ int Server::accept_next_client()
     int connection_fd = ::accept(server_fd_, addr, &size);
     if (connection_fd < 0)
     {
-        std::cerr << "accept(): failed; errno=" << errno << std::endl;
+        std::cerr << "accept(): failed; errno=" << errno << " (" << ::strerror(errno) << ")" << std::endl;
         return -2;
     }
 

@@ -40,73 +40,122 @@ template <> class is_cfref<CFBooleanRef>           : public std::true_type {};
 template <> class is_cfref<CFDateRef>              : public std::true_type {};
 template <> class is_cfref<CFNumberRef>            : public std::true_type {};
 
-/*! A simple RAII smart-pointer for Core Foundation references that
- *  are freed with CFRelease.
- */
 template <typename T>
-class CFRef
+class CFRefTraits
 {
-    static_assert(is_cfref<T>::value, "Type T must be a CFTypeRef type");
+    static_assert(is_cfref<T>::value, "T must be a CoreFoundation type.  Did you forget to specialize is_cfref<T>?");
 
 public:
-    CFRef() : CFRef(nullptr)
+    static void release(T ref) noexcept
+    {
+        if (ref != nullptr)
+        {
+            CFRelease(ref);
+        }
+    }
+
+    static T empty() noexcept
+    {
+        return nullptr;
+    }
+
+    static bool is_empty(T ref) noexcept
+    {
+        return ref != empty();
+    }
+};
+
+template <typename T, typename TTraits>
+class RefHolder
+{
+    using ThisType = RefHolder<T, TTraits>;
+
+public:
+    RefHolder() : ref_(TTraits::empty())
     {
     }
 
-    CFRef(T ref) : m_ref(ref)
+    RefHolder(T ref) : ref_(ref)
     {
     }
 
-    CFRef(CFRef<T>&& other)
+    RefHolder(ThisType&& other) : ref_(other.detach())
     {
-        m_ref = other.m_ref;
-        other.m_ref = nullptr;
     }
 
-    ~CFRef()
+    ~RefHolder()
     {
-        reset();
+        do_release();
     }
 
-    CFRef<T>& operator=(T other)
+    void reset()
     {
-        reset();
-        m_ref = other;
-        return *this;
+        do_release();
+    }
+
+    T detach()
+    {
+        T ref = ref_;
+        ref_ = TTraits::empty();
+        return ref;
+    }
+
+    void attach(T ref)
+    {
+        if (ref != ref_)
+        {
+            TTraits::release(ref_);
+            ref_ = ref;
+        }
+    }
+
+    operator T() const noexcept
+    {
+        return ref_;
+    }
+
+    operator bool() const noexcept
+    {
+        return ! TTraits::is_empty(ref_);
     }
 
     T get() const noexcept
     {
-        return m_ref;
+        return ref_;
     }
 
-    CFTypeID get_type_id() const noexcept
+    const ThisType& operator=(T ref)
     {
-        return CFGetTypeID(m_ref);
+        reset();
+        ref_ = ref;
+        return *this;
     }
 
-    operator T() noexcept
+    ThisType& operator=(ThisType&& holder)
     {
-        return m_ref;
-    }
-
-    operator bool() noexcept
-    {
-        return m_ref != nullptr;
-    }
-
-    virtual void reset()
-    {
-        if (m_ref != nullptr)
-        {
-            CFRelease(m_ref);
-            m_ref = nullptr;
-        }
+        attach(holder.detach());
+        return *this;
     }
 
 private:
-    T m_ref;
+    RefHolder(ThisType&) = delete;
+    RefHolder(const ThisType&) = delete;
+
+    void do_release()
+    {
+        T ref = ref_;
+        ref_ = TTraits::empty();
+        TTraits::release(ref);
+    }
+
+    T ref_;
 };
+
+/*! A simple RAII smart-pointer for Core Foundation references that
+ *  are freed with CFRelease.
+ */
+template <typename T>
+using CFRef = RefHolder<T, CFRefTraits<T>>;
 
 }} // ama::trusty
 
