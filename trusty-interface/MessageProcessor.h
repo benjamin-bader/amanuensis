@@ -127,7 +127,7 @@ struct Message
 
     void assign_u8_payload(uint8_t n);
     void assign_u32_payload(uint32_t n);
-    void assign_i32_payload(int n);
+    void assign_i32_payload(int32_t n);
     void assign_string_payload(const std::string &str);
 
     int get_i32_payload() const;

@@ -24,12 +24,14 @@ DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
 HEADERS += \
     ProxyStateTest.h \
-    MessageProcessorTest.h
+    MessageProcessorTest.h \
+    BytesTest.h
 
 SOURCES += \
     main.cpp \
     ProxyStateTest.cpp \
-    MessageProcessorTest.cpp
+    MessageProcessorTest.cpp \
+    BytesTest.cpp
 
 DEFINES += SRCDIR=\\\"$$PWD/\\\"
 

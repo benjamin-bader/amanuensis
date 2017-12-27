@@ -15,35 +15,42 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "ProxyStateTest.h"
+#include "BytesTest.h"
 
-#include <string>
-#include <sstream>
+#include <cstdint>
+#include <vector>
 
-#include <QString>
 #include <QtTest>
 
-#include "ProxyState.h"
+#include "Bytes.h"
 
 using namespace ama::trusty;
 
-ProxyStateTest::ProxyStateTest()
+BytesTest::BytesTest()
 {
 }
 
-void ProxyStateTest::serialize()
+void BytesTest::to_network_order()
 {
-    ProxyState state(true, "google.com", 0x0000FFFF);
-    std::vector<uint8_t> expected{1, 0x00, 0x00, 0xFF, 0xFF, 'g', 'o', 'o', 'g', 'l', 'e', '.', 'c', 'o', 'm' };
-    std::vector<uint8_t> actual = state.serialize();
-    QCOMPARE(expected, actual);
+    std::vector<uint8_t> v(4);
+
+    Bytes::to_network_order<int32_t>(257, v.data());
+    QCOMPARE((std::vector<uint8_t>{0, 0, 1, 1}), v);
+
+    Bytes::to_network_order<uint32_t>(0xAABBCCDD, v.data());
+    QCOMPARE((std::vector<uint8_t>{ 0xAA, 0xBB, 0xCC, 0xDD }), v);
 }
 
-void ProxyStateTest::deserialize_empty_host()
+void BytesTest::from_network_order()
 {
-    std::vector<uint8_t> serialized{0, 0, 0, 0, 0}; // disabled, port=0, host=""
-    ProxyState state{serialized};
-    QCOMPARE(std::string{""}, state.get_host());
-    QCOMPARE(false, state.is_enabled());
-    QCOMPARE(0, state.get_port());
+    std::vector<uint8_t> bytes;
+
+    bytes = { 0, 0, 1, 1 };
+    QCOMPARE(257, Bytes::from_network_order<int32_t>(bytes.data()));
+
+    bytes = { 0xAA, 0xBB, 0xCC, 0xDD };
+    QCOMPARE(0xAABBCCDD, Bytes::from_network_order<uint32_t>(bytes.data()));
+
+    bytes = { 0, 0, 0, 0, 0xFF };
+    QCOMPARE(0, Bytes::from_network_order<int32_t>(bytes.data()));
 }

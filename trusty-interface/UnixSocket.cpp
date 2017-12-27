@@ -170,7 +170,7 @@ void UnixSocket::checked_read(uint8_t* data, size_t len)
 
         if (num_read == 0)
         {
-            throw std::runtime_error("Connected is unexpectedly closed");
+            throw std::runtime_error("Connection is unexpectedly closed");
         }
 
         data += num_read;

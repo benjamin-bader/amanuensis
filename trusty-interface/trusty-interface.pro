@@ -16,7 +16,8 @@ HEADERS += \
     Service.h \
     CFRef.h \
     ProxyState.h \
-    UnixSocket.h
+    UnixSocket.h \
+    Bytes.h
 
 SOURCES += \
     MessageProcessor.cpp \

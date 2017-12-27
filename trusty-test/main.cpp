@@ -23,7 +23,7 @@
 #include <QCoreApplication>
 #include <QtTest>
 
-// Include test files
+#include "BytesTest.h"
 #include "MessageProcessorTest.h"
 #include "ProxyStateTest.h"
 
@@ -33,7 +33,8 @@ int main(int argc, char **argv)
     QStringList arguments = QCoreApplication::arguments();
 
     std::unordered_map<std::string, std::unique_ptr<QObject>> tests;
-    tests.emplace("MessageProcessorTests", std::make_unique<MessageProcessorTest>());
+    tests.emplace("BytesTest", std::make_unique<BytesTest>());
+    tests.emplace("MessageProcessorTest", std::make_unique<MessageProcessorTest>());
     tests.emplace("ProxyStateTest", std::make_unique<ProxyStateTest>());
 
     int status = 0;

@@ -17,7 +17,15 @@
 
 #include "ProxyState.h"
 
+#include "Bytes.h"
+
 namespace ama { namespace trusty {
+
+namespace {
+
+constexpr size_t kHeaderSize = 5;
+
+} // namepace
 
 ProxyState::ProxyState(bool enabled, const std::string &host, int port) noexcept
     : enabled_(enabled)
@@ -32,31 +40,29 @@ ProxyState::ProxyState(const std::vector<uint8_t> &payload)
     // 1-4: port, as int32_t
     // 5-: host, as character data, not null-terminated.
 
-    if (payload.size() < 5)
+    if (payload.size() < kHeaderSize)
     {
         throw std::invalid_argument{"payload too small to be a ProxyState"};
     }
 
     enabled_ = payload[0] != 0;
-    port_ = *((int32_t*) (payload.data() + 1));
+    port_ = Bytes::from_network_order<int32_t>(payload.data() + 1);
 
-    if (payload.size() > 5)
+    if (payload.size() > kHeaderSize)
     {
-        // This would be safe, but just to be paranoid, let's avoid doing anything
-        // with a pointer to invalid memory.
-        host_.assign(reinterpret_cast<const char *>(payload.data() + 5), payload.size() - 5);
+        // This would be safe if payload.size() == kHeaderSize, but just to be paranoid,
+        // let's avoid doing anything with a pointer to invalid memory.
+        host_.assign(reinterpret_cast<const char *>(payload.data() + kHeaderSize), payload.size() - kHeaderSize);
     }
 }
 
 std::vector<uint8_t> ProxyState::serialize() const
 {
-    size_t size = 5 + host_.size();
-    std::vector<uint8_t> payload;
-    payload.reserve(size);
+    std::vector<uint8_t> payload(kHeaderSize);
 
-    payload.push_back(enabled_ ? 1 : 0);
-    payload.resize(payload.size() + sizeof(int32_t));
-    ::memcpy(payload.data() + 1, &port_, sizeof(int32_t));
+    payload[0] = enabled_ ? 1 : 0;
+
+    Bytes::to_network_order(port_, payload.data() + 1);
 
     std::copy(host_.begin(), host_.end(), std::back_inserter(payload));
 
