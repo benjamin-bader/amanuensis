@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <system_error>
 
@@ -28,7 +29,7 @@
 namespace ama
 {
 
-enum class ProxyError
+enum class ProxyError : int32_t
 {
     NetworkError = 1,
     RemoteDnsLookupError,

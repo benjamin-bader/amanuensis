@@ -539,10 +539,6 @@ ProxyTransaction::ProxyTransaction(int id, std::shared_ptr<ConnectionPool> conne
 {
 }
 
-ProxyTransaction::~ProxyTransaction()
-{
-}
-
 int ProxyTransaction::id() const
 {
     return impl_->id();

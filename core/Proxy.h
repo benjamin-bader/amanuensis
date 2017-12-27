@@ -43,7 +43,7 @@ class A_EXPORT Proxy : public QObject,
 
 public:
     Proxy(const int port = 9999);
-    virtual ~Proxy();
+    virtual ~Proxy() = default;
 
     int port() const;
 

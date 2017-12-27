@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>CFBundleDevelopmentRegion</key>
+        <string>English</string>
+        <key>CFBundleExecutable</key>
+        <string>Amanuensis</string>
+        <key>CFBundleIdentifier</key>
+        <string>com.bendb.amanuensis.Amanuensis</string>
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleSignature</key>
+        <string>????</string>
+        <key>CFBundleVersion</key>
+        <string>1.0</string>
+        <key>CFBundleShortVersionString</key>
+        <string>1.0</string>
+        <key>NSMainNibFile</key>
+        <string>MainMenu</string>
+        <key>NSHumanReadableCopyright</key>
+        <string>Copyright © 2017 Benjamin Bader</string>
+        <key>NSPrincipalClass</key>
+        <string>NSApplication</string>
+        <key>SMPrivilegedExecutables</key>
+        <dict>
+                <key>com.bendb.amanuensis.Trusty</key>
+                <string>identifier &quot;com.bendb.amanuensis.Trusty&quot; and certificate leaf = H&quot;@CERTSHA1@&quot;</string>
+        </dict>
+</dict>
+</plist>

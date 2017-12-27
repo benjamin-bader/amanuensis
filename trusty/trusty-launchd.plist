@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>Label</key>
+        <string>com.bendb.amanuensis.Trusty</string>
+        <key>StandardErrorPath</key>
+        <string>/var/log/com.bendb.amanuensis.Trusty.log</string>
+        <key>MachServices</key>
+        <dict>
+            <key>com.bendb.amanuensis.Trusty</key>
+            <true />
+        </dict>
+        <key>Sockets</key>
+        <dict>
+            <key>com.bendb.amanuensis.Trusty</key>
+            <dict>
+                <key>SockFamily</key>
+                <string>Unix</string>
+                <key>SockPathMode</key>
+                <integer>438</integer>
+                <key>SockPathName</key>
+                <string>/var/run/com.bendb.amanuensis.Trusty.socket</string>
+                <key>SockType</key>
+                <string>Stream</string>
+            </dict>
+        </dict>
+    </dict>
+</plist>

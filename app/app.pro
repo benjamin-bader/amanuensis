@@ -19,8 +19,8 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = app
 TEMPLATE = app
+TARGET = Amanuensis
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked as deprecated (the exact warnings
@@ -53,7 +53,41 @@ DEPENDPATH += $$PWS/../core
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
 macx {
+    QMAKE_TARGET_BUNDLE_PREFIX=com.bendb.amanuensis
+
     QMAKE_CXXFLAGS += \
         -Wno-unused-local-typedef \ # ASIO has unused typedefs, which is unfortunate.
         -isystem $$PWD/../include/
+
+    include($$PWD/../trusty-constants.pri)
+    include($$PWD/../trusty-libs.pri)
+
+    LIBS += -L$${OUT_PWD}/../trusty-interface/ -ltrusty-interface
+    INCLUDEPATH += $$PWD/../trusty-interface
+
+    HEADERS += \
+        mac/MacProxy.h
+
+    SOURCES += \
+        mac/MacProxy.cpp
+
+    DISTFILES += \
+        Info.plist
+
+    APP_PATH = $$shell_quote($${DESTDIR}$${TARGET}.app)
+
+    INFO_PLIST_PATH = $$shell_quote($$APP_PATH/Contents/Info.plist)
+
+    HELPER_IDENTIFIER = com.bendb.amanuensis.Trusty
+
+    plist.commands += $(COPY) $$PWD/Info.plist $${INFO_PLIST_PATH};
+    plist.commands += /usr/libexec/PlistBuddy -c \"Set :CFBundleIdentifier com.bendb.amanuensis.$${TARGET}\" $${INFO_PLIST_PATH};
+    plist.commands += /usr/libexec/PlistBuddy -c \'Set :SMPrivilegedExecutables:$${HELPER_IDENTIFIER} 'identifier \\\"$${HELPER_IDENTIFIER}\\\" and certificate leaf = H\\\"$${CERTSHA1}\\\"'\' $${INFO_PLIST_PATH};
+
+    first.depends = $(first) plist
+
+    export(first.depends)
+    export(plist.depends)
+
+    QMAKE_EXTRA_TARGETS += first plist
 }

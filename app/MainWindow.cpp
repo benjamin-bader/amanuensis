@@ -18,6 +18,7 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 
+#include <iostream>
 #include <sstream>
 
 #include <QDebug>
@@ -27,6 +28,10 @@
 #include "Proxy.h"
 #include "ProxyFactory.h"
 #include "Transaction.h"
+
+#ifdef Q_OS_MAC
+#include "mac/MacProxy.h"
+#endif
 
 using namespace ama;
 
@@ -44,7 +49,25 @@ MainWindow::MainWindow(QWidget *parent) :
                        QCoreApplication::applicationName());
 
     int port = settings.value("Proxy/port", 9999).toInt();
+
+#ifdef Q_OS_MAC
+    proxy = std::make_shared<ama::MacProxy>(port);
+
+    std::error_code ec;
+    static_cast<ama::MacProxy*>(proxy.get())->enable(ec);
+
+    if (ec)
+    {
+        std::cout << ec << std::endl;
+        throw std::invalid_argument("wtf");
+    }
+    else
+    {
+        static_cast<ama::MacProxy*>(proxy.get())->say_hi();
+    }
+#else
     proxy = ProxyFactory().create(port);
+#endif
 
     connections << connect(proxy.get(), &Proxy::transactionStarted, [this](std::shared_ptr<Transaction> tx) {
                    qDebug() << "Got a tx! " << tx->id();

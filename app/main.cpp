@@ -33,6 +33,8 @@
 //Q_DECLARE_METATYPE(std::shared_ptr<ama::Connection>)
 //Q_DECLARE_METATYPE(ama::HttpMessage)
 
+Q_DECLARE_SMART_POINTER_METATYPE(std::shared_ptr)
+
 int main(int argc, char *argv[])
 {
     QCoreApplication::setOrganizationName("Amanuensis");
