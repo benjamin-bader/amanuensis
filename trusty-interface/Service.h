@@ -20,56 +20,10 @@
 
 #include <cstdint>
 #include <memory>
-#include <string>
-#include <vector>
+
+#include "ProxyState.h"
 
 namespace ama { namespace trusty {
-
-/**
- * Plain Old Data representing HTTP proxy configuration
- * data on macOS.
- *
- * Specifically, ProxyState is a 3-tuple of (enabled, host, port);
- * this is true for all of the network protocols that we care
- * about.
- */
-class ProxyState
-{
-public:
-    ProxyState(bool enabled, const std::string &host, int port) noexcept;
-
-    /**
-     * Initializes ProxyState with the serialized data in the given
-     * payload, which is expected to have been produced from
-     * ProxyState::serialize().
-     *
-     * @param payload a serialized binary representation of ProxyState data.
-     * @throws if the given payload is not comprehensible as a ProxyState.
-     */
-    ProxyState(const std::vector<uint8_t>& payload);
-
-    ProxyState(const ProxyState&) = default;
-    ProxyState(ProxyState&&) = default;
-    ProxyState& operator=(const ProxyState&) = default;
-    ProxyState& operator=(ProxyState&&) = default;
-
-    bool is_enabled() const noexcept { return enabled_; }
-    const std::string& get_host() const noexcept { return host_; }
-    int32_t get_port() const noexcept { return port_; }
-
-    /**
-     * Returns a representation of this instance as a vector of bytes,
-     * suitable for transmitting over the wire.
-     *
-     * @return a vector of bytes representing the data in this instance.
-     */
-    std::vector<uint8_t> serialize() const;
-
-private:
-    bool enabled_;
-    std::string host_;
-    int32_t port_;
-};
 
 /**
  * Defines the RPC interface between Amanuensis and Trusty.
@@ -141,7 +95,7 @@ public:
  */
 std::unique_ptr<IService> create_client(const std::string &path, const std::vector<uint8_t> &auth);
 
-} // namespace trusty
-} // namespace ama
+}} // namespace ama::trusty
+
 
 #endif // ISERVICE_H

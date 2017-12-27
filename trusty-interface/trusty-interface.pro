@@ -14,9 +14,13 @@ HEADERS += \
     TrustyCommon.h \
     MessageProcessor.h \
     Service.h \
-    CFRef.h
+    CFRef.h \
+    ProxyState.h \
+    UnixSocket.h
 
 SOURCES += \
     MessageProcessor.cpp \
     Service.cpp \
-    TrustyCommon.cpp
+    TrustyCommon.cpp \
+    ProxyState.cpp \
+    UnixSocket.cpp

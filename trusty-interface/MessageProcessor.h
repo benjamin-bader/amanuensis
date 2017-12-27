@@ -21,14 +21,16 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
+#include <memory>
 #include <string>
+#include <vector>
+
+#include "UnixSocket.h"
 
 namespace ama { namespace trusty {
 
 enum class MessageType : uint8_t
 {
-
     /**
      * A reply, indicating that the last message was processed successfully.
      *
@@ -138,9 +140,10 @@ class MessageProcessor
 public:
     MessageProcessor(const std::string &path);
     MessageProcessor(int fd);
+    MessageProcessor(std::unique_ptr<ISocket>&& socket);
     ~MessageProcessor();
 
-    void send(const Message &message) const;
+    void send(const Message &message);
     Message recv();
 
 private:
@@ -155,17 +158,17 @@ private:
      * We can assume that nearly all payloads will be will be tiny;
      * 64 bytes should be more than enough.
      */
-    static const size_t kBufLen = 64;
-
-    /**
-     * A file-descriptor of a connected socket.
-     */
-    int fd;
+    static constexpr size_t kBufLen = 64;
 
     /**
      * A buffer used when reading data from [fd].
      */
     uint8_t read_buffer[kBufLen];
+
+    /**
+     * A file-descriptor of a connected socket.
+     */
+    std::unique_ptr<ISocket> socket_;
 };
 
 }} // ama::trusty

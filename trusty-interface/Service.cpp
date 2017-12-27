@@ -22,7 +22,7 @@
 
 #include "MessageProcessor.h"
 
-using namespace ama::trusty;
+namespace ama { namespace trusty {
 
 namespace
 {
@@ -138,46 +138,12 @@ void MessageProcessorServiceClient::authenticate(const std::vector<uint8_t> &aut
 
 } // namespace
 
-ProxyState::ProxyState(bool enabled, const std::string &host, int port) noexcept
-    : enabled_(enabled)
-    , host_(host)
-    , port_(port)
-{}
-
-ProxyState::ProxyState(const std::vector<uint8_t> &payload)
-{
-    // Format is:
-    // 0: enabled (0 == disabled, !0 == enabled)
-    // 1-4: port, as int32_t
-    // 5-: host
-
-    if (payload.size() < 5) throw std::invalid_argument{"payload too small to be a ProxyState"};
-
-
-    enabled_ = payload[0] != 0;
-    port_ = *((int32_t*) (payload.data() + 1));
-    host_.assign(reinterpret_cast<const char *>(payload.data() + 5), payload.size() - 5);
-}
-
-std::vector<uint8_t> ProxyState::serialize() const
-{
-    size_t size = 5 + host_.size();
-    std::vector<uint8_t> payload;
-    payload.reserve(size);
-
-    payload.push_back(enabled_ ? 1 : 0);
-    payload.resize(payload.size() + sizeof(int32_t));
-    ::memcpy(payload.data() + 1, &port_, sizeof(int32_t));
-
-    std::copy(host_.begin(), host_.end(), std::back_inserter(payload));
-
-    return payload;
-}
-
-std::unique_ptr<IService> ama::trusty::create_client(const std::string &address, const std::vector<uint8_t> &auth)
+std::unique_ptr<IService> create_client(const std::string &address, const std::vector<uint8_t> &auth)
 {
     std::unique_ptr<MessageProcessorServiceClient> svc = std::make_unique<MessageProcessorServiceClient>(address);
     svc->authenticate(auth);
 
     return std::move(svc);
 }
+
+}} // namespace ama::trusty

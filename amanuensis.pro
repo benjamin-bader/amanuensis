@@ -32,10 +32,12 @@ macx {
 
     SUBDIRS += \
         trusty \
-        trusty-interface
+        trusty-interface \
+        trusty-test \
 
     trusty.depends = trusty-interface
     app.depends += trusty-interface
+    trusty-test.depends = trusty
 
     BUNDLEAPP = Amanuensis
     HELPERAPP = com.bendb.amanuensis.Trusty
