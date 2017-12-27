@@ -21,6 +21,7 @@
 #include <sstream>
 #include <string>
 
+#include "Bytes.h"
 #include "TrustyCommon.h"
 
 namespace ama { namespace trusty {
@@ -53,14 +54,14 @@ void Message::assign_u8_payload(uint8_t n)
 
 void Message::assign_u32_payload(uint32_t n)
 {
-    uint8_t *ptr = reinterpret_cast<uint8_t *>(&n);
-    payload.assign(ptr, ptr + sizeof(n));
+    payload.resize(sizeof(uint32_t));
+    Bytes::to_network_order(n, payload.data());
 }
 
-void Message::assign_i32_payload(int n)
+void Message::assign_i32_payload(int32_t n)
 {
-    uint8_t *ptr = reinterpret_cast<uint8_t *>(&n);
-    payload.assign(ptr, ptr + sizeof(n));
+    payload.resize(sizeof(int32_t));
+    Bytes::to_network_order(n, payload.data());
 }
 
 void Message::assign_string_payload(const std::string &str)
@@ -70,14 +71,14 @@ void Message::assign_string_payload(const std::string &str)
 
 int Message::get_i32_payload() const
 {
-    if (payload.size() != sizeof(int))
+    if (payload.size() != sizeof(int32_t))
     {
         std::stringstream ss;
         ss << "Expected " << sizeof(int) << " bytes; got " << payload.size();
         throw std::invalid_argument(ss.str());
     }
 
-    return *((int *) payload.data());
+    return Bytes::from_network_order<int32_t>(payload.data());
 }
 
 uint32_t Message::get_u32_payload() const
@@ -89,7 +90,7 @@ uint32_t Message::get_u32_payload() const
         throw std::invalid_argument(ss.str());
     }
 
-    return *((uint32_t *) payload.data());
+    return Bytes::from_network_order<uint32_t>(payload.data());
 }
 
 std::string Message::get_string_payload() const
@@ -122,7 +123,7 @@ MessageProcessor::~MessageProcessor()
 
 /* The wire format is simple.  A message is written as:
  * type: 1 octet
- * payload length: 4 octets
+ * payload length: 4 octets, network order (i.e. big-endian)
  * payload: <payload length> octets
  */
 
