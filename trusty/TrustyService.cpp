@@ -17,17 +17,19 @@
 
 #include "TrustyService.h"
 
-#include <SystemConfiguration/SystemConfiguration.h>
-
 #include <iostream>
 #include <memory>
 #include <string>
 #include <sstream>
 
+#include <SystemConfiguration/SystemConfiguration.h>
+
+#include "CFRef.h"
 #include "TrustyCommon.h"
 
 namespace ama { namespace trusty {
 
+template <> class is_cfref<SCDynamicStoreRef> : public std::true_type {};
 template <> class is_cfref<SCPreferencesRef> : public std::true_type {};
 template <> class is_cfref<SCNetworkSetRef> : public std::true_type {};
 template <> class is_cfref<SCNetworkServiceRef> : public std::true_type {};
@@ -107,17 +109,49 @@ std::string cfstring_as_std_string(CFStringRef ref)
         return {};
     }
 
-    CFIndex num_unicode_chars = CFStringGetLength(ref);
-    CFIndex buffer_len = num_unicode_chars * 3;
-    std::unique_ptr<char> buffer = std::make_unique<char>(static_cast<size_t>(buffer_len));
-
-    if (! CFStringGetCString(ref, buffer.get(), buffer_len, kCFStringEncodingUTF8))
+    CFIndex length = CFStringGetLength(ref);
+    if (length == 0)
     {
-        std::cerr << "Failed to convert a CFStringRef to a std::string" << std::endl;
         return {};
     }
 
-    return std::string{buffer.get()};
+    CFRange allStringBytes = CFRangeMake(0, length);
+    CFIndex outSize;
+    CFIndex converted = CFStringGetBytes(
+                ref,
+                allStringBytes,
+                kCFStringEncodingUTF8,
+                0,        // lossByte
+                false,    // isExternalRepresentation
+                nullptr,  // buffer
+                0,        // maxBufLen
+                &outSize);
+
+    if (converted == 0 || outSize == 0)
+    {
+        return {};
+    }
+
+    size_t num_elements = static_cast<size_t>(outSize);
+
+    std::vector<char> elements(num_elements + 1); // Leave room for the null terminator
+    converted = CFStringGetBytes(
+                ref,
+                allStringBytes,
+                kCFStringEncodingUTF8,
+                0,        // lossByte
+                false,    // isExternalRepresentation
+                reinterpret_cast<UInt8*>(elements.data()),
+                outSize,
+                nullptr); // usedBufLen
+
+    if (converted == 0)
+    {
+        return {};
+    }
+
+    elements[num_elements] = '\0';
+    return std::string{elements.data(), num_elements};
 }
 
 int32_t cfnumber_as_int32_t(CFNumberRef ref)
@@ -128,12 +162,28 @@ int32_t cfnumber_as_int32_t(CFNumberRef ref)
     }
 
     int32_t value;
-    if (! CFNumberGetValue(ref, kCFNumberIntType, &value))
+    if (! CFNumberGetValue(ref, kCFNumberSInt32Type, &value))
     {
         std::cerr << "Warning: CFNumberGetValue returned false for an expected int32_t; value=" << value << std::endl;
     }
 
     return value;
+}
+
+bool cfnumber_as_bool(CFNumberRef ref)
+{
+    if (ref == nullptr)
+    {
+        return false;
+    }
+
+    int32_t value;
+    if (! CFNumberGetValue(ref, kCFNumberSInt32Type, &value))
+    {
+        std::cerr << "Warning: CFNumberGetValue returned false for an expected int32_t; value=" << value << std::endl;
+    }
+
+    return value != 0;
 }
 
 CFStringRef get_primary_service_id()
@@ -151,126 +201,59 @@ CFStringRef get_primary_service_id()
     return primaryServiceId;
 }
 
-ProxyState get_current_proxy_state(SCDynamicStoreRef /* storeRef */)
-{
-    CFRef<SCPreferencesRef> prefs = SCPreferencesCreate(kCFAllocatorDefault, CFSTR("com.bendb.amanuensis.Trusty"), nullptr);
-
-    CFRef<SCNetworkSetRef> netset = SCNetworkSetCopyCurrent(prefs);
-
-    CFRef<CFArrayRef> services = SCNetworkSetCopyServices(netset);
-
-    CFRef<CFStringRef> primaryServiceId = get_primary_service_id();
-    CFIndex numServices = CFArrayGetCount(services);
-    for (CFIndex i = 0; i < numServices; ++i)
-    {
-        SCNetworkServiceRef service = (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
-
-        if (! CFEqual(primaryServiceId, SCNetworkServiceGetServiceID(service)))
-        {
-            continue;
-        }
-
-        CFRef<SCNetworkProtocolRef> proxies = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies);
-
-        if (proxies != nullptr)
-        {
-            CFDictionaryRef config = SCNetworkProtocolGetConfiguration(proxies);
-            bool enabled = SCNetworkProtocolGetEnabled(proxies);
-            CFStringRef httpProxyHost = (CFStringRef) CFDictionaryGetValue(config, kSCPropNetProxiesHTTPProxy);
-            CFNumberRef httpProxyPort = (CFNumberRef) CFDictionaryGetValue(config, kSCPropNetProxiesHTTPPort);
-
-            return {enabled, cfstring_as_std_string(httpProxyHost), cfnumber_as_int32_t(httpProxyPort) };
-        }
-    }
-
-    std::cerr << "No proxy-aware network service defined for the current NetworkSet" << std::endl;
-    return {false, "", 0};
-}
-
-void set_current_proxy_state(SCDynamicStoreRef /* storeRef */, const ProxyState& state)
-{
-    CFRef<SCPreferencesRef> prefs = SCPreferencesCreate(kCFAllocatorDefault, CFSTR("com.bendb.amanuensis.Trusty"), nullptr);
-    PreferencesLocker locker{prefs, /* wait */ true};
-
-    CFRef<SCNetworkSetRef> netset = SCNetworkSetCopyCurrent(prefs);
-
-    CFRef<CFArrayRef> services = SCNetworkSetCopyServices(netset);
-
-    bool didUpdate = false;
-    CFRef<CFStringRef> primaryServiceId = get_primary_service_id();
-    CFIndex numServices = CFArrayGetCount(services);
-    for (CFIndex i = 0; i < numServices; ++i)
-    {
-        SCNetworkServiceRef service = (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
-
-        if (! CFEqual(primaryServiceId, SCNetworkServiceGetServiceID(service)))
-        {
-            continue;
-        }
-
-        CFRef<SCNetworkProtocolRef> proxies = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies);
-
-        if (proxies != nullptr)
-        {
-            CFDictionaryRef config = SCNetworkProtocolGetConfiguration(proxies);
-            CFRef<CFMutableDictionaryRef> copy = nullptr;
-
-            if (!state.get_host().empty() && config != nullptr)
-            {
-                copy = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, config);
-            }
-            else if (!state.get_host().empty())
-            {
-                copy = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, config);
-            }
-
-            if (copy != nullptr)
-            {
-                int32_t port = state.get_port();
-                CFRef<CFStringRef> hostRef = CFStringCreateWithCString(kCFAllocatorDefault, state.get_host().c_str(), kCFStringEncodingUTF8);
-                CFRef<CFNumberRef> portRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &port);
-
-                CFDictionarySetValue(copy, kSCPropNetProxiesHTTPSProxy, hostRef);
-                CFDictionarySetValue(copy, kSCPropNetProxiesHTTPPort, portRef);
-            }
-
-            SCNetworkProtocolSetEnabled(proxies, state.is_enabled() && copy != nullptr);
-            SCNetworkProtocolSetConfiguration(proxies, copy);
-
-            didUpdate = true;
-            break;
-        }
-
-        locker.unlock();
-    }
-
-    if (didUpdate)
-    {
-        SCPreferencesCommitChanges(prefs);
-        SCPreferencesApplyChanges(prefs);
-
-        // Open and close a dynamic-store session; this is (was?) required for some of the config
-        // daemons to pick up on the changes.
-        SCDynamicStoreRef wakeUp = SCDynamicStoreCreate(nullptr, CFSTR("com.bendb.amanuensis.trusty.TrustyService.WakeUp"), nullptr, nullptr);
-        CFRelease(wakeUp);
-    }
-    else
-    {
-        std::cerr << "Active network set did not contain any proxy-enabled service" << std::endl;
-    }
-}
-
-
 } // anonymous namespace
-
-TrustyService::TrustyService()
-{
-    ref_ = SCDynamicStoreCreate(kCFAllocatorDefault, CFSTR("com.bendb.amanuensis.trusty.TrustyService"), nullptr, nullptr);
-}
 
 ProxyState TrustyService::get_http_proxy_state()
 {
-    return get_current_proxy_state(ref_);
+    CFRef<SCPreferencesRef> prefs    = SCPreferencesCreate(kCFAllocatorDefault, CFSTR("com.bendb.amanuensis.Trusty"), nullptr);
+    CFRef<SCNetworkSetRef>  netset   = SCNetworkSetCopyCurrent(prefs);
+    CFRef<CFArrayRef>       services = SCNetworkSetCopyServices(netset);
+
+    CFRef<CFStringRef> primaryServiceId = get_primary_service_id();
+    CFIndex numServices = CFArrayGetCount(services);
+    for (CFIndex i = 0; i < numServices; ++i)
+    {
+        SCNetworkServiceRef service = (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
+
+        if (! CFEqual(primaryServiceId, SCNetworkServiceGetServiceID(service)))
+        {
+            continue;
+        }
+
+        CFRef<SCNetworkProtocolRef> proxies = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies);
+        if (proxies == nullptr)
+        {
+            std::cerr << "Proxy protocol does not exist for primary network service" << std::endl;
+            continue;
+        }
+
+        if (! SCNetworkProtocolGetEnabled(proxies))
+        {
+            std::cerr << "Proxy protocol disabled for primary network service" << std::endl;
+            continue;
+        }
+
+        std::string host{};
+        int32_t port = 0;
+        bool enabled = false;
+
+        CFDictionaryRef config = SCNetworkProtocolGetConfiguration(proxies);
+        if (config)
+        {
+            CFStringRef httpProxyHost = (CFStringRef) CFDictionaryGetValue(config, kSCPropNetProxiesHTTPProxy);
+            CFNumberRef httpProxyPort = (CFNumberRef) CFDictionaryGetValue(config, kSCPropNetProxiesHTTPPort);
+            CFNumberRef enabledRef    = (CFNumberRef) CFDictionaryGetValue(config, kSCPropNetProxiesHTTPEnable);
+
+            host    = (httpProxyHost != nullptr) ? cfstring_as_std_string(httpProxyHost) : "";
+            port    = (httpProxyPort != nullptr) ? cfnumber_as_int32_t(httpProxyPort) : 0;
+            enabled = (enabledRef    != nullptr) ? cfnumber_as_bool(enabledRef) : false;
+        }
+
+        return { enabled, host, port };
+    }
+
+    std::cerr << "No proxy-aware network service defined for the current NetworkSet" << std::endl;
+    return { false, "", 0 };
 }
 
 void TrustyService::set_http_proxy_state(const ProxyState &state)
@@ -281,7 +264,99 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
               << ", port=" << state.get_port()
               << ")" << std::endl;
 
-    set_current_proxy_state(ref_, state);
+    CFRef<SCPreferencesRef> prefs = SCPreferencesCreate(kCFAllocatorDefault, CFSTR("com.bendb.amanuensis.Trusty"), nullptr);
+    PreferencesLocker locker{prefs, /* wait */ true};
+
+    CFRef<SCNetworkSetRef> netset = SCNetworkSetCopyCurrent(prefs);
+
+    CFRef<CFArrayRef> services = SCNetworkSetCopyServices(netset);
+
+    bool didUpdate = false;
+    CFRef<CFStringRef> primaryServiceId = get_primary_service_id();
+    CFIndex numServices = CFArrayGetCount(services);
+
+    for (CFIndex i = 0; i < numServices; ++i)
+    {
+        SCNetworkServiceRef service = (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
+
+        if (! CFEqual(primaryServiceId, SCNetworkServiceGetServiceID(service)))
+        {
+            continue;
+        }
+
+        CFRef<SCNetworkProtocolRef> proxies = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies);
+        if (proxies == nullptr)
+        {
+            std::cerr << "Proxy protocol does not exist for primary network service" << std::endl;
+            continue;
+        }
+
+        if (! SCNetworkProtocolGetEnabled(proxies))
+        {
+            std::cerr << "Proxy protocol disabled for primary network service" << std::endl;
+            continue;
+        }
+
+        CFDictionaryRef config = SCNetworkProtocolGetConfiguration(proxies);
+        CFRef<CFMutableDictionaryRef> copy = nullptr;
+
+        if (!state.get_host().empty() && config != nullptr)
+        {
+            copy = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, config);
+        }
+        else if (!state.get_host().empty())
+        {
+            copy = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, config);
+        }
+        else
+        {
+            // ProxyState has an empty hostname, so we'll just remove the entire dictionary.
+            //std::cerr << "ProxyState has an empty hostname; clearing settings." << std::endl;
+        }
+
+        if (copy != nullptr)
+        {
+            int32_t enabled = state.is_enabled() ? 1 : 0;
+            int32_t port = state.get_port();
+            CFRef<CFStringRef> hostRef = CFStringCreateWithCString(kCFAllocatorDefault, state.get_host().c_str(), kCFStringEncodingUTF8);
+            CFRef<CFNumberRef> portRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &port);
+            CFRef<CFNumberRef> enabledRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &enabled);
+
+            CFDictionarySetValue(copy, kSCPropNetProxiesHTTPProxy, hostRef);
+            CFDictionarySetValue(copy, kSCPropNetProxiesHTTPPort, portRef);
+            CFDictionarySetValue(copy, kSCPropNetProxiesHTTPEnable, enabledRef);
+        }
+
+        if (SCNetworkProtocolSetConfiguration(proxies, copy))
+        {
+            didUpdate = true;
+        }
+        else
+        {
+            std::cerr << "Error saving proxy protocol configuration: " << SCErrorString(SCError()) << std::endl;
+        }
+
+        break;
+    }
+
+    if (didUpdate)
+    {
+        if (! SCPreferencesCommitChanges(prefs))
+        {
+            std::cerr << "SCPreferencesCommitChanges failed: " << SCErrorString(SCError()) << std::endl;
+        }
+
+        if (! SCPreferencesApplyChanges(prefs))
+        {
+            std::cerr << "SCPreferencesApplyChanges failed: " << SCErrorString(SCError()) << std::endl;
+        }
+    }
+    else
+    {
+        std::cerr << "Active network set did not contain any proxy-enabled service" << std::endl;
+    }
+
+    locker.unlock();
 }
 
 void TrustyService::reset_proxy_settings()
