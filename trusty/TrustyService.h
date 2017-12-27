@@ -21,14 +21,9 @@
 #include <cstdint>
 #include <string>
 
-#include <SystemConfiguration/SystemConfiguration.h>
-
-#include "CFRef.h"
 #include "Service.h"
 
 namespace ama { namespace trusty {
-
-template <> class is_cfref<SCDynamicStoreRef> : public std::true_type {};
 
 /*! The trusted IService implementation.
  *
@@ -39,17 +34,12 @@ template <> class is_cfref<SCDynamicStoreRef> : public std::true_type {};
 class TrustyService : public IService
 {
 public:
-    TrustyService();
-
     ProxyState get_http_proxy_state() override;
     void set_http_proxy_state(const ProxyState& state) override;
 
     void reset_proxy_settings() override;
 
     uint32_t get_current_version() override;
-
-private:
-    CFRef<SCDynamicStoreRef> ref_;
 };
 
 }} // ama::trusty
