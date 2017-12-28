@@ -56,17 +56,14 @@ macx {
 
     # organizer.commands += rm -rf $${BUNDLE_DIR};
 
-    # Move the built .app from the app subdir to the root
-    # organizer.commands += $(MOVE) $$OUT_PWD/app/$${BUNDLEAPP}.app $${BUNDLE_DIR};
-
     # Move the core lib to the bundle
     organizer.commands += $(MKDIR) $${BUNDLE_DIR}/Contents/Frameworks;
-    organizer.commands += $(MOVE) $$OUT_PWD/core/libcore.1.0.0.dylib $${BUNDLE_DIR}/Contents/Frameworks;
+    organizer.commands += $(COPY) $$OUT_PWD/core/libcore.1.0.0.dylib $${BUNDLE_DIR}/Contents/Frameworks;
 
     # Set up the trusted-helper files in the bundle
     organizer.commands += $(MKDIR) $${BUNDLE_DIR}/Contents/Library/LaunchServices;
     organizer.commands += $(MKDIR) $${BUNDLE_DIR}/Contents/Resources;
-    organizer.commands += $(MOVE) $$OUT_PWD/trusty/$${HELPERAPP} $${BUNDLE_DIR}/Contents/Library/LaunchServices;
+    organizer.commands += $(COPY) $$OUT_PWD/trusty/$${HELPERAPP} $${BUNDLE_DIR}/Contents/Library/LaunchServices;
     organizer.commands += $(COPY) $$PWD/trusty/$${HELPERAPP_INFO} $${BUNDLE_DIR}/Contents/Resources;
     organizer.commands += $(COPY) $$PWD/trusty/$${HELPER_APP_LAUNCHD_INFO} $${BUNDLE_DIR}/Contents/Resources;
 
