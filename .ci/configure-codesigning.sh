@@ -20,6 +20,8 @@ security set-keychain-settings -t 3600 -u $KEYCHAIN
 # Generate a random cert and install it to the new keychain
 keygen/install_codesigning_cert.sh -k $KEYCHAIN -p $PASSWD
 
+security set-key-partition-list -S apple-tool:,apple: -s -k $PASSWD $KEYCHAIN
+
 # Now we need to configure the build to use the new cert
 KEYHASH=$(sudo security find-certificate -c "Amanuensis Authors" -Z $KEY_CHAIN | awk '/^SHA-1/ { print $3}')
 rm trusty-constants.pri
