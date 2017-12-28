@@ -15,14 +15,7 @@ if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
   # generate a random one and install it.
   #
   # Assuming that we're in the travis repo root...
-  echo some_passphrase | keygen/install_codesigning_cert.sh
-
-  # Now we need to configure the build to use the new cert
-  KEYHASH=$(sudo security find-certificate -c "Amanuensis Authors" -Z login.keychain | awk '/^SHA-1/ { print $3}')
-  rm trusty-constants.pri
-  echo 'CERT_CN = "\"Amanuensis Authors\""' > trusty-constants.pri
-  echo 'CERT_OU = bendb.com' >> trusty-constants.pri
-  echo "CERTSHA1 = $KEYHASH" >> trusty-constants.pri
+  .ci/configure-codesigning.sh
 
 elif [[ $TRAVIS_OS_NAME == 'linux' ]]; then
   sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
