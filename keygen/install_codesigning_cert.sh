@@ -3,6 +3,10 @@
 set -e
 set -x
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+pushd "$DIR"
+trap popd EXIT
+
 # We need to automate keygen and key installation for Travis CI;
 # part of this is providing a passphrase via stdin, then automatically
 # installing it without any UI interaction.
