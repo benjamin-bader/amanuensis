@@ -4,10 +4,11 @@ set -e
 set -x
 
 if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
-  echo $(cat /opt/qt59/bin/qt59-env.sh)
   # This will set up our environment to use the freshly-installed
   # QT 5.9 PPA packages
+  set +e
   source /opt/qt59/bin/qt59-env.sh
+  set -e
 
   qmake -v
   qmake "CONFIG+=test" "QMAKE_CXX=g++-6" "QMAKE_LINK=g++-6" -spec linux-g++  amanuensis.pro
