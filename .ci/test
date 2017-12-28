@@ -3,7 +3,8 @@
 set -e
 set -x
 
-if [[ $TRAVIS_OS_NAME == "linux" ]]; then
+if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
+  echo $(cat /opt/qt59/bin/qt59-env.sh)
   # This will set up our environment to use the freshly-installed
   # QT 5.9 PPA packages
   source /opt/qt59/bin/qt59-env.sh
@@ -12,7 +13,7 @@ if [[ $TRAVIS_OS_NAME == "linux" ]]; then
   qmake "CONFIG+=test" "QMAKE_CXX=g++-6" "QMAKE_LINK=g++-6" -spec linux-g++  amanuensis.pro
   make
   LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core" core-test/core-test
-elif [[ $TRAVIS_OS_NAME == "osx" ]]; then
+elif [[ $TRAVIS_OS_NAME == 'osx' ]]; then
   qmake -v
   qmake "CONFIG+=test" -spec macx-xcode amanuensis.pro
   make
