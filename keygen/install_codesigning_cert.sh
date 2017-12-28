@@ -53,6 +53,7 @@ trap popd EXIT
 KEYCHAIN_OPTS=
 PASSWD_OPENSSL_OPTS=
 PASSWD_SECURITY_OPTS=
+CODESIGN_OPTS=
 
 if [ -n "$PASSWD" ]; then
   PASSWD_OPENSSL_OPTS="-passout pass:$PASSWD"
@@ -63,6 +64,11 @@ if [ -n "$KEYCHAIN" ]; then
   KEYCHAIN_OPTS="-k $KEYCHAIN"
 fi
 
+CODESIGN_PATH=`which codesign`
+if [ -n "$CODESIGN_PATH" ]; then
+  CODESIGN_OPTS="-T $CODESIGN_PATH"
+fi
+
 if [ -z "$PASSWD" ]; then
   echo "Generating PKCS#12 wrapper; please choose a passphrase:"
 fi
@@ -70,5 +76,5 @@ fi
 openssl genrsa -out ama.key 2048
 openssl req -x509 -new -config ama.conf -nodes -key ama.key -sha256 -out ama.crt
 openssl pkcs12 -export -inkey ama.key -in ama.crt -out ama.p12 $PASSWD_OPENSSL_OPTS
-security import ama.p12 -t agg -f pkcs12 $PASSWD_SECURITY_OPTS -T /usr/bin/codesign $KEYCHAIN_OPTS
+security import ama.p12 -t agg -f pkcs12 $PASSWD_SECURITY_OPTS $CODESIGN_OPTS $KEYCHAIN_OPTS
 
