@@ -27,8 +27,9 @@ public:
     MessageProcessorTest();
 
 private Q_SLOTS:
-    // TODO: write tests using a mocked ISocket
-
+    void sends_well_formatted_messages();
+    void reads_well_formatted_messages();
+    void get_string_payload();
 };
 
 #endif // MESSAGEPROCESSORTEST_H

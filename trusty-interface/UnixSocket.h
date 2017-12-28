@@ -35,7 +35,7 @@ public:
      * @param len the number of bytes to be written
      * @throws std::system_error on failure.
      */
-    virtual void checked_write(uint8_t* data, size_t len) = 0;
+    virtual void checked_write(const uint8_t* data, size_t len) = 0;
 
     /**
      * Fully reads the given amount of data, throwing if the expected amount
@@ -72,7 +72,7 @@ public:
 
     ~UnixSocket() noexcept;
 
-    void checked_write(uint8_t* data, size_t len) override;
+    void checked_write(const uint8_t* data, size_t len) override;
 
     void checked_read(uint8_t* data, size_t len) override;
 
