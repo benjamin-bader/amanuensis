@@ -20,10 +20,9 @@ elif [[ $TRAVIS_OS_NAME == 'osx' ]]; then
   make
 
   sudo ln -s ${TRAVIS_BUILD_DIR}/core/libcore.1.0.0.dylib /usr/local/lib/libcore.1.dylib
-  sudo ln -s ${TRAVIS_BUILD_DIR}/trusty/com.bendb.amanuensis.Trusty /usr/local/lib/com.bendb.amanuensis.Trusty
 
-  DYLD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core" core-test/core-test && \
-  DYLD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/trusty" trusty-test/trusty-test
+  export DYLD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core"
+  core-test/core-test && trusty-test/trusty-test
 
 else
   echo "Unrecognized OS name $TRAVIS_OS_NAME; cannot continue."
