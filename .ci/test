@@ -1,13 +1,30 @@
 #!/usr/bin/env bash
 
-# This will set up our environment to use the freshly-installed
-# QT 5.9 PPA packages
-source /opt/qt59/bin/qt59-env.sh
-
 set -e
 set -x
 
-qmake -v
-qmake "CONFIG+=test" "QMAKE_CXX=g++-6" "QMAKE_LINK=g++-6" -spec linux-g++  amanuensis.pro
-make
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core" core-test/core-test
+if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
+  # This will set up our environment to use the freshly-installed
+  # QT 5.9 PPA packages
+  set +e
+  source /opt/qt59/bin/qt59-env.sh
+  set -e
+
+  qmake -v
+  qmake "CONFIG+=test" "QMAKE_CXX=g++-6" "QMAKE_LINK=g++-6" -spec linux-g++  amanuensis.pro
+  make
+  LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core" core-test/core-test
+elif [[ $TRAVIS_OS_NAME == 'osx' ]]; then
+  qmake -v
+  qmake "CONFIG+=test" -spec macx-clang amanuensis.pro
+  make
+
+  sudo ln -s ${TRAVIS_BUILD_DIR}/core/libcore.1.0.0.dylib /usr/local/lib/libcore.1.dylib
+
+  export DYLD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core"
+  core-test/core-test && trusty-test/trusty-test
+
+else
+  echo "Unrecognized OS name $TRAVIS_OS_NAME; cannot continue."
+  exit 1
+fi
