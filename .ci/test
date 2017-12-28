@@ -15,7 +15,7 @@ if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
   LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core" core-test/core-test
 elif [[ $TRAVIS_OS_NAME == 'osx' ]]; then
   qmake -v
-  qmake "CONFIG+=test" -spec macx-xcode amanuensis.pro
+  qmake "CONFIG+=test" -spec macx-clang amanuensis.pro
   make
 
   LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core" core-test/core-test && \
