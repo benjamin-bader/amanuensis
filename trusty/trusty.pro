@@ -64,7 +64,7 @@ QMAKE_LFLAGS_RELEASE = $$QMAKE_LFLAGS_RELEASE_WITH_DEBUGINFO
 codesigner.commands += dsymutil $${DESTDIR}$${TARGET} -o $${DESTDIR}$${TARGET}.dSYM;
 CODESIGN_ALLOCATE_PATH=$$system(xcrun -find codesign_allocate)
 codesigner.commands += export CODESIGN_ALLOCATE=$${CODESIGN_ALLOCATE_PATH};
-codesigner.commands += codesign --force --sign $${CERTSHA1} -r=\'designated => identifier \"$${TARGET}\" and certificate leaf = H\"$${CERTSHA1}\"\' --timestamp=none $${DESTDIR}$${TARGET};
+codesigner.commands += codesign --force --sign $${CERTSHA1} -r=\'designated => identifier \"$${TARGET}\" and certificate leaf = H\"$${CERTSHA1}\"\' --timestamp=none $${DESTDIR}$${TARGET} 2>&1;
 
 first.depends = $(first) codesigner
 export(first.depends)

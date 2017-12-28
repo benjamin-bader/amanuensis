@@ -132,8 +132,11 @@ void MessageProcessor::send(const Message &message)
     uint8_t type = static_cast<uint8_t>(message.type);
     uint32_t payload_length = static_cast<uint32_t>(message.payload.size());
 
+    uint8_t payload_length_bytes[sizeof(uint32_t)];
+    Bytes::to_network_order(payload_length, payload_length_bytes);
+
     socket_->checked_write(&type, sizeof(uint8_t));
-    socket_->checked_write((uint8_t *) &payload_length, sizeof(uint32_t));
+    socket_->checked_write(payload_length_bytes, sizeof(payload_length_bytes));
     socket_->checked_write((uint8_t *) message.payload.data(), message.payload.size());
 }
 
@@ -142,9 +145,12 @@ Message MessageProcessor::recv()
     Message result;
     uint8_t type;
     uint32_t length;
+    uint8_t length_bytes[sizeof(length)];
 
     socket_->checked_read(&type, sizeof(uint8_t));
-    socket_->checked_read((uint8_t *) &length, sizeof(uint32_t));
+    socket_->checked_read(length_bytes, sizeof(length_bytes));
+
+    length = Bytes::from_network_order<uint32_t>(length_bytes);
 
     // I think there's a theoretical bug here, in that size_t isn't
     // *guaranteed* to be 32 bits wide; it could, technically, be only

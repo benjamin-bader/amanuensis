@@ -130,7 +130,7 @@ UnixSocket::~UnixSocket() noexcept
     }
 }
 
-void UnixSocket::checked_write(uint8_t* data, size_t len)
+void UnixSocket::checked_write(const uint8_t* data, size_t len)
 {
     while (len > 0)
     {
