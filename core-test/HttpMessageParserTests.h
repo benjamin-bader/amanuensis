@@ -36,6 +36,8 @@ private Q_SLOTS:
     void simpleForbiddenResponse();
 
     void connectFromEdge();
+
+    void pauses_on_phase_transitions();
 };
 
 #endif

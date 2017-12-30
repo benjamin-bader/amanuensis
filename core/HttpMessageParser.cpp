@@ -17,6 +17,7 @@
 
 #include "HttpMessageParser.h"
 
+#include <cassert>
 #include <cctype>
 #include <cerrno>
 #include <cstdlib>
@@ -29,9 +30,7 @@
 #include "Headers.h"
 #include "HttpMessage.h"
 
-using namespace ama;
-
-class ResponseBuilder {};
+namespace ama {
 
 #if defined(Q_OS_WIN)
 #define Q_STRTOULL _strtoui64
@@ -39,98 +38,152 @@ class ResponseBuilder {};
 #define Q_STRTOULL strtoull
 #endif
 
-namespace
+namespace {
+
+template <typename T>
+class MemoryBuffer
 {
-    bool parse_uint64_t(const std::string &str, uint64_t &result, int base = 10)
+public:
+    static MemoryBuffer<T> allocate(size_t num_elements)
     {
-        char *end;
+        return MemoryBuffer<T>(num_elements);
+    }
 
-        errno = 0;
-        auto parsed = Q_STRTOULL(str.c_str(), &end, base);
-
-        auto parse_error = errno;
-        if (parsed == 0 && (parse_error == ERANGE || parse_error == EINVAL))
+    MemoryBuffer(size_t size)
+    {
+        pointer_ = (T*) ::malloc(sizeof(T) * size);
+        if (pointer_ == nullptr)
         {
-            return false;
+            throw std::bad_alloc();
         }
+    }
 
-        result = parsed;
+    MemoryBuffer(MemoryBuffer<T>&& that)
+    {
+        this->pointer_ = that.pointer_;
+        that.pointer_ = nullptr;
+    }
+
+    MemoryBuffer& operator=(MemoryBuffer<T>&& that)
+    {
+        this->pointer_ = that.pointer_;
+        that.pointer_ = nullptr;
+        return *this;
+    }
+
+    ~MemoryBuffer()
+    {
+        if (pointer_ != nullptr)
+        {
+            ::free(pointer_);
+        }
+    }
+
+    operator T*()
+    {
+        return pointer_;
+    }
+
+    T operator*()
+    {
+        return *pointer_;
+    }
+
+private:
+    T* pointer_;
+};
+
+bool parse_uint64_t(const std::string &str, uint64_t &result, int base = 10)
+{
+    char *end;
+
+    errno = 0;
+    auto parsed = Q_STRTOULL(str.c_str(), &end, base);
+
+    auto parse_error = errno;
+    if (parsed == 0 && (parse_error == ERANGE || parse_error == EINVAL))
+    {
+        return false;
+    }
+
+    result = parsed;
+    return true;
+}
+
+inline bool is_char(int input)
+{
+    return input >= 0 && input <= 127;
+}
+
+inline bool is_ctl(int input)
+{
+    return (input >= 0 && input <= 31) || (input == 127);
+}
+
+inline bool is_tspecial(int input)
+{
+    switch (input)
+    {
+    case '(':
+    case ')':
+    case '<':
+    case '@':
+    case ',':
+    case ';':
+    case ':':
+    case '\\':
+    case '"':
+    case '/':
+    case '[':
+    case ']':
+    case '?':
+    case '=':
+    case '{':
+    case '}':
+    case ' ':
+    case '\t':
         return true;
-    }
 
-    inline bool is_char(int input)
-    {
-        return input >= 0 && input <= 127;
-    }
-
-    inline bool is_ctl(int input)
-    {
-        return (input >= 0 && input <= 31) || (input == 127);
-    }
-
-    inline bool is_tspecial(int input)
-    {
-        switch (input)
-        {
-        case '(':
-        case ')':
-        case '<':
-        case '@':
-        case ',':
-        case ';':
-        case ':':
-        case '\\':
-        case '"':
-        case '/':
-        case '[':
-        case ']':
-        case '?':
-        case '=':
-        case '{':
-        case '}':
-        case ' ':
-        case '\t':
-            return true;
-
-        default:
-            return false;
-        }
-    }
-
-    inline bool is_digit(int input)
-    {
-        return input >= '0' && input <= '9';
-    }
-
-    inline bool is_hex(int input)
-    {
-        return is_digit(input)
-                || (input >= 'a' && input <= 'f')
-                || (input >= 'A' && input <= 'F');
-    }
-
-    inline int hex_value(char c)
-    {
-        if (is_digit(c))
-        {
-            return c - '0';
-        }
-        else if (c >= 'a' && c <= 'f')
-        {
-            return c - 'a' + 10;
-        }
-        else if (c >= 'A' && c <= 'F')
-        {
-            return c - 'A' + 10;
-        }
-        else
-        {
-            std::stringstream ss;
-            ss << "Not a hex value: " << c;
-            throw std::domain_error(ss.str());
-        }
+    default:
+        return false;
     }
 }
+
+inline bool is_digit(int input)
+{
+    return input >= '0' && input <= '9';
+}
+
+inline bool is_hex(int input)
+{
+    return is_digit(input)
+            || (input >= 'a' && input <= 'f')
+            || (input >= 'A' && input <= 'F');
+}
+
+inline int hex_value(char c)
+{
+    if (is_digit(c))
+    {
+        return c - '0';
+    }
+    else if (c >= 'a' && c <= 'f')
+    {
+        return c - 'a' + 10;
+    }
+    else if (c >= 'A' && c <= 'F')
+    {
+        return c - 'A' + 10;
+    }
+    else
+    {
+        std::stringstream ss;
+        ss << "Not a hex value: " << c;
+        throw std::domain_error(ss.str());
+    }
+}
+
+} // anonymous namespace
 
 HttpMessageParser::HttpMessageParser() :
     state_(method_start),
@@ -168,16 +221,14 @@ void HttpMessageParser::transition_to_state(ParserState newState)
     state_ = newState;
 }
 
-HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char input)
+HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char input, ParsePhase* phase)
 {
-#if defined(DEBUG_PARSER_TRANSITIONS)
 #define TRANSIT(x) do { \
-    qDebug() << state_ << "->" << (x) << "(" #x ")"; \
+    if (phase != nullptr) { \
+        *phase = get_phase_for_state_transition(*phase, state_, (x)); \
+    } \
     transition_to_state((x)); \
 } while (false)
-#else
-#define TRANSIT(x) transition_to_state((x))
-#endif
 
     switch (state_)
     {
@@ -567,11 +618,7 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
                 {
                     // strtok modifies its arguments, so we need to
                     // make a copy here.
-                    char *data = (char *) ::malloc(sizeof(char) * value.size() + 1);
-                    if (data == nullptr)
-                    {
-                        throw std::bad_alloc();
-                    }
+                    MemoryBuffer<char> data = MemoryBuffer<char>::allocate(value.size() + 1);
                     ::strcpy(data, value.c_str());
 
                     const char delimiters[] = ", ";
@@ -586,8 +633,6 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
                         }
                         tokenPtr = std::strtok(nullptr, delimiters);
                     }
-
-                    ::free(data);
                 }
 
                 if (is_chunked)
@@ -739,6 +784,58 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
     }
 
     return Invalid;
+}
+
+ParsePhase HttpMessageParser::get_phase_for_state_transition(
+        ParsePhase currentPhase,
+        HttpMessageParser::ParserState oldState,
+        HttpMessageParser::ParserState newState)
+{
+    if (oldState == newState)
+    {
+        return currentPhase;
+    }
+
+    switch (newState)
+    {
+    case header_line_start:
+        if (currentPhase == ParsePhase::Start)
+        {
+            return ParsePhase::ReceivedMessageLine;
+        }
+        break;
+
+    case chunk_length_start:
+    case fixed_length_entity:
+        if (currentPhase == ParsePhase::ReceivedMessageLine)
+        {
+            return ParsePhase::ReceivedHeaders;
+        }
+        break;
+
+    default:
+        // no-op
+        break;
+    }
+
+    return currentPhase;
+}
+
+} // namespace ama
+
+std::ostream& operator<<(std::ostream& os, ama::ParsePhase phase)
+{
+    switch (phase)
+    {
+    case ama::ParsePhase::Start:               return os << "ParsePhase::Start";
+    case ama::ParsePhase::ReceivedMessageLine: return os << "ParsePhase::ReceivedMessageLine";
+    case ama::ParsePhase::ReceivedHeaders:     return os << "ParsePhase::ReceivedHeaders";
+    case ama::ParsePhase::ReceivedBody:        return os << "ParsePhase::ReceivedBody";
+    case ama::ParsePhase::ReceivedFullMessage: return os << "ParsePhase::ReceivedFullMessage";
+    default:
+        assert(false);
+        return os << "(unexpected phase value: " << static_cast<int>(phase) << ")";
+    }
 }
 
 //QDebug operator<<(QDebug d, const HttpMessageParser &parser)
