@@ -45,15 +45,15 @@ class A_EXPORT TransactionListener
 public:
     virtual ~TransactionListener() {}
 
-    virtual void on_transaction_start(const Transaction &tx) = 0;
-    virtual void on_request_read(const Transaction &tx) = 0;
+    virtual void on_transaction_start(Transaction &tx) = 0;
+    virtual void on_request_read(Transaction &tx) = 0;
 
-    virtual void on_response_headers_read(const Transaction &tx) = 0;
-    virtual void on_response_read(const Transaction &tx) = 0;
+    virtual void on_response_headers_read(Transaction &tx) = 0;
+    virtual void on_response_read(Transaction &tx) = 0;
 
-    virtual void on_transaction_complete(const Transaction &tx) = 0;
+    virtual void on_transaction_complete(Transaction &tx) = 0;
 
-    virtual void on_transaction_failed(const Transaction &tx) = 0;
+    virtual void on_transaction_failed(Transaction &tx) = 0;
 };
 
 /**

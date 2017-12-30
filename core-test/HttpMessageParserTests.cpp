@@ -245,3 +245,56 @@ void HttpMessageParserTests::connectFromEdge()
     QCOMPARE(request.method(), {"CONNECT"});
 }
 
+void HttpMessageParserTests::pauses_on_phase_transitions()
+{
+    std::string url = "https://www.smbc-comics.com/comic/the-talk-3";
+
+    std::stringstream requestText;
+    requestText << "POST /foo/bar HTTP/1.1\r\n";
+    requestText << "Accept: application/html\r\n";
+    requestText << "Content-Type: text/plain\r\n";
+    requestText << "Transfer-Encoding: gzip, chunked\r\n";
+    requestText << "\r\n";
+    requestText << "5\r\n";
+    requestText << "abcde\r\n";
+    requestText << "9\r\n";
+    requestText << "fghijklmn\r\n";
+    requestText << "A\r\n";
+    requestText << "opqrstuvwx\r\n";
+    requestText << "c\r\n";
+    requestText << "yz0123456789\r\n";
+    requestText << "0\r\n";
+    requestText << "\r\n";
+
+    HttpMessage request;
+    HttpMessageParser parser;
+    parser.resetForRequest();
+
+    auto content = requestText.str();
+    auto begin = content.begin();
+    auto end = content.end();
+
+    ParsePhase phase = ParsePhase::Start;
+    auto state = parser.parse(request, begin, end, phase);
+
+    QCOMPARE(HttpMessageParser::State::Incomplete, state);
+    QCOMPARE(ParsePhase::ReceivedMessageLine, phase);
+    QCOMPARE(std::string{"POST"}, request.method());
+    QCOMPARE(std::string{"/foo/bar"}, request.uri());
+    QCOMPARE(size_t(0), request.headers().size());
+    QCOMPARE(std::string{""}, request.body_as_string());
+
+    state = parser.parse(request, begin, end, phase);
+
+    QCOMPARE(HttpMessageParser::State::Incomplete, state);
+    QCOMPARE(ParsePhase::ReceivedHeaders, phase);
+    QCOMPARE(size_t(3), request.headers().size());
+    QCOMPARE(std::string{""}, request.body_as_string());
+
+    state = parser.parse(request, begin, end, phase);
+
+    QCOMPARE(HttpMessageParser::State::Valid, state);
+    QCOMPARE(ParsePhase::ReceivedFullMessage, phase);
+    QCOMPARE(std::string{"abcdefghijklmnopqrstuvwxyz0123456789"}, request.body_as_string());
+}
+

@@ -25,6 +25,8 @@
 #include <QStringListModel>
 #include <QVector>
 
+#include "Transaction.h"
+
 namespace ama
 {
 class Proxy;
@@ -34,6 +36,26 @@ namespace Ui {
 class MainWindow;
 }
 
+class TxListener : public QObject
+                 , public ama::TransactionListener
+                 , public std::enable_shared_from_this<TxListener>
+{
+    Q_OBJECT
+public:
+    void on_transaction_start(ama::Transaction &tx) override;
+    void on_request_read(ama::Transaction &tx) override;
+
+    void on_response_headers_read(ama::Transaction &tx) override;
+    void on_response_read(ama::Transaction &tx) override;
+
+    void on_transaction_complete(ama::Transaction &tx) override;
+
+    void on_transaction_failed(ama::Transaction &tx) override;
+
+signals:
+    void message_logged(const QString& message);
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -42,12 +64,19 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+    //void addRowToListView(const std::string& message);
+
+public slots:
+    void on_message_logged(const QString& message);
+
 private:
     //void addRowToListView(const std::shared_ptr<ama::Connection> &connection, const std::string &message);
+
 
 private:
     Ui::MainWindow *ui;
     std::shared_ptr<ama::Proxy> proxy;
+    std::shared_ptr<TxListener> txListener;
     QVector<QMetaObject::Connection> connections;
 
     QStringListModel *model;

@@ -24,6 +24,7 @@
 
 #include <cstdint>
 #include <string>
+#include <iostream>
 #include <system_error>
 #include <tuple>
 #include <vector>
@@ -41,6 +42,25 @@ namespace ama
 {
 
 class HttpMessage;
+
+/**
+ * Enumerates the various phases of incremental HTTP message parsing.
+ *
+ * @par Parsing consists of stepping through a large number of different
+ * states, many of which are logically related and can be grouped together
+ * into a smaller number of phases. Parsing can, optionally, pause whenever
+ * the current phase changes.  This allows actions to be taken at interesting
+ * points, such as when all headers have been parsed but before reading a
+ * potentially large entity.
+ */
+enum class ParsePhase : int
+{
+    Start = 0,
+    ReceivedMessageLine,
+    ReceivedHeaders,
+    ReceivedBody,
+    ReceivedFullMessage
+};
 
 class A_EXPORT HttpMessageParser
 {
@@ -65,30 +85,42 @@ public:
     }
 
     template <typename InputIterator>
+    State parse(Request &request, InputIterator &begin, InputIterator end, ParsePhase& phase)
+    {
+        return parse(request.message_, begin, end, phase);
+    }
+
+    template <typename InputIterator>
     State parse(Response &response, InputIterator &begin, InputIterator end)
     {
         return parse(response.message_, begin, end);
     }
 
     template <typename InputIterator>
+    State parse(Response &response, InputIterator &begin, InputIterator end, ParsePhase& phase)
+    {
+        return parse(response.message_, begin, end, phase);
+    }
+
+    template <typename InputIterator>
     State parse(HttpMessage &message, InputIterator &begin, InputIterator end)
     {
-        while (begin != end)
-        {
-            auto state = consume(message, *begin++);
-            if (state != State::Incomplete)
-            {
-                return state;
-            }
-        }
+        return parse(message, begin, end, nullptr);
+    }
 
-        return Incomplete;
+    template <typename InputIterator>
+    State parse(HttpMessage &message, InputIterator &begin, InputIterator end, ParsePhase& phase)
+    {
+        return parse(message, begin, end, &phase);
     }
 
 private:
     friend QDebug operator<<(QDebug, const HttpMessageParser &parser);
 
-    State consume(HttpMessage &message, char input);
+    template <typename InputIterator>
+    State parse(HttpMessage &message, InputIterator &begin, InputIterator end, ParsePhase* phase);
+
+    State consume(HttpMessage &message, char input, ParsePhase* phase);
 
 private:
     enum ParserState {
@@ -168,6 +200,8 @@ private:
 
     void transition_to_state(ParserState newState);
 
+    static ParsePhase get_phase_for_state_transition(ParsePhase phase, ParserState oldState, ParserState newState);
+
     // A counter of how many bytes in a fixed-length range
     // remain to be read; this is used both for individual
     // chunks as well as fixed-length entities.
@@ -181,8 +215,38 @@ private:
     std::string value_buffer_;
 };
 
-//QDebug operator<<(QDebug d, const HttpMessageParser &parser);
+template <typename InputIterator>
+HttpMessageParser::State HttpMessageParser::parse(HttpMessage &message, InputIterator &begin, InputIterator end, ParsePhase* phase)
+{
+    ParsePhase startingPhase = ParsePhase::Start;
+    if (phase != nullptr)
+    {
+        startingPhase = *phase;
+    }
+
+    while (begin != end)
+    {
+        auto state = consume(message, *begin++, phase);
+        if (state != State::Incomplete)
+        {
+            if (state == State::Valid && phase != nullptr)
+            {
+                *phase = ParsePhase::ReceivedFullMessage;
+            }
+            return state;
+        }
+
+        if (phase != nullptr && *phase != startingPhase)
+        {
+            break;
+        }
+    }
+
+    return Incomplete;
+}
 
 } // namespace ama
+
+std::ostream& operator<<(std::ostream& os, ama::ParsePhase phase);
 
 #endif // HTTPMESSAGEPARSER_H

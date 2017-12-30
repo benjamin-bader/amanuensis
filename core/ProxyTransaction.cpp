@@ -18,12 +18,12 @@
 #include "ProxyTransaction.h"
 
 #include <array>
-
-#include <ctime>
-
+#include <cassert>
 #include <chrono>
+#include <ctime>
 #include <cstdint>
 #include <iomanip>
+#include <iostream>
 #include <locale>
 #include <sstream>
 #include <vector>
@@ -39,7 +39,33 @@
 #include "Errors.h"
 #include "HttpMessageParser.h"
 
-using namespace ama;
+QDebug operator<<(QDebug d, ama::ParsePhase phase)
+{
+    std::stringstream ss;
+    ss << phase;
+    return d << ss.str().c_str();
+}
+
+namespace ama {
+
+namespace {
+
+enum class NotificationState : uint8_t
+{
+    None = 0,
+    RequestHeaders = 1,
+    RequestBody = 2,
+    RequestComplete = 3,
+    ResponseHeaders = 4,
+    ResponseBody = 5,
+    ResponseComplete = 6,
+
+    TLSTunnel = 7,
+
+    Error = 8,
+};
+
+}
 
 class ProxyTransaction::impl : public std::enable_shared_from_this<ProxyTransaction::impl>
 {
@@ -68,6 +94,8 @@ private:
     void send_client_request_via_tunnel();
     void send_server_response_via_tunnel();
 
+    void notify_phase_change(ParsePhase phase);
+    void do_notification(NotificationState ns);
     void notify_failure(std::error_code ec);
 
     void release_connections();
@@ -93,8 +121,13 @@ private:
     // they can be relayed as-is.
     std::vector<uint8_t> raw_input_;
 
+    ParsePhase request_parse_phase_;
     Request request_;
+
+    ParsePhase response_parse_phase_;
     Response response_;
+
+    NotificationState notification_state_;
 };
 
 ProxyTransaction::impl::impl(
@@ -112,8 +145,11 @@ ProxyTransaction::impl::impl(
     , read_buffer_()
     , remote_buffer_(nullptr)
     , raw_input_()
+    , request_parse_phase_(ParsePhase::Start)
     , request_()
+    , response_parse_phase_(ParsePhase::Start)
     , response_()
+    , notification_state_(NotificationState::None)
 {
 }
 
@@ -160,7 +196,17 @@ void ProxyTransaction::impl::read_client_request()
 
         self->raw_input_.insert(self->raw_input_.end(), start, stop);
 
-        auto state = self->parser_.parse(self->request(), start, stop);
+        auto current_phase = self->request_parse_phase_;
+        auto state = self->parser_.parse(self->request(), start, stop, self->request_parse_phase_);
+        while (state == HttpMessageParser::State::Incomplete && current_phase != self->request_parse_phase_)
+        {
+            qDebug() << "ProxyTransaction::impl::read_client_request() (phase change) old=" << current_phase << " new=" << self->request_parse_phase_;
+            self->notify_phase_change(self->request_parse_phase_);
+
+            current_phase = self->request_parse_phase_;
+            state = self->parser_.parse(self->request(), start, stop, self->request_parse_phase_);
+        }
+
         if (state == HttpMessageParser::State::Incomplete)
         {
             qDebug() << "ProxyTransaction::impl::read_client_request() (parse: Incomplete) id=" << self->id_;
@@ -183,11 +229,7 @@ void ProxyTransaction::impl::read_client_request()
             else
             {
                 qDebug() << "ProxyTransaction::impl::read_client_request() (do notify and relay request) id=" << self->id_;
-                self->parent_->notify_listeners([self](auto &listener)
-                {
-                    listener->on_request_read(*self->parent_);
-                });
-
+                self->do_notification(NotificationState::RequestComplete);
                 self->open_remote_connection();
             }
         }
@@ -265,7 +307,7 @@ void ProxyTransaction::impl::send_client_request_to_remote()
 
 void ProxyTransaction::impl::read_remote_response()
 {
-    auto self = shared_from_this();
+    std::shared_ptr<ProxyTransaction::impl> self = shared_from_this();
     remote_->async_read_some(read_buffer_, [self](auto ec, size_t num_bytes_read)
     {
        if (ec == asio::error::eof)
@@ -285,9 +327,20 @@ void ProxyTransaction::impl::read_remote_response()
        auto begin = std::begin(self->read_buffer_);
        auto end = begin + num_bytes_read;
 
-       self->raw_input_.insert(self->raw_input_.end(), begin, end);
+       std::copy(begin, end, std::back_inserter(self->raw_input_));
 
-       switch (self->parser_.parse(self->response(), begin, end))
+       auto current_phase = self->response_parse_phase_;
+       auto state = self->parser_.parse(self->response(), begin, end, self->response_parse_phase_);
+       while (state == HttpMessageParser::State::Incomplete && current_phase != self->response_parse_phase_)
+       {
+           qDebug() << "ProxyTransaction::impl::read_remote_response() (phase change) old=" << current_phase << " new=" << self->response_parse_phase_;
+           self->notify_phase_change(self->response_parse_phase_);
+
+           current_phase = self->response_parse_phase_;
+           state = self->parser_.parse(self->response(), begin, end, self->response_parse_phase_);
+       }
+
+       switch (state)
        {
        case HttpMessageParser::State::Incomplete:
            self->read_remote_response();
@@ -298,10 +351,7 @@ void ProxyTransaction::impl::read_remote_response()
            break;
 
        case HttpMessageParser::Valid:
-           self->parent_->notify_listeners([self](auto &listener)
-           {
-               listener->on_response_read(*self->parent_);
-           });
+           self->do_notification(NotificationState::ResponseComplete);
 
            self->send_remote_response_to_client();
            break;
@@ -514,11 +564,103 @@ void ProxyTransaction::impl::send_server_response_via_tunnel()
     });
 }
 
+void ProxyTransaction::impl::notify_phase_change(ParsePhase phase)
+{
+    NotificationState ns;
+    switch (phase)
+    {
+    case ParsePhase::Start:
+        std::cerr << "Should not notify for " << phase << std::endl;
+        assert(false);
+        return;
+    case ParsePhase::ReceivedMessageLine:
+        // nothing to notify on
+        return;
+    case ParsePhase::ReceivedHeaders:
+        ns = notification_state_ < NotificationState::RequestComplete
+                ? NotificationState::RequestHeaders
+                : NotificationState::ResponseHeaders;
+        break;
+    case ParsePhase::ReceivedBody:
+        ns = notification_state_ < NotificationState::RequestComplete
+                ? NotificationState::RequestBody
+                : NotificationState::ResponseBody;
+        break;
+    case ParsePhase::ReceivedFullMessage:
+        ns = notification_state_ < NotificationState::RequestComplete
+                ? NotificationState::RequestComplete
+                : NotificationState::ResponseComplete;
+        break;
+    default:
+        std::cerr << "Unexpected ParsePhase value: " << phase;
+        assert(false);
+        return;
+    }
+
+    qInfo() << "tx(" << id_ << "): mapped " << phase << " to NotificationState " << static_cast<uint8_t>(ns);
+
+    do_notification(ns);
+}
+
+void ProxyTransaction::impl::do_notification(NotificationState ns)
+{
+    qInfo() << "tx(" << id_ << "): do_notification(ns=" << static_cast<uint8_t>(ns) << ")";
+    while (notification_state_ < ns)
+    {
+        uint8_t ns_int = static_cast<uint8_t>(notification_state_);
+        auto current_state = notification_state_;
+        notification_state_ = static_cast<NotificationState>(ns_int + 1);
+        qInfo() << "tx(" << id_ << "): notifying " << (ns_int + 1);
+        switch (current_state)
+        {
+        case NotificationState::None:
+            // nothing, yet
+            break;
+        case NotificationState::RequestHeaders:
+            // also nothing, yet
+            break;
+        case NotificationState::RequestBody:
+            // ditto
+            break;
+        case NotificationState::RequestComplete:
+            parent_->notify_listeners([this](auto& listener)
+            {
+                listener->on_request_read(*parent_);
+            });
+            break;
+        case NotificationState::ResponseHeaders:
+            parent_->notify_listeners([this](auto& listener)
+            {
+                listener->on_response_headers_read(*parent_);
+            });
+            break;
+        case NotificationState::ResponseBody:
+            // nothing
+            break;
+        case NotificationState::ResponseComplete:
+            parent_->notify_listeners([this](auto& listener)
+            {
+                listener->on_response_read(*parent_);
+                listener->on_transaction_complete(*parent_);
+            });
+            break;
+        case NotificationState::TLSTunnel:
+            // nothing
+            break;
+        case NotificationState::Error:
+            std::cerr << "Errors should use notify_failure, not do_notification";
+            assert(false);
+            break;
+        }
+    }
+}
+
 void ProxyTransaction::impl::notify_failure(std::error_code error)
 {
     release_connections();
 
     error_ = error;
+    notification_state_ = NotificationState::Error;
     parent_->notify_listeners([this](auto &listener)
     {
         listener->on_transaction_failed(*parent_);
@@ -597,3 +739,4 @@ time_point ProxyTransaction::parse_http_date(const std::string &text)
     throw std::invalid_argument("Invalid date-time value");
 }
 
+} // namespace ama
