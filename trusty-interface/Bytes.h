@@ -20,6 +20,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <type_traits>
 
 namespace ama { namespace trusty {
 
@@ -28,7 +29,7 @@ namespace Bytes {
 template <typename T>
 inline T from_network_order(const uint8_t* bytes)
 {
-    static_assert(sizeof(T) == 4, "T must have a width of four bytes");
+    static_assert(std::is_integral<T>::value && sizeof(T) == 4, "T must be a four-byte-wide integer");
 
     assert(bytes != nullptr);
 
@@ -41,7 +42,7 @@ inline T from_network_order(const uint8_t* bytes)
 template <typename T>
 inline void to_network_order(const T val, uint8_t* bytes)
 {
-    static_assert(sizeof(T) == 4, "T must have a width of four bytes");
+    static_assert(std::is_integral<T>::value && sizeof(T) == 4, "T must be a four-byte-wide integer");
 
     assert(bytes != nullptr);
 

@@ -114,6 +114,7 @@ void TxListener::on_response_headers_read(Transaction &tx)
 {
     std::stringstream ss;
     ss << "TX(" << tx.id() << "): " << tx.response().status_code() << " " << tx.response().status_message();
+
     emit message_logged(QString{ss.str().c_str()});
 }
 
@@ -143,6 +144,6 @@ void TxListener::on_transaction_failed(Transaction &tx)
 
 void MainWindow::on_message_logged(const QString& message)
 {
-    model->stringList() << QString::fromStdString(message);
+    model->stringList() << message;
 }
 
