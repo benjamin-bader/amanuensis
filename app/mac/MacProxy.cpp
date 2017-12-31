@@ -195,6 +195,27 @@ bool should_install_helper_tool()
     }
 }
 
+std::unique_ptr<ama::trusty::IService> create_client_with_rights()
+{
+    std::vector<const char *> rights = {
+        ama::kGetProxyStateRightName,
+        ama::kSetProxyStateRightName,
+        ama::kClearSettingsRightName,
+        ama::kGetToolVersionRightName,
+    };
+
+    acquire_rights(rights);
+
+    AuthorizationExternalForm authExt;
+    AuthorizationMakeExternalForm(g_auth, &authExt);
+
+    uint8_t *authExtPtr = (uint8_t *) &authExt;
+
+    std::vector<uint8_t> authBytes(authExtPtr, authExtPtr + sizeof(authExt));
+
+    return ama::trusty::create_client(ama::kHelperSocketPath, authBytes);
+}
+
 } // anonymous namespace
 
 MacProxy::MacProxy(int port) :
@@ -204,15 +225,34 @@ MacProxy::MacProxy(int port) :
     std::call_once(auth_init_flag, init_auth);
 }
 
+MacProxy::~MacProxy()
+{
+    try
+    {
+        disable();
+    }
+    catch (const std::exception& ex)
+    {
+        os_log_error(OS_LOG_DEFAULT, "Error disabling MacProxy: %{public}s", ex.what());
+    }
+}
+
 bool MacProxy::is_enabled() const
 {
     return enabled_;
 }
 
-void MacProxy::enable(std::error_code &ec)
+void MacProxy::enable()
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (enabled_)
+    {
+        return;
+    }
+
     if (should_install_helper_tool())
     {
+        std::error_code ec;
         for (int attempts = 0; attempts < 3; attempts++)
         {
             ec.clear();
@@ -226,17 +266,41 @@ void MacProxy::enable(std::error_code &ec)
 
         if (ec)
         {
-            throw std::system_error(ec.value(), ec.category());
+            throw std::system_error(ec);
         }
+    }
+
+    auto client = create_client_with_rights();
+
+    auto current_state = client->get_http_proxy_state();
+    if (! current_state.is_enabled() || current_state.get_host() != "localhost" || current_state.get_port() != port())
+    {
+        hostname_to_restore_ = current_state.get_host();
+        port_to_restore_ = current_state.get_port();
+
+        ama::trusty::ProxyState new_state{ true, "localhost", static_cast<int32_t>(port()) };
+        client->set_http_proxy_state(new_state);
+    }
+    else
+    {
+        os_log_info(OS_LOG_DEFAULT, "Proxy already enabled, no action needed");
     }
 
     enabled_ = true;
 }
 
-void MacProxy::disable(std::error_code &ec)
+void MacProxy::disable()
 {
-    Q_UNUSED(ec);
-    enabled_ = false;
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (enabled_)
+    {
+        auto client = create_client_with_rights();
+        ama::trusty::ProxyState new_state{false, hostname_to_restore_, port_to_restore_};
+
+        client->set_http_proxy_state(new_state);
+
+        enabled_ = false;
+    }
 }
 
 void MacProxy::bless_helper_program(std::error_code &ec) const
@@ -291,28 +355,16 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
 
 void MacProxy::say_hi()
 {
-    std::vector<const char *> rights = {
-        ama::kGetProxyStateRightName,
-        ama::kSetProxyStateRightName,
-        ama::kClearSettingsRightName,
-        ama::kGetToolVersionRightName,
-    };
-    acquire_rights(rights);
+    auto client = create_client_with_rights();
 
-    AuthorizationExternalForm authExt;
-    AuthorizationMakeExternalForm(g_auth, &authExt);
+    ama::trusty::ProxyState state = client->get_http_proxy_state();
+    os_log_info(OS_LOG_DEFAULT, "before: host=%{public}s port=%d enabled=%d", state.get_host().c_str(), state.get_port(), state.is_enabled());
 
-    uint8_t *authExtPtr = (uint8_t *) &authExt;
+    client->set_http_proxy_state(ama::trusty::ProxyState{ true, "localhost", port() });
 
-    std::vector<uint8_t> authBytes(authExtPtr, authExtPtr + sizeof(authExt));
+    state = client->get_http_proxy_state();
+    os_log_info(OS_LOG_DEFAULT, "after: host=%{public}s port=%d enabled=%d", state.get_host().c_str(), state.get_port(), state.is_enabled());
 
-    auto client = ama::trusty::create_client(ama::kHelperSocketPath, authBytes);
-
-    auto state = client->get_http_proxy_state();
-
-    os_log_info(OS_LOG_DEFAULT, "host=%{public}s port=%d enabled=%B", state.get_host().c_str(), state.get_port(), state.is_enabled());
-
-    client->set_http_proxy_state(ama::trusty::ProxyState{ true, "127.0.0.1", port() });
     client->reset_proxy_settings();
 }
 
