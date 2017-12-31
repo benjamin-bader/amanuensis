@@ -38,8 +38,8 @@ using namespace ama;
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    connections(),
     txListener(std::make_shared<TxListener>()),
+    connections(),
     model(new QStringListModel)
 {
     ui->setupUi(this);
@@ -76,10 +76,6 @@ MainWindow::MainWindow(QWidget *parent) :
     });
 
     connections << connect(txListener.get(), &TxListener::message_logged, this, &MainWindow::on_message_logged, Qt::QueuedConnection);
-//    connections << connect(proxy.get(), &Proxy::connectionEstablished, this, &MainWindow::connectionEstablished);
-//    connections << connect(proxy.get(), &Proxy::requestReceived,       this, &MainWindow::requestReceived);
-//    connections << connect(proxy.get(), &Proxy::responseReceived,      this, &MainWindow::responseReceived);
-//    connections << connect(proxy.get(), &Proxy::connectionClosed,      this, &MainWindow::connectionClosed);
 
     ui->listView->setModel(model);
     ui->listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -119,15 +115,6 @@ void TxListener::on_response_headers_read(Transaction &tx)
     std::stringstream ss;
     ss << "TX(" << tx.id() << "): " << tx.response().status_code() << " " << tx.response().status_message();
     emit message_logged(QString{ss.str().c_str()});
-
-    for (size_t i = 0; i < tx.response().headers().size(); ++i)
-    {
-        const std::string& header = tx.response().headers().names()[i];
-        const std::string& value = tx.response().headers().values()[i];
-        ss = std::stringstream{};
-        ss << "TX(" << tx.id() << "): " << header << ": " << value;
-        emit message_logged(QString{ss.str().c_str()});
-    }
 }
 
 void TxListener::on_response_read(Transaction &tx)
@@ -156,46 +143,6 @@ void TxListener::on_transaction_failed(Transaction &tx)
 
 void MainWindow::on_message_logged(const QString& message)
 {
-    model->insertRow(model->rowCount());
-    QModelIndex index = model->index(model->rowCount() - 1);
-    model->setData(index, message);
-    ui->listView->setCurrentIndex(index);
+    model->stringList() << QString::fromStdString(message);
 }
 
-//void MainWindow::connectionEstablished(const std::shared_ptr<Connection> &connection)
-//{
-//    addRowToListView(connection, "Established");
-//}
-
-//void MainWindow::requestReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &request)
-//{
-//    std::stringstream ss;
-//    ss << ">>> " << request.method() << " " << request.uri();
-
-//    addRowToListView(connection, ss.str());
-//}
-
-//void MainWindow::responseReceived(const std::shared_ptr<Connection> &connection, const HttpMessage &response)
-//{
-//    std::stringstream ss;
-//    ss << "<<< " << response.status_code() << " " << response.status_message();
-
-//    addRowToListView(connection, ss.str());
-//}
-
-//void MainWindow::connectionClosed(const std::shared_ptr<Connection> &connection)
-//{
-//    addRowToListView(connection, "Closed");
-//}
-
-//void MainWindow::addRowToListView(const std::shared_ptr<Connection> &connection, const std::string &message)
-//{
-////    std::stringstream ss;
-////    ss << "CONN(" << connection->id() << "): " << message;
-////    QString text(ss.str().c_str());
-
-////    model->insertRow(model->rowCount());
-////    QModelIndex index = model->index(model->rowCount() - 1);
-////    model->setData(index, text);
-////    ui->listView->setCurrentIndex(index);
-//}
