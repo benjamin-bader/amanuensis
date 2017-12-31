@@ -38,6 +38,8 @@ private Q_SLOTS:
     void connectFromEdge();
 
     void pauses_on_phase_transitions();
+
+    void zero_prefixed_chunk_lengths();
 };
 
 #endif

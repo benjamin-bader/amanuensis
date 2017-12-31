@@ -670,12 +670,12 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
         return Invalid;
 
     case chunk_length_start:
-        if (input == '0')
-        {
-            TRANSIT(chunk_sequence_terminating_cr);
-            return Incomplete;
-        }
-        else if (is_hex(input))
+        // RFC 7230 (s) 4.1.1. defines the terminal chunk length
+        // as being exactly "0" (that is, only one zero), we
+        // are more lenient here due to Github issue #23, where
+        // we encountered servers that seem to prefix extra zeroes
+        // to chunk lengths.
+        if (is_hex(input))
         {
             TRANSIT(chunk_length);
             remaining_ = hex_value(input);
@@ -703,7 +703,14 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
     case chunk_length_newline:
         if (input == '\n')
         {
-            TRANSIT(chunk);
+            if (remaining_ > 0)
+            {
+                TRANSIT(chunk);
+            }
+            else
+            {
+                TRANSIT(chunk_trailing_header_line_start);
+            }
             return Incomplete;
         }
         return Invalid;
@@ -729,22 +736,6 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
         if (input == '\n')
         {
             TRANSIT(chunk_length_start);
-            return Incomplete;
-        }
-        return Invalid;
-
-    case chunk_sequence_terminating_cr:
-        if (input == '\r')
-        {
-            TRANSIT(chunk_sequence_terminating_lf);
-            return Incomplete;
-        }
-        return Invalid;
-
-    case chunk_sequence_terminating_lf:
-        if (input == '\n')
-        {
-            TRANSIT(chunk_trailing_header_line_start);
             return Incomplete;
         }
         return Invalid;
