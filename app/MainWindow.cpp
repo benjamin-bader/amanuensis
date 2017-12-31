@@ -54,18 +54,8 @@ MainWindow::MainWindow(QWidget *parent) :
 #ifdef Q_OS_MAC
     proxy = std::make_shared<ama::MacProxy>(port);
 
-    std::error_code ec;
-    static_cast<ama::MacProxy*>(proxy.get())->enable(ec);
-
-    if (ec)
-    {
-        std::cout << ec << std::endl;
-        throw std::invalid_argument("wtf");
-    }
-    else
-    {
-        static_cast<ama::MacProxy*>(proxy.get())->say_hi();
-    }
+    static_cast<ama::MacProxy*>(proxy.get())->enable();
+    //static_cast<ama::MacProxy*>(proxy.get())->say_hi();
 #else
     proxy = ProxyFactory().create(port);
 #endif
@@ -144,6 +134,9 @@ void TxListener::on_transaction_failed(Transaction &tx)
 
 void MainWindow::on_message_logged(const QString& message)
 {
-    model->stringList() << message;
+    int rowCount = model->rowCount();
+    model->insertRow(rowCount);
+    QModelIndex ix = model->index(rowCount);
+    model->setData(ix, message);
 }
 

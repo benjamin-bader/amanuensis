@@ -20,9 +20,12 @@
 
 #pragma once
 
+#include <cstdint>
+#include <mutex>
 #include <system_error>
 
 #include "Proxy.h"
+#include "ProxyState.h"
 
 #include "TrustyCommon.h"
 
@@ -32,15 +35,15 @@ class MacProxy : public Proxy
 {
 public:
     MacProxy(int port);
-    virtual ~MacProxy() = default;
+    virtual ~MacProxy();
 
     bool is_enabled() const;
 
     // Attempts to apply system-wide proxy settings.
-    void enable(std::error_code &ec);
+    void enable();
 
     // Attempts to disable system-wide proxy settings.
-    void disable(std::error_code &ec);
+    void disable();
 
     void say_hi();
 
@@ -48,7 +51,10 @@ private:
     void bless_helper_program(std::error_code &ec) const;
 
 private:
+    std::mutex mutex_;
     bool enabled_;
+    std::string hostname_to_restore_;
+    int32_t port_to_restore_;
 };
 
 } // ama
