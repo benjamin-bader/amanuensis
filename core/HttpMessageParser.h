@@ -183,16 +183,12 @@ private:
 
         chunk                            = 204,
         chunk_trailing_newline           = 205,
-        chunk_sequence_terminating_cr    = 206,
-        chunk_sequence_terminating_lf    = 207,
-        chunk_sequence_terminating_cr_2  = 208,
-        chunk_sequence_terminating_lf_2  = 209,
-        chunk_trailing_header_line_start = 210,
-        chunk_trailing_header_lws        = 211,
-        chunk_trailing_header_name       = 212,
-        chunk_trailing_header_space      = 213,
-        chunk_trailing_header_value      = 214,
-        chunk_terminating_newline        = 215,
+        chunk_trailing_header_line_start = 206,
+        chunk_trailing_header_lws        = 207,
+        chunk_trailing_header_name       = 208,
+        chunk_trailing_header_space      = 209,
+        chunk_trailing_header_value      = 210,
+        chunk_terminating_newline        = 211,
 
         // Non-chunked entities
         fixed_length_entity              = 300,

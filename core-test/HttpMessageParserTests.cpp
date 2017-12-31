@@ -298,3 +298,25 @@ void HttpMessageParserTests::pauses_on_phase_transitions()
     QCOMPARE(std::string{"abcdefghijklmnopqrstuvwxyz0123456789"}, request.body_as_string());
 }
 
+void HttpMessageParserTests::zero_prefixed_chunk_lengths()
+{
+    std::string text =
+            "HTTP/1.1 200 OK\r\n"
+            "Transfer-Encoding: chunked\r\n"
+            "\r\n"
+            "005\r\n"
+            "aaaaa\r\n"
+            "00000000\r\n"
+            "\r\n";
+
+    HttpMessage message;
+    HttpMessageParser parser;
+    parser.resetForResponse();
+
+    auto begin = text.begin();
+    auto end = text.end();
+    auto state = parser.parse(message, begin, end);
+
+    QCOMPARE(HttpMessageParser::State::Valid, state);
+}
+
