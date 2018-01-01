@@ -20,8 +20,6 @@
 #include <atomic>
 #include <memory>
 
-#include <QDebug>
-
 #include "ProxyTransaction.h"
 
 using namespace ama;
@@ -30,9 +28,9 @@ class Proxy::ProxyImpl : public std::enable_shared_from_this<ProxyImpl>,
                          public ConnectionPoolListener
 {
 public:
-    ProxyImpl(const int port, Proxy *proxy);
+    ProxyImpl(const int port);
 
-    void init();
+    void init(std::shared_ptr<Proxy> proxy);
     void deinit();
 
     int port() const { return port_; }
@@ -45,46 +43,50 @@ private:
 
     std::atomic_int next_id_;
 
-    Proxy *proxy_;
+    std::weak_ptr<Proxy> weak_proxy_;
 };
 
-Proxy::ProxyImpl::ProxyImpl(const int port, Proxy *proxy) :
+Proxy::ProxyImpl::ProxyImpl(const int port) :
     std::enable_shared_from_this<ProxyImpl>(),
     ConnectionPoolListener(),
     port_(port),
     server_(port),
     next_id_(1),
-    proxy_(proxy)
+    weak_proxy_()
 {
 }
 
-void Proxy::ProxyImpl::init()
+void Proxy::ProxyImpl::init(std::shared_ptr<Proxy> proxy)
 {
+    weak_proxy_ = proxy;
     server_.connection_pool()->add_listener(shared_from_this());
 }
 
 void Proxy::ProxyImpl::deinit()
 {
     server_.connection_pool()->remove_listener(shared_from_this());
+    weak_proxy_.reset();
 }
 
 void Proxy::ProxyImpl::on_client_connected(std::shared_ptr<Conn> connection)
 {
-    auto tx = std::make_shared<ProxyTransaction>(next_id_++, server_.connection_pool(), connection);
-    emit proxy_->transactionStarted(tx);
-    tx->begin();
+    if (auto proxy = weak_proxy_.lock())
+    {
+        auto tx = std::make_shared<ProxyTransaction>(next_id_++, server_.connection_pool(), connection);
+        emit proxy->transactionStarted(tx);
+        tx->begin();
+    }
 }
 
 
 Proxy::Proxy(const int port) :
-    impl_(std::make_shared<Proxy::ProxyImpl>(port, this))
+    impl_(std::make_shared<Proxy::ProxyImpl>(port))
 {
 }
 
 void Proxy::init()
 {
-    impl_->init();
-
+    impl_->init(shared_from_this());
 }
 
 void Proxy::deinit()
