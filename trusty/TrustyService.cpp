@@ -17,7 +17,6 @@
 
 #include "TrustyService.h"
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <sstream>
@@ -25,6 +24,7 @@
 #include <SystemConfiguration/SystemConfiguration.h>
 
 #include "CFRef.h"
+#include "TLog.h"
 #include "TrustyCommon.h"
 
 namespace ama { namespace trusty {
@@ -70,7 +70,7 @@ public:
         }
         catch (const std::exception& ex)
         {
-            std::cerr << "Exception in dtor: " << ex.what() << std::endl;
+            log_error("Exception in PreferencesLocker dtor: %s", ex.what());
             // ignore exceptions in dtor
         }
     }
@@ -164,7 +164,7 @@ int32_t cfnumber_as_int32_t(CFNumberRef ref)
     int32_t value;
     if (! CFNumberGetValue(ref, kCFNumberSInt32Type, &value))
     {
-        std::cerr << "Warning: CFNumberGetValue returned false for an expected int32_t; value=" << value << std::endl;
+        //log_warn("CFNumberGetValue returned false for an expected int32_t; value=%d", value);
     }
 
     return value;
@@ -180,7 +180,7 @@ bool cfnumber_as_bool(CFNumberRef ref)
     int32_t value;
     if (! CFNumberGetValue(ref, kCFNumberSInt32Type, &value))
     {
-        std::cerr << "Warning: CFNumberGetValue returned false for an expected int32_t; value=" << value << std::endl;
+        //log_warn("CFNumberGetValue returned false for an expected int32_t; value=%d", value);
     }
 
     return value != 0;
@@ -223,13 +223,13 @@ ProxyState TrustyService::get_http_proxy_state()
         CFRef<SCNetworkProtocolRef> proxies = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies);
         if (proxies == nullptr)
         {
-            std::cerr << "Proxy protocol does not exist for primary network service" << std::endl;
+            log_warn("Proxy protocol does not exist for primary network service");
             continue;
         }
 
         if (! SCNetworkProtocolGetEnabled(proxies))
         {
-            std::cerr << "Proxy protocol disabled for primary network service" << std::endl;
+            log_warn("Proxy protocol disabled for primary network service");
             continue;
         }
 
@@ -252,17 +252,13 @@ ProxyState TrustyService::get_http_proxy_state()
         return { enabled, host, port };
     }
 
-    std::cerr << "No proxy-aware network service defined for the current NetworkSet" << std::endl;
+    log_critical("No proxy-aware network service defined for the current NetworkSet");
     return { false, "", 0 };
 }
 
 void TrustyService::set_http_proxy_state(const ProxyState &state)
 {
-    std::cerr << "TrustyService::set_http_proxy_state("
-              << "enabled=" << state.is_enabled()
-              << ", host=" << state.get_host()
-              << ", port=" << state.get_port()
-              << ")" << std::endl;
+    log_info("Setting proxy state: enabled={} host={} port={}", state.is_enabled(), state.get_host(), state.get_port());
 
     CFRef<SCPreferencesRef> prefs = SCPreferencesCreate(kCFAllocatorDefault, CFSTR("com.bendb.amanuensis.Trusty"), nullptr);
     PreferencesLocker locker{prefs, /* wait */ true};
@@ -279,6 +275,8 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
     {
         SCNetworkServiceRef service = (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
 
+        log_trace("Examining one network service; ix={}", i);
+
         if (! CFEqual(primaryServiceId, SCNetworkServiceGetServiceID(service)))
         {
             continue;
@@ -287,13 +285,13 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
         CFRef<SCNetworkProtocolRef> proxies = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies);
         if (proxies == nullptr)
         {
-            std::cerr << "Proxy protocol does not exist for primary network service" << std::endl;
+            log_warn("Proxy protocol does not exist for primary network service");
             continue;
         }
 
         if (! SCNetworkProtocolGetEnabled(proxies))
         {
-            std::cerr << "Proxy protocol disabled for primary network service" << std::endl;
+            log_warn("Proxy protocol disabled for primary network service");
             continue;
         }
 
@@ -306,12 +304,11 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
         }
         else if (!state.get_host().empty())
         {
-            copy = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, config);
+            copy = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
         }
         else
         {
             // ProxyState has an empty hostname, so we'll just remove the entire dictionary.
-            //std::cerr << "ProxyState has an empty hostname; clearing settings." << std::endl;
         }
 
         if (copy != nullptr)
@@ -333,7 +330,7 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
         }
         else
         {
-            std::cerr << "Error saving proxy protocol configuration: " << SCErrorString(SCError()) << std::endl;
+            log_critical("Error saving proxy protocol configuration: %s", SCErrorString(SCError()));
         }
 
         break;
@@ -343,17 +340,17 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
     {
         if (! SCPreferencesCommitChanges(prefs))
         {
-            std::cerr << "SCPreferencesCommitChanges failed: " << SCErrorString(SCError()) << std::endl;
+            log_error("SCPreferencesCommitChanges failed: %s", SCErrorString(SCError()));
         }
 
         if (! SCPreferencesApplyChanges(prefs))
         {
-            std::cerr << "SCPreferencesApplyChanges failed: " << SCErrorString(SCError()) << std::endl;
+            log_error("SCPreferencesApplyChanges failed: %s", SCErrorString(SCError()));
         }
     }
     else
     {
-        std::cerr << "Active network set did not contain any proxy-enabled service" << std::endl;
+        log_warn("Active network set did not contain any proxy-enabled service");
     }
 
     locker.unlock();
@@ -361,7 +358,7 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
 
 void TrustyService::reset_proxy_settings()
 {
-    std::cerr << "TrustyService::reset_proxy_settings()" << std::endl;
+    log_info("TrustyService::reset_proxy_settings()");
 }
 
 uint32_t TrustyService::get_current_version()

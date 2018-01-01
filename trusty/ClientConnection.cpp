@@ -17,8 +17,6 @@
 
 #include "ClientConnection.h"
 
-#include <iostream>
-
 #include <Security/Security.h>
 
 #include <os/log.h>
@@ -26,6 +24,7 @@
 
 #include "MessageProcessor.h"
 #include "Service.h"
+#include "TLog.h"
 #include "TrustyCommon.h"
 
 namespace ama { namespace trusty {
@@ -103,7 +102,7 @@ uint32_t AuthorizedService::get_current_version()
 
 void AuthorizedService::assert_right(const char *right)
 {
-    std::cerr << "Asserting a right: " << right << std::endl;
+    log_debug("Asserting a right: {}", right);
     AuthorizationItem item = { right, 0, NULL, 0 };
     AuthorizationRights rights = { 1, &item };
 
@@ -116,6 +115,8 @@ void AuthorizedService::assert_right(const char *right)
 
     if (status != errAuthorizationSuccess)
     {
+        log_debug("Could not obtain right non-interactively; trying again, with interaction (status={})", status);
+
         status = AuthorizationCopyRights(
                     auth_,
                     &rights,
@@ -125,7 +126,7 @@ void AuthorizedService::assert_right(const char *right)
 
         if (status != errAuthorizationSuccess)
         {
-            syslog(LOG_ERR, "Right not present; status=%d", status);
+            log_error("Right not present; status={}", status);
             throw std::invalid_argument("Authorization denied");
         }
     }
@@ -195,7 +196,7 @@ void ClientConnection::impl::handle()
             catch (const std::exception& ex2)
             {
                 // don't crash while reporting an error
-                std::cerr << "Error while sending error reply: " << ex2.what() << std::endl;
+                log_critical("Error while sending error reply: %s", ex2.what());
             }
 
             break;
@@ -253,7 +254,7 @@ MessageType ClientConnection::impl::handle_one()
 
     default:
     {
-        std::cerr << "ERROR: Received response message-type from a client!  type=" << msg.type << std::endl;
+        log_critical("ERROR: Received response message-type from a client!  type={}", msg.type);
         break;
     }
 

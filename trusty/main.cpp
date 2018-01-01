@@ -33,6 +33,7 @@
 
 // our stuff
 #include "Server.h"
+#include "TLog.h"
 #include "TrustyCommon.h"
 #include "TrustyService.h"
 
@@ -40,6 +41,8 @@
 // seem to handle UNIX sockets on macOS.  Pity, because
 // writing socket code the old way works, but is endlessly
 // tedious.
+
+using namespace ama::trusty;
 
 std::error_code lookup_socket_endpoint(int *fd)
 {
@@ -74,28 +77,28 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
-    std::cerr << "Our amazing journey begins" << std::endl;
+    init_logging();
 
     int fd;
     std::error_code ec = lookup_socket_endpoint(&fd);
     if (ec)
     {
-        syslog(LOG_INFO, "Failed to open launchd socket list: %d", ec.value());
+        log_critical("Failed to open launchd socket list: ec=%d", ec.value());
         return -1;
     }
 
-    ama::trusty::TrustyService service;
-    ama::trusty::Server server(&service, fd);
+    TrustyService service;
+    Server server(&service, fd);
     try
     {
         server.serve();
     }
     catch (std::exception &ex)
     {
-        std::cerr << "Failed, somehow: " << ex.what() << std::endl;
+        log_critical("failed, somehow: %s", ex.what());
     }
 
-    std::cerr << "Hanging up now!" << std::endl;
+    log_info("Hanging up now!");
 
     return 0;
 }

@@ -36,10 +36,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++14
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
-SOURCES += main.cpp\
-        MainWindow.cpp
+SOURCES += \
+    main.cpp \
+    MainWindow.cpp \
+    LogSetup.cpp \
 
-HEADERS  += MainWindow.h
+HEADERS  += \
+    MainWindow.h \
+    LogSetup.h \
 
 FORMS    += MainWindow.ui
 
@@ -51,6 +55,14 @@ INCLUDEPATH += $$PWD/../core $$PWD/../include
 DEPENDPATH += $$PWS/../core
 
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
+
+win32 {
+    HEADERS += \
+        win/WindowsLogSetup.h \
+
+    SOURCES += \
+        win/WindowsLogSetup.cpp \
+}
 
 macx {
     QMAKE_TARGET_BUNDLE_PREFIX=com.bendb.amanuensis
@@ -66,10 +78,12 @@ macx {
     INCLUDEPATH += $$PWD/../trusty-interface
 
     HEADERS += \
-        mac/MacProxy.h
+        mac/MacProxy.h \
+        mac/MacLogSetup.h \
 
     SOURCES += \
-        mac/MacProxy.cpp
+        mac/MacProxy.cpp \
+        mac/MacLogSetup.cpp \
 
     DISTFILES += \
         Info.plist

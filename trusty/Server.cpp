@@ -22,10 +22,10 @@
 #include <string.h>     // for strerror
 #include <sys/socket.h>
 
-#include <iostream>
 #include <system_error>
 
 #include "ClientConnection.h"
+#include "TLog.h"
 
 namespace ama { namespace trusty {
 
@@ -63,20 +63,20 @@ int Server::accept_next_client()
     if (ready_count == -1)
     {
         // womp womp
-        std::cerr << "poll() failed: errno=" << errno << " (" << ::strerror(errno) << ")" << std::endl;
+        log_error("poll() failed: errno=%d (%s)", errno, ::strerror(errno));
         return -2;
     }
 
     if (ready_count == 0)
     {
-        std::cerr << "poll(): No connection?" << std::endl;
+        log_error("poll(): no connection?");
         return -1;
     }
 
     int connection_fd = ::accept(server_fd_, addr, &size);
     if (connection_fd < 0)
     {
-        std::cerr << "accept(): failed; errno=" << errno << " (" << ::strerror(errno) << ")" << std::endl;
+        log_error("accept() failed: errno=%d (%s)", errno, ::strerror(errno));
         return -2;
     }
 
@@ -92,7 +92,7 @@ void Server::handle_client_session(int client_fd)
     }
     catch (const std::exception &ex)
     {
-        std::cerr << "Client error: " << ex.what() << std::endl;
+        log_critical("Exception in handle_client_session(): %s", ex.what());
     }
 }
 
