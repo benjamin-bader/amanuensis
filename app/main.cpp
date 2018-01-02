@@ -26,6 +26,7 @@
 #include <memory>
 
 #include "HttpMessage.h"
+#include "LogSetup.h"
 #include "Proxy.h"
 #include "ProxyFactory.h"
 #include "Server.h"
@@ -41,6 +42,8 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationDomain("bendb.com");
     QCoreApplication::setApplicationName("amanuensis");
     QCoreApplication::setApplicationVersion("0.1.0");
+
+    ama::make_log_configurer()->configure_logging();
 
     try
     {

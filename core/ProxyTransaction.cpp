@@ -38,6 +38,7 @@
 #include "ConnectionPool.h"
 #include "Errors.h"
 #include "HttpMessageParser.h"
+#include "Logging.h"
 
 QDebug operator<<(QDebug d, ama::ParsePhase phase)
 {
@@ -65,6 +66,25 @@ enum class NotificationState : uint8_t
     Error = 8,
 };
 
+std::ostream& operator<<(std::ostream& os, NotificationState ns)
+{
+    switch (ns)
+    {
+    case NotificationState::None: return os << "NotificationState::None";
+    case NotificationState::RequestHeaders: return os << "NotificationState::RequestHeaders";
+    case NotificationState::RequestBody: return os << "NotificationState::RequestBody";
+    case NotificationState::RequestComplete: return os << "NotificationState::RequestComplete";
+    case NotificationState::ResponseHeaders: return os << "NotificationState::ResponseHeaders";
+    case NotificationState::ResponseBody: return os << "NotificationState::ResponseBody";
+    case NotificationState::ResponseComplete: return os << "NotificationState::ResponseComplete";
+    case NotificationState::TLSTunnel: return os << "NotificationState::TLSTunnel";
+    case NotificationState::Error: return os << "NotificationState::Error";
+    default:
+        assert(false);
+        return os << "(unknown NotificationState: " << static_cast<uint8_t>(ns) << ")";
+    }
+}
+
 }
 
 class ProxyTransaction::impl : public std::enable_shared_from_this<ProxyTransaction::impl>
@@ -81,6 +101,8 @@ public:
 
     Request& request() { return request_; }
     Response& response() { return response_; }
+
+    std::shared_ptr<spdlog::logger> logger() { return logger_; }
 
 private:
     void read_client_request();
@@ -103,6 +125,8 @@ private:
 private:
     int id_;
     std::error_code error_;
+
+    std::shared_ptr<spdlog::logger> logger_;
 
     std::shared_ptr<Conn> client_;
     std::shared_ptr<Conn> remote_;
@@ -136,6 +160,7 @@ ProxyTransaction::impl::impl(
         std::shared_ptr<Conn> clientConnection)
     : id_(id)
     , error_()
+    , logger_(get_logger("ProxyTransaction"))
     , client_(clientConnection)
     , remote_(nullptr)
     , connection_pool_(connectionPool)
@@ -155,7 +180,7 @@ ProxyTransaction::impl::impl(
 
 ProxyTransaction::impl::~impl()
 {
-    qDebug() << "ProxyTransaction::impl::~impl() id=" << id_;
+    logger()->debug("dtor() id={}", id_);
 }
 
 void ProxyTransaction::impl::begin(std::shared_ptr<ProxyTransaction> parent)
@@ -172,12 +197,12 @@ void ProxyTransaction::impl::begin(std::shared_ptr<ProxyTransaction> parent)
 
 void ProxyTransaction::impl::read_client_request()
 {
-    qDebug() << "ProxyTransaction::impl::read_client_request() id=" << id_;
+    logger()->debug("read_client_request() id={}", id_);
 
     auto self = shared_from_this();
     client_->async_read_some(read_buffer_, [self](asio::error_code ec, size_t num_read)
     {
-        qDebug() << "ProxyTransaction::impl::read_client_request()#async_read_some id=" << self->id_ << " ec=" << ec.message().c_str() << " num_read=" << num_read;
+        self->logger()->debug("read_client_request()#async_read_some id={} ec={} num_read={}", self->id_, ec.message(), num_read);
         if (ec == asio::error::eof)
         {
             // unexpected disconnect
@@ -200,7 +225,7 @@ void ProxyTransaction::impl::read_client_request()
         auto state = self->parser_.parse(self->request(), start, stop, self->request_parse_phase_);
         while (state == HttpMessageParser::State::Incomplete && current_phase != self->request_parse_phase_)
         {
-            qDebug() << "ProxyTransaction::impl::read_client_request() (phase change) old=" << current_phase << " new=" << self->request_parse_phase_;
+            self->logger()->debug("read_client_request() (phase change) old={} new={}", current_phase, self->request_parse_phase_);
             self->notify_phase_change(self->request_parse_phase_);
 
             current_phase = self->request_parse_phase_;
@@ -209,26 +234,26 @@ void ProxyTransaction::impl::read_client_request()
 
         if (state == HttpMessageParser::State::Incomplete)
         {
-            qDebug() << "ProxyTransaction::impl::read_client_request() (parse: Incomplete) id=" << self->id_;
+            self->logger()->debug("read_client_request() (parse: Incomplete) id={}", self->id_);
             self->read_client_request();
             return;
         }
         else if (state == HttpMessageParser::State::Invalid)
         {
-            qDebug() << "ProxyTransaction::impl::read_client_request() (parse: Invalid) id=" << self->id_;
+            self->logger()->debug("read_client_request() (parse: Invalid) id={}", self->id_);
             self->notify_failure(ProxyError::MalformedRequest);
         }
         else if (state == HttpMessageParser::State::Valid)
         {
-            qDebug() << "ProxyTransaction::impl::read_client_request() (parse: Valid) id=" << self->id_;
+            self->logger()->debug("read_client_request() (parse: Valid) id={}", self->id_);
             if (self->request().method() == "CONNECT")
             {
-                qDebug() << "ProxyTransaction::impl::read_client_request() (do TLS tunnel) id=" << self->id_;
+                self->logger()->debug("read_client_request() (do TLS tunnel) id={}", self->id_);
                 self->establish_tls_tunnel();
             }
             else
             {
-                qDebug() << "ProxyTransaction::impl::read_client_request() (do notify and relay request) id=" << self->id_;
+                self->logger()->debug("read_client_request() (do notify and relay request) id={}", self->id_);
                 self->do_notification(NotificationState::RequestComplete);
                 self->open_remote_connection();
             }
@@ -246,7 +271,7 @@ void ProxyTransaction::impl::open_remote_connection()
     auto headerValues = request().headers().find_by_name("Host");
     if (headerValues.empty())
     {
-        qWarning() << "Malformed request - no 'Host' header found!";
+        logger()->warn("open_remote_connection(): Malformed request - no 'Host' header found! id={}", id_);
         notify_failure(ProxyError::MalformedRequest);
         return;
     }
@@ -264,11 +289,11 @@ void ProxyTransaction::impl::open_remote_connection()
         }
         catch (std::out_of_range)
         {
-            qWarning() << "Malformed request - assuming port 80";
+            logger()->warn("open_remote_connection(): Malformed request - assuming port 80.  id={}", id_);
         }
         catch (std::invalid_argument)
         {
-            qWarning() << "Malformed request - assuming port 80";
+            logger()->warn("open_remote_connection(): Malformed request - assuming port 80.  id={}", id_);
         }
     }
 
@@ -333,7 +358,7 @@ void ProxyTransaction::impl::read_remote_response()
        auto state = self->parser_.parse(self->response(), begin, end, self->response_parse_phase_);
        while (state == HttpMessageParser::State::Incomplete && current_phase != self->response_parse_phase_)
        {
-           qDebug() << "ProxyTransaction::impl::read_remote_response() (phase change) old=" << current_phase << " new=" << self->response_parse_phase_;
+           self->logger()->debug("read_remote_response() (phase change) old={} new={}", current_phase, self->response_parse_phase_);
            self->notify_phase_change(self->response_parse_phase_);
 
            current_phase = self->response_parse_phase_;
@@ -408,11 +433,11 @@ void ProxyTransaction::impl::establish_tls_tunnel()
         }
         catch (std::out_of_range)
         {
-            qWarning() << "Malformed request - assuming port 443";
+            logger()->warn("Malformed request - assuming port 443 id={}", id_);
         }
         catch (std::invalid_argument)
         {
-            qWarning() << "Malformed request - assuming port 443";
+            logger()->warn("Malformed request - assuming port 443 id={}", id_);
         }
     }
 
@@ -450,7 +475,7 @@ void ProxyTransaction::impl::establish_tls_tunnel()
             if (ec2)
             {
                 // (double?) fail
-                qWarning() << "Failed to send CONNECT reply to client: " << ec2.message().c_str();
+                self->logger()->warn("Failed to send CONNECT reply to client: {}", ec2.message());
                 localSuccess = false;
             }
 
@@ -570,7 +595,7 @@ void ProxyTransaction::impl::notify_phase_change(ParsePhase phase)
     switch (phase)
     {
     case ParsePhase::Start:
-        std::cerr << "Should not notify for " << phase << std::endl;
+        logger()->error("Should not notify for {}", phase);
         assert(false);
         return;
     case ParsePhase::ReceivedMessageLine:
@@ -592,25 +617,23 @@ void ProxyTransaction::impl::notify_phase_change(ParsePhase phase)
                 : NotificationState::ResponseComplete;
         break;
     default:
-        std::cerr << "Unexpected ParsePhase value: " << phase;
+        logger()->critical("Unexpected ParsePhase value: {}", phase);
         assert(false);
         return;
     }
-
-    qInfo() << "tx(" << id_ << "): mapped " << phase << " to NotificationState " << static_cast<uint8_t>(ns);
 
     do_notification(ns);
 }
 
 void ProxyTransaction::impl::do_notification(NotificationState ns)
 {
-    qInfo() << "tx(" << id_ << "): do_notification(ns=" << static_cast<uint8_t>(ns) << ")";
+    logger()->debug("tx({}): do_notification(ns={})", id_, ns);
     while (notification_state_ < ns)
     {
         uint8_t ns_int = static_cast<uint8_t>(notification_state_);
         auto current_state = notification_state_;
         notification_state_ = static_cast<NotificationState>(ns_int + 1);
-        qInfo() << "tx(" << id_ << "): notifying " << (ns_int + 1);
+        SPDLOG_TRACE(logger(), "tx({}): notifying {}", id_, current_state);
         switch (current_state)
         {
         case NotificationState::None:
@@ -648,7 +671,7 @@ void ProxyTransaction::impl::do_notification(NotificationState ns)
             // nothing
             break;
         case NotificationState::Error:
-            std::cerr << "Errors should use notify_failure, not do_notification";
+            logger()->critical("Errors should use notify_failure, not do_notification");
             assert(false);
             break;
         }

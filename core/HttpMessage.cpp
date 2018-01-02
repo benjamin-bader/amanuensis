@@ -17,11 +17,6 @@
 
 #include "HttpMessage.h"
 
-#include <cctype>
-#include <sstream>
-
-#include <QDebug>
-
 using namespace ama;
 
 HttpMessage::HttpMessage() :

@@ -28,6 +28,7 @@
 #include <stdexcept>
 #include <system_error>
 
+#include "TLog.h"
 #include "TrustyCommon.h"
 
 namespace ama { namespace trusty {
@@ -39,7 +40,7 @@ UnixSocket::UnixSocket(const std::string &path)
     if (socket_fd == -1)
     {
         int error_code = errno;
-        std::cerr << "socket() failed: " << error_code << std::endl;
+        log_critical("socket() failed: {}", error_code);
         throw std::system_error(error_code, std::system_category());
     }
 
@@ -59,7 +60,7 @@ UnixSocket::UnixSocket(const std::string &path)
         int error_value = errno;
         if (error_value != EINPROGRESS)
         {
-            std::cerr << "Failed to connect; errno=" << error_value << std::endl;
+            log_critical("Failed to connect; errno={}", error_value);
 
             ::close(socket_fd);
             throw std::system_error(errno, std::system_category());
@@ -76,14 +77,17 @@ UnixSocket::UnixSocket(const std::string &path)
             if (select_result < 0 && errno != EINTR)
             {
                 // problem
+                int error_value = errno;
                 ::close(socket_fd);
-                throw std::system_error(errno, std::system_category());
+                log_critical("select() failed; errno={}", error_value);
+                throw std::system_error(error_value, std::system_category());
             }
 
             if (select_result == 0)
             {
                 // timeout
                 ::close(socket_fd);
+                log_critical("select() timed out");
                 throw ama::timeout_exception();
             }
 
@@ -92,8 +96,10 @@ UnixSocket::UnixSocket(const std::string &path)
             if (::getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon) < 0)
             {
                 // Can't getsockopt
+                int error_value = errno;
                 ::close(socket_fd);
-                throw std::system_error(errno, std::system_category());
+                log_critical("Can't getsockopt(); errno={}", error_value);
+                throw std::system_error(error_value, std::system_category());
             }
 
             if (valopt > 0)

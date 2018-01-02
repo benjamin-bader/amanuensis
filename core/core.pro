@@ -59,7 +59,8 @@ SOURCES += \
     ConnectionPool.cpp \
     Request.cpp \
     Response.cpp \
-    Errors.cpp
+    Errors.cpp \
+    Logging.cpp
 
 HEADERS += \
     Proxy.h \
@@ -79,16 +80,19 @@ HEADERS += \
     common.h \
     Request.h \
     Response.h \
-    Errors.h
+    Errors.h \
+    Logging.h
 
 windows {
     SOURCES += \
         win/RegistryKey.cpp \
-        win/WindowsProxy.cpp
+        win/WindowsProxy.cpp \
+        win/OutputDebugStringSink.cpp \
 
     HEADERS += \
         win/RegistryKey.h \
-        win/WindowsProxy.h
+        win/WindowsProxy.h \
+        win/OutputDebugStringSink.h \
 
     LIBS += -lwininet
 }
@@ -99,6 +103,12 @@ macx {
         -isystem $$PWD/../include
 
     QMAKE_CXXFLAGS += -Wno-unused-local-typedef
+
+    SOURCES += \
+        mac/OsLogSink.cpp \
+
+    HEADERS += \
+        mac/OsLogSink.h \
 }
 
 unix {
