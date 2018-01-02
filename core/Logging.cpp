@@ -60,7 +60,7 @@ void init_sinks()
 #endif
 
 #ifdef Q_OS_DARWIN
-        g_mac_os_log_sink = std::make_shared<ama::trusty::OsLogSink>();
+        g_mac_os_log_sink = std::make_shared<ama::OsLogSink>();
 #else
         g_mac_os_log_sink = nullptr;
 #endif

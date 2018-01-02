@@ -103,6 +103,12 @@ macx {
         -isystem $$PWD/../include
 
     QMAKE_CXXFLAGS += -Wno-unused-local-typedef
+
+    SOURCES += \
+        mac/OsLogSink.cpp \
+
+    HEADERS += \
+        mac/OsLogSink.h \
 }
 
 unix {
