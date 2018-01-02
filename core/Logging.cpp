@@ -24,7 +24,7 @@
 #if defined(Q_OS_WIN)
 #include "win/OutputDebugStringSink.h"
 #elif defined(Q_OS_DARWIN)
-#include "OsLogSink.h"
+#include "mac/OsLogSink.h"
 #endif
 
 namespace ama {
