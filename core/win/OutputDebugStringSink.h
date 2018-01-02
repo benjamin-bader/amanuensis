@@ -1,6 +1,6 @@
 // Amanuensis - Web Traffic Inspector
 //
-// Copyright (C) 2017 Benjamin Bader
+// Copyright (C) 2018 Benjamin Bader
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,27 +15,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "MacLogSetup.h"
+#ifndef OSLOGSINK_H
+#define OSLOGSINK_H
 
-#include <string>
+#pragma once
 
-#include <QApplication>
-#include <spdlog/spdlog.h>
+#include <mutex>
 
-#include "Logging.h"
-#include "TLog.h"
+#include <spdlog/sinks/base_sink.h>
+
+#include "global.h"
 
 namespace ama {
 
-void MacLogSetup::configure_logging()
+class A_EXPORT OutputDebugStringSink : public spdlog::sinks::base_sink<std::mutex>
 {
-    std::string app_name = QCoreApplication::applicationName().toStdString();
-    ama::trusty::init_logging(app_name);
+protected:
+    void _sink_it(const spdlog::details::log_msg& msg) override;
+    void _flush() override;
+};
 
-    set_default_sinks({
-        LogSinks::stderr_sink(),
-        LogSinks::mac_os_log_sink()
-    });
-}
+} // namespace ama::trusty
 
-}
+#endif // OSLOGSINK_H

@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
-    init_logging();
+    init_logging("trusty");
 
     int fd;
     std::error_code ec = lookup_socket_endpoint(&fd);

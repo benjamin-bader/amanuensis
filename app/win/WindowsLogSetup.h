@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef MACLOGSETUP_H
-#define MACLOGSETUP_H
+#ifndef WINDOWSLOGSETUP_H
+#define WINDOWSLOGSETUP_H
 
 #pragma once
 
@@ -27,6 +27,9 @@ namespace ama {
 class WindowsLogSetup : public LogSetup
 {
 public:
+    WindowsLogSetup() = default;
+    virtual ~WindowsLogSetup() = default;
+
     void configure_logging() override;
 };
 

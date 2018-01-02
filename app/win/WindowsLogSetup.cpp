@@ -22,12 +22,18 @@
 #include <QApplication>
 #include <spdlog/spdlog.h>
 
+#include "Logging.h"
+
 namespace ama {
 
 void WindowsLogSetup::configure_logging()
 {
     std::string app_name = QCoreApplication::applicationName().toStdString();
-    // todo
+
+    ama::set_default_sinks({
+        ama::LogSinks::stderr_sink(),
+        ama::LogSinks::windows_debug_sink()
+    });
 }
 
 }

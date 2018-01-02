@@ -91,7 +91,7 @@ public:
  * }
  * @enddot
  */
-enum TransactionState
+enum A_EXPORT TransactionState
 {
     // No data has been received yet.
     Start = 0,
@@ -126,6 +126,11 @@ enum TransactionState
     // The proxy transaction failed.
     Error = 0xFFFF
 };
+
+/**
+ * Manually exporting the Listenable specialization, because MSVC can't figure it out on its own.
+ */
+template class A_EXPORT Listenable<TransactionListener>;
 
 /**
  * @brief

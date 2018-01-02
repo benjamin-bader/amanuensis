@@ -24,7 +24,7 @@
 
 namespace ama {
 
-std::unique_ptr<LogSetup> create_log_configurer()
+std::unique_ptr<LogSetup> make_log_configurer()
 {
 #if defined(Q_OS_WIN)
     return std::make_unique<WindowsLogSetup>();

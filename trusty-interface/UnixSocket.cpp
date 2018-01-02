@@ -40,7 +40,7 @@ UnixSocket::UnixSocket(const std::string &path)
     if (socket_fd == -1)
     {
         int error_code = errno;
-        log_critical("socket() failed: %d", error_code);
+        log_critical("socket() failed: {}", error_code);
         throw std::system_error(error_code, std::system_category());
     }
 
@@ -60,7 +60,7 @@ UnixSocket::UnixSocket(const std::string &path)
         int error_value = errno;
         if (error_value != EINPROGRESS)
         {
-            log_critical("Failed to connect; errno=%d", error_value);
+            log_critical("Failed to connect; errno={}", error_value);
 
             ::close(socket_fd);
             throw std::system_error(errno, std::system_category());
@@ -79,7 +79,7 @@ UnixSocket::UnixSocket(const std::string &path)
                 // problem
                 int error_value = errno;
                 ::close(socket_fd);
-                log_critical("select() failed; errno=%d", error_value);
+                log_critical("select() failed; errno={}", error_value);
                 throw std::system_error(error_value, std::system_category());
             }
 
@@ -98,7 +98,7 @@ UnixSocket::UnixSocket(const std::string &path)
                 // Can't getsockopt
                 int error_value = errno;
                 ::close(socket_fd);
-                log_critical("Can't getsockopt(); errno=%d", error_value);
+                log_critical("Can't getsockopt(); errno={}", error_value);
                 throw std::system_error(error_value, std::system_category());
             }
 

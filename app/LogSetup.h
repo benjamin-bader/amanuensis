@@ -25,6 +25,7 @@ namespace ama {
 class LogSetup
 {
 public:
+    LogSetup() = default;
     virtual ~LogSetup() {}
 
     virtual void configure_logging() = 0;
@@ -32,6 +33,6 @@ public:
 
 std::unique_ptr<LogSetup> make_log_configurer();
 
-}
+} // namespace ama
 
 #endif // LOGSETUP_H

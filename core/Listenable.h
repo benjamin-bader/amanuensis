@@ -39,12 +39,65 @@ public:
         listeners_()
     {}
 
-    void add_listener(const std::shared_ptr<Listener> &listener);
-    void remove_listener(const std::shared_ptr<Listener> &listener);
+    void add_listener(const std::shared_ptr<Listener> &listener)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        listeners_.push_back(listener);
+    }
+
+    void remove_listener(const std::shared_ptr<Listener> &listener)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        // Take the opportunity to cull dead listeners, too.
+        listeners_.erase(std::find_if(listeners_.begin(),
+                                      listeners_.end(),
+                                      [this, &listener](const std::weak_ptr<Listener> &weakListener) {
+            if (auto strongListener = weakListener.lock())
+            {
+                return strongListener == listener;
+            }
+            else
+            {
+                return true;
+            }
+        }));
+    }
 
 protected:
     template <typename ListenerAction>
-    void notify_listeners(const ListenerAction &action);
+    void notify_listeners(const ListenerAction &action)
+    {
+        std::vector<std::shared_ptr<Listener>> toNotify;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+
+            // While we're here, cull the dead ones.
+            auto toErase = std::find_if(listeners_.begin(),
+                                        listeners_.end(),
+                                        [&toNotify](auto &weakListener) {
+                if (auto listener = weakListener.lock())
+                {
+                    toNotify.push_back(listener);
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            });
+
+            if (toErase != listeners_.end())
+            {
+                listeners_.erase(toErase);
+            }
+        }
+
+        for (auto &listener : toNotify)
+        {
+            action(listener);
+        }
+    }
 
 private:
     std::mutex mutex_;
@@ -52,67 +105,5 @@ private:
 };
 
 } // namespace ama
-
-template <typename Listener>
-void ama::Listenable<Listener>::add_listener(const std::shared_ptr<Listener> &listener)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    listeners_.push_back(listener);
-}
-
-template <typename Listener>
-void ama::Listenable<Listener>::remove_listener(const std::shared_ptr<Listener> &listener)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    // Take the opportunity to cull dead listeners, too.
-    listeners_.erase(std::find_if(listeners_.begin(),
-                                  listeners_.end(),
-                                  [this, &listener](const std::weak_ptr<Listener> &weakListener) {
-        if (auto strongListener = weakListener.lock())
-        {
-            return strongListener == listener;
-        }
-        else
-        {
-            return true;
-        }
-    }));
-}
-
-template <typename Listener>
-template <typename ListenerAction>
-void ama::Listenable<Listener>::notify_listeners(const ListenerAction &action)
-{
-    std::vector<std::shared_ptr<Listener>> toNotify;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        // While we're here, cull the dead ones.
-        auto toErase = std::find_if(listeners_.begin(),
-                                    listeners_.end(),
-                                    [&toNotify](auto &weakListener) {
-            if (auto listener = weakListener.lock())
-            {
-                toNotify.push_back(listener);
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        });
-
-        if (toErase != listeners_.end())
-        {
-            listeners_.erase(toErase);
-        }
-    }
-
-    for (auto &listener : toNotify)
-    {
-        action(listener);
-    }
-}
 
 #endif // LISTENABLE_H
