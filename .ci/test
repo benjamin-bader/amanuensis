@@ -6,7 +6,7 @@ set -x
 # We may be running in VSTS - swap out some Travis vars, if so.
 # Note that we expect TRAVIS_OS_NAME to be provided even in VSTS
 # builds, as there is no suitable builtin var in that environment.
-if [ -n $BUILD_REPOSITORY_LOCALPATH ]; then
+if [[ -n $BUILD_REPOSITORY_LOCALPATH ]]; then
   export TRAVIS_BUILD_DIR=$BUILD_REPOSITORY_LOCALPATH
 fi
 
