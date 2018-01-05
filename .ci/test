@@ -21,7 +21,7 @@ elif [[ $TRAVIS_OS_NAME == 'osx' ]]; then
 
   sudo ln -s ${TRAVIS_BUILD_DIR}/core/libcore.1.0.0.dylib /usr/local/lib/libcore.1.dylib
 
-  export DYLD_LIBRARY_PATH="$LD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core"
+  export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:${TRAVIS_BUILD_DIR}/core"
   core-test/core-test && trusty-test/trusty-test
 
 else
