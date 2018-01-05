@@ -8,7 +8,7 @@ set -x
 # builds, as there is no suitable builtin var in that environment.
 if [ -n $BUILD_REPOSITORY_LOCALPATH ]; then
   export TRAVIS_BUILD_DIR=$BUILD_REPOSITORY_LOCALPATH
-end
+fi
 
 # Install the correct dependencies, depending on the current OS.
 
