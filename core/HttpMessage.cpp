@@ -17,6 +17,8 @@
 
 #include "HttpMessage.h"
 
+#include <utility>
+
 using namespace ama;
 
 HttpMessage::HttpMessage() :
@@ -105,6 +107,11 @@ void HttpMessage::set_minor_version(int minor_version)
 void HttpMessage::set_body(const std::vector<uint8_t> &body)
 {
     body_ = body;
+}
+
+void HttpMessage::set_body(std::vector<uint8_t>&& body)
+{
+    body_ = std::move(body);
 }
 
 void HttpMessage::set_status_code(int status_code)

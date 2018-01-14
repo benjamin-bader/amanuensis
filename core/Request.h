@@ -20,6 +20,10 @@
 
 #pragma once
 
+#include <algorithm>
+#include <iterator>
+#include <utility>
+
 #include "common.h"
 #include "global.h"
 
@@ -34,15 +38,42 @@ class HttpMessageParser;
 class A_EXPORT Request
 {
 public:
-    Request();
+    Request() = default;
+    Request(const HttpMessage& message);
+    Request(HttpMessage&& message);
+
+    Request(const Request&) = default;
+    Request(Request&&) = default;
+
+    Request& operator=(const Request&) = default;
+    Request& operator=(Request&&) = default;
+
+    void set_major_version(int version) { message_.set_major_version(version); }
+    void set_minor_version(int version) { message_.set_minor_version(version); }
 
     const std::string& method() const { return message_.method(); }
+    void set_method(const std::string& method) { message_.set_method(method); }
+
     const std::string& uri() const { return message_.uri(); }
+    void set_uri(const std::string& uri) { message_.set_uri(uri); }
 
     Headers& headers() { return message_.headers(); }
     const Headers& headers() const { return message_.headers(); }
 
     std::vector<uint8_t>& body() { return message_.body(); }
+    const std::vector<uint8_t>& body() const { return message_.body(); }
+
+    void set_body(const std::vector<uint8_t>& body) { message_.set_body(body); }
+    void set_body(std::vector<uint8_t>&& body) { message_.set_body(std::move(body)); }
+    void set_body(const std::string& body)
+    {
+        std::vector<uint8_t> bytes;
+        bytes.reserve(body.size());
+        std::copy(body.begin(), body.end(), std::back_inserter(bytes));
+        message_.set_body(std::move(bytes));
+    }
+
+    const std::string format() const noexcept;
 
     friend class HttpMessageParser;
 

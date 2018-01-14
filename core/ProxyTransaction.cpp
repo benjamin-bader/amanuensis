@@ -219,8 +219,6 @@ void ProxyTransaction::impl::read_client_request()
         auto start = std::begin(self->read_buffer_);
         auto stop = start + num_read;
 
-        self->raw_input_.insert(self->raw_input_.end(), start, stop);
-
         auto current_phase = self->request_parse_phase_;
         auto state = self->parser_.parse(self->request(), start, stop, self->request_parse_phase_);
         while (state == HttpMessageParser::State::Incomplete && current_phase != self->request_parse_phase_)
@@ -314,7 +312,9 @@ void ProxyTransaction::impl::open_remote_connection()
 void ProxyTransaction::impl::send_client_request_to_remote()
 {
     auto self = shared_from_this();
-    remote_->async_write(asio::buffer(raw_input_), [self](auto ec, size_t num_bytes_written)
+    auto formatted_request = std::make_shared<std::string>(request_.format());
+    remote_->async_write(asio::buffer(*formatted_request),
+                         [self, formatted_request](auto ec, size_t num_bytes_written)
     {
         UNUSED(num_bytes_written);
 

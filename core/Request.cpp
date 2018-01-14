@@ -17,9 +17,44 @@
 
 #include "Request.h"
 
-using namespace ama;
+#include <sstream>
+#include <utility>
 
-Request::Request()
+namespace ama {
+
+Request::Request(const HttpMessage& message)
+    : message_(message)
 {
+}
+
+Request::Request(HttpMessage &&message)
+    : message_(std::move(message))
+{
+}
+
+const std::string Request::format() const noexcept
+{
+    std::stringstream ss;
+    ss << method() << " " << this->uri() << " HTTP/" << this->message_.major_version() << "." << message_.minor_version() << "\r\n";
+
+    auto hds = headers();
+    for (auto i = 0; i < hds.size(); ++i)
+    {
+        const auto& name = hds.names()[i];
+        const auto& value = hds.values()[i];
+
+        ss << name << ": " << value << "\r\n";
+    }
+    ss << "\r\n";
+
+    if (body().size() > 0)
+    {
+        std::for_each(body().begin(), body().end(), [&](auto byte) {
+            ss << static_cast<char>(byte);
+        });
+    }
+
+    return ss.str();
+}
 
 }
