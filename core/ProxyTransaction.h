@@ -20,12 +20,19 @@
 
 #pragma once
 
+#include <array>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <system_error>
+#include <vector>
+
+#include <spdlog/spdlog.h>
 
 #include "common.h"
 #include "global.h"
 
+#include "HttpMessageParser.h"
 #include "Request.h"
 #include "Response.h"
 #include "Transaction.h"
@@ -36,6 +43,21 @@ namespace ama
 class Conn;
 class ConnectionPool;
 
+enum class NotificationState : uint8_t
+{
+    None = 0,
+    RequestHeaders = 1,
+    RequestBody = 2,
+    RequestComplete = 3,
+    ResponseHeaders = 4,
+    ResponseBody = 5,
+    ResponseComplete = 6,
+
+    TLSTunnel = 7,
+
+    Error = 8,
+};
+
 class A_EXPORT ProxyTransaction : public Transaction
                                 , public std::enable_shared_from_this<ProxyTransaction>
 {
@@ -43,28 +65,63 @@ public:
     ProxyTransaction(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection);
     virtual ~ProxyTransaction() = default;
 
-    virtual int id() const override;
-    virtual TransactionState state() const override;
-    virtual std::error_code error() const override;
+    int id() const override { return id_; }
+    TransactionState state() const override { return state_; }
+    std::error_code error() const override { return error_; }
 
-    virtual Request& request() override;
-    virtual Response& response() override;
+    Request& request() override { return request_; }
+    Response& response() override { return response_; }
 
     void begin();
 
-    /**
-     * Parses the given text into a time_point, according
-     * to RFC 7231's Date/Time Formats spec in section 7.1.1.1.
-     *
-     * @param text the text to be parsed.
-     * @return a time_point parsed from the given @c text.
-     * @throws std::invalid_argument if the date cannot be understood.
-     */
-    static time_point parse_http_date(const std::string &text);
+private:
+    void read_client_request();
+    void open_remote_connection();
+    void send_client_request_to_remote();
+
+    void read_remote_response();
+    void send_remote_response_to_client();
+
+    void establish_tls_tunnel();
+    void send_client_request_via_tunnel();
+    void send_server_response_via_tunnel();
+
+    void notify_phase_change(ParsePhase phase);
+    void do_notification(NotificationState ns);
+    void notify_failure(std::error_code ec);
+
+    void release_connections();
 
 private:
-    class impl;
-    std::shared_ptr<impl> impl_;
+    int id_;
+    std::error_code error_;
+
+    std::shared_ptr<spdlog::logger> logger_;
+
+    std::shared_ptr<Conn> client_;
+    std::shared_ptr<Conn> remote_;
+
+    std::shared_ptr<ConnectionPool> connection_pool_;
+
+    TransactionState state_;
+
+    HttpMessageParser parser_;
+    std::weak_ptr<ProxyTransaction> parent_;
+
+    std::array<uint8_t, 8192> read_buffer_;
+    std::unique_ptr<std::array<uint8_t, 8192>> remote_buffer_;
+
+    // Records the exact bytes received from client/server, so that
+    // they can be relayed as-is.
+    std::vector<uint8_t> raw_input_;
+
+    ParsePhase request_parse_phase_;
+    Request request_;
+
+    ParsePhase response_parse_phase_;
+    Response response_;
+
+    NotificationState notification_state_;
 };
 
 } // namespace ama

@@ -1,8 +1,6 @@
 #ifndef DATE_H
 #define DATE_H
 
-#pragma once
-
 // The MIT License (MIT)
 //
 // Copyright (c) 2015, 2016, 2017 Howard Hinnant
@@ -32,9 +30,19 @@
 // been invented (that would involve another several millennia of evolution).
 // We did not mean to shout.
 
+#ifndef HAS_STRING_VIEW
+#  if __cplusplus >= 201703
+#    define HAS_STRING_VIEW 1
+#  else
+#    define HAS_STRING_VIEW 0
+#  endif
+#endif  // HAS_STRING_VIEW
+
+#include <cassert>
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <climits>
 #if !(__cplusplus >= 201402)
 #  include <cmath>
 #endif
@@ -47,11 +55,15 @@
 #include <iterator>
 #include <limits>
 #include <locale>
+#include <memory>
 #include <ostream>
 #include <ratio>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#if HAS_STRING_VIEW
+# include <string_view>
+#endif
 #include <utility>
 #include <type_traits>
 
@@ -1016,20 +1028,88 @@ trunc(T t) NOEXCEPT
     return t;
 }
 
+template <std::intmax_t Xp, std::intmax_t Yp>
+struct static_gcd
+{
+    static const std::intmax_t value = static_gcd<Yp, Xp % Yp>::value;
+};
+
+template <std::intmax_t Xp>
+struct static_gcd<Xp, 0>
+{
+    static const std::intmax_t value = Xp;
+};
+
+template <>
+struct static_gcd<0, 0>
+{
+    static const std::intmax_t value = 1;
+};
+
+template <class R1, class R2>
+struct no_overflow
+{
+private:
+    static const std::intmax_t gcd_n1_n2 = static_gcd<R1::num, R2::num>::value;
+    static const std::intmax_t gcd_d1_d2 = static_gcd<R1::den, R2::den>::value;
+    static const std::intmax_t n1 = R1::num / gcd_n1_n2;
+    static const std::intmax_t d1 = R1::den / gcd_d1_d2;
+    static const std::intmax_t n2 = R2::num / gcd_n1_n2;
+    static const std::intmax_t d2 = R2::den / gcd_d1_d2;
+    static const std::intmax_t max = -((std::intmax_t(1) <<
+                                       (sizeof(std::intmax_t) * CHAR_BIT - 1)) + 1);
+
+    template <std::intmax_t Xp, std::intmax_t Yp, bool overflow>
+    struct mul    // overflow == false
+    {
+        static const std::intmax_t value = Xp * Yp;
+    };
+
+    template <std::intmax_t Xp, std::intmax_t Yp>
+    struct mul<Xp, Yp, true>
+    {
+        static const std::intmax_t value = 1;
+    };
+
+public:
+    static const bool value = (n1 <= max / d2) && (n2 <= max / d1);
+    typedef std::ratio<mul<n1, d2, !value>::value,
+                       mul<n2, d1, !value>::value> type;
+};
+
 }  // detail
 
 // trunc towards zero
 template <class To, class Rep, class Period>
 CONSTCD11
 inline
-To
+typename std::enable_if
+<
+    detail::no_overflow<Period, typename To::period>::value,
+    To
+>::type
 trunc(const std::chrono::duration<Rep, Period>& d)
 {
     return To{detail::trunc(std::chrono::duration_cast<To>(d).count())};
 }
 
+template <class To, class Rep, class Period>
+CONSTCD11
+inline
+typename std::enable_if
+<
+    !detail::no_overflow<Period, typename To::period>::value,
+    To
+>::type
+trunc(const std::chrono::duration<Rep, Period>& d)
+{
+    using namespace std::chrono;
+    using rep = typename std::common_type<Rep, typename To::rep>::type;
+    return To{detail::trunc(duration_cast<To>(duration_cast<duration<rep>>(d)).count())};
+}
+
 #ifndef HAS_CHRONO_ROUNDING
-#  if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023918
+#  if defined(_MSC_FULL_VER) && (_MSC_FULL_VER >= 190023918 || (_MSC_FULL_VER >= 190000000 && defined (__clang__)))
 #    define HAS_CHRONO_ROUNDING 1
 #  elif defined(__cpp_lib_chrono) && __cplusplus > 201402 && __cpp_lib_chrono >= 201510
 #    define HAS_CHRONO_ROUNDING 1
@@ -1046,13 +1126,32 @@ trunc(const std::chrono::duration<Rep, Period>& d)
 template <class To, class Rep, class Period>
 CONSTCD14
 inline
-To
+typename std::enable_if
+<
+    detail::no_overflow<Period, typename To::period>::value,
+    To
+>::type
 floor(const std::chrono::duration<Rep, Period>& d)
 {
     auto t = trunc<To>(d);
     if (t > d)
         return t - To{1};
     return t;
+}
+
+template <class To, class Rep, class Period>
+CONSTCD14
+inline
+typename std::enable_if
+<
+    !detail::no_overflow<Period, typename To::period>::value,
+    To
+>::type
+floor(const std::chrono::duration<Rep, Period>& d)
+{
+    using namespace std::chrono;
+    using rep = typename std::common_type<Rep, typename To::rep>::type;
+    return floor<To>(floor<duration<rep>>(d));
 }
 
 // round to nearest, to even on tie
@@ -1779,12 +1878,21 @@ weekday_indexed::ok() const NOEXCEPT
     return weekday().ok() && 1 <= index_ && index_ <= 5;
 }
 
+#ifdef __GNUC__
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wconversion"
+#endif  // __GNUC__
+
 CONSTCD11
 inline
 weekday_indexed::weekday_indexed(const date::weekday& wd, unsigned index) NOEXCEPT
     : wd_(static_cast<decltype(wd_)>(static_cast<unsigned>(wd)))
     , index_(static_cast<decltype(index_)>(index))
     {}
+
+#ifdef __GNUC__
+#  pragma GCC diagnostic pop
+#endif  // __GNUC__
 
 template<class CharT, class Traits>
 inline
@@ -3496,18 +3604,18 @@ struct static_pow10<0>
     static CONSTDATA std::uint64_t value = 1;
 };
 
-template <unsigned w, bool in_range = (w < 19)>
+template <class Rep, unsigned w, bool in_range = (w < 19)>
 struct make_precision
 {
-    using type = std::chrono::duration<std::int64_t,
+    using type = std::chrono::duration<Rep,
                                        std::ratio<1, static_pow10<w>::value>>;
     static CONSTDATA unsigned width = w;
 };
 
-template <unsigned w>
-struct make_precision<w, false>
+template <class Rep, unsigned w>
+struct make_precision<Rep, w, false>
 {
-    using type = std::chrono::microseconds;
+    using type = std::chrono::duration<Rep, std::micro>;
     static CONSTDATA unsigned width = 6;
 };
 
@@ -3518,8 +3626,9 @@ template <class Duration,
 class decimal_format_seconds
 {
 public:
-    using precision = typename make_precision<w>::type;
-    static auto CONSTDATA width = make_precision<w>::width;
+    using rep = typename std::common_type<Duration, std::chrono::seconds>::type::rep;
+    using precision = typename make_precision<rep, w>::type;
+    static auto CONSTDATA width = make_precision<rep, w>::width;
 
 private:
     std::chrono::seconds s_;
@@ -3563,7 +3672,7 @@ public:
         os << x.s_.count() <<
               std::use_facet<std::numpunct<char>>(os.getloc()).decimal_point();
         os.width(width);
-        os << x.sub_s_.count();
+        os << static_cast<std::int64_t>(x.sub_s_.count());
         return os;
     }
 };
@@ -3573,8 +3682,9 @@ class decimal_format_seconds<Duration, 0>
 {
     static CONSTDATA unsigned w = 0;
 public:
-    using precision = std::chrono::seconds;
-    static auto CONSTDATA width = make_precision<w>::width;
+    using rep = typename std::common_type<Duration, std::chrono::seconds>::type::rep;
+    using precision = std::chrono::duration<rep>;
+    static auto CONSTDATA width = make_precision<rep, w>::width;
 private:
 
     std::chrono::seconds s_;
@@ -4034,9 +4144,9 @@ public:
         {}
 
     CONSTCD11 explicit time_of_day_storage(Duration since_midnight) NOEXCEPT
-        : base(std::chrono::duration_cast<std::chrono::hours>(since_midnight),
+        : base(date::trunc<std::chrono::hours>(since_midnight),
                since_midnight < Duration{0}, is24hr)
-        , m_(std::chrono::duration_cast<std::chrono::minutes>(detail::abs(since_midnight) - h_))
+        , m_(date::trunc<std::chrono::minutes>(detail::abs(since_midnight) - h_))
         , s_(detail::abs(since_midnight) - h_ - m_)
         {}
 
@@ -4281,6 +4391,19 @@ extract_weekday(std::basic_ostream<CharT, Traits>& os, const fields<Duration>& f
     return wd;
 }
 
+template <class CharT, class Traits, class Duration>
+unsigned
+extract_month(std::basic_ostream<CharT, Traits>& os, const fields<Duration>& fds)
+{
+    if (!fds.ymd.month().ok())
+    {
+        // fds does not contain a valid month
+        os.setstate(std::ios::failbit);
+        return 0;
+    }
+    return static_cast<unsigned>(fds.ymd.month());
+}
+
 }  // namespace detail
 
 #if ONLY_C_LOCALE
@@ -4478,7 +4601,8 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
 {
     using namespace std;
     using namespace std::chrono;
-    tm tm;
+    using namespace detail;
+    tm tm{};
 #if !ONLY_C_LOCALE
     auto& facet = use_facet<time_put<CharT>>(os.getloc());
 #endif
@@ -4494,14 +4618,14 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
             {
                 if (modified == CharT{})
                 {
-                    tm.tm_wday = static_cast<int>(detail::extract_weekday(os, fds));
+                    tm.tm_wday = static_cast<int>(extract_weekday(os, fds));
                     if (os.fail())
                         return os;
 #if !ONLY_C_LOCALE
                     const CharT f[] = {'%', *fmt};
                     facet.put(os, os, os.fill(), &tm, begin(f), end(f));
 #else  // ONLY_C_LOCALE
-                    os << detail::weekday_names().first[tm.tm_wday+7*(*fmt == 'a')];
+                    os << weekday_names().first[tm.tm_wday+7*(*fmt == 'a')];
 #endif  // ONLY_C_LOCALE
                 }
                 else
@@ -4521,12 +4645,12 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
             {
                 if (modified == CharT{})
                 {
-                    tm.tm_mon = static_cast<int>(unsigned(fds.ymd.month())) - 1;
+                    tm.tm_mon = static_cast<int>(extract_month(os, fds)) - 1;
 #if !ONLY_C_LOCALE
                     const CharT f[] = {'%', *fmt};
                     facet.put(os, os, os.fill(), &tm, begin(f), end(f));
 #else  // ONLY_C_LOCALE
-                    os << detail::month_names().first[tm.tm_mon+12*(*fmt == 'b')];
+                    os << month_names().first[tm.tm_mon+12*(*fmt == 'b')];
 #endif  // ONLY_C_LOCALE
                 }
                 else
@@ -4555,9 +4679,9 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                     tm.tm_min = static_cast<int>(fds.tod.minutes().count());
                     tm.tm_hour = static_cast<int>(fds.tod.hours().count());
                     tm.tm_mday = static_cast<int>(static_cast<unsigned>(ymd.day()));
-                    tm.tm_mon = static_cast<int>(static_cast<unsigned>(ymd.month()) - 1);
+                    tm.tm_mon = static_cast<int>(extract_month(os, fds) - 1);
                     tm.tm_year = static_cast<int>(ymd.year()) - 1900;
-                    tm.tm_wday = static_cast<int>(detail::extract_weekday(os, fds));
+                    tm.tm_wday = static_cast<int>(extract_weekday(os, fds));
                     if (os.fail())
                         return os;
                     tm.tm_yday = static_cast<int>((ld - local_days(ymd.year()/1/1)).count());
@@ -4570,11 +4694,10 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
 #else  // ONLY_C_LOCALE
                     if (*fmt == 'c')
                     {
-                        auto wd = static_cast<int>(detail::extract_weekday(os, fds));
-                        os << detail::weekday_names().first[static_cast<unsigned>(wd)+7]
+                        auto wd = static_cast<int>(extract_weekday(os, fds));
+                        os << weekday_names().first[static_cast<unsigned>(wd)+7]
                            << ' ';
-                        os << detail::month_names().first[
-                                 static_cast<unsigned>(fds.ymd.month())-1+12] << ' ';
+                        os << month_names().first[extract_month(os, fds)-1+12] << ' ';
                         auto d = static_cast<int>(static_cast<unsigned>(fds.ymd.day()));
                         if (d < 10)
                             os << ' ';
@@ -4586,7 +4709,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                     else  // *fmt == 'x'
                     {
                         auto const& ymd = fds.ymd;
-                        detail::save_stream<CharT, Traits> _(os);
+                        save_stream<CharT, Traits> _(os);
                         os.fill('0');
                         os.flags(std::ios::dec | std::ios::right);
                         os.width(2);
@@ -4612,7 +4735,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                 if (modified == CharT{})
                 {
 #endif
-                    detail::save_stream<CharT, Traits> _(os);
+                    save_stream<CharT, Traits> _(os);
                     os.fill('0');
                     os.flags(std::ios::dec | std::ios::right);
                     if (y >= 0)
@@ -4654,7 +4777,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                 if (modified == CharT{})
                 {
 #endif
-                    detail::save_stream<CharT, Traits> _(os);
+                    save_stream<CharT, Traits> _(os);
                     if (*fmt == CharT{'d'})
                         os.fill('0');
                     os.flags(std::ios::dec | std::ios::right);
@@ -4685,7 +4808,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                 if (modified == CharT{})
                 {
                     auto const& ymd = fds.ymd;
-                    detail::save_stream<CharT, Traits> _(os);
+                    save_stream<CharT, Traits> _(os);
                     os.fill('0');
                     os.flags(std::ios::dec | std::ios::right);
                     os.width(2);
@@ -4711,7 +4834,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                 if (modified == CharT{})
                 {
                     auto const& ymd = fds.ymd;
-                    detail::save_stream<CharT, Traits> _(os);
+                    save_stream<CharT, Traits> _(os);
                     os.fill('0');
                     os.flags(std::ios::dec | std::ios::right);
                     os.width(4);
@@ -4746,7 +4869,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                         os << y;
                     else
                     {
-                        detail::save_stream<CharT, Traits> _(os);
+                        save_stream<CharT, Traits> _(os);
                         os.fill('0');
                         os.flags(std::ios::dec | std::ios::right);
                         os.width(2);
@@ -4804,7 +4927,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                     auto ld = local_days(fds.ymd);
                     auto y = fds.ymd.year();
                     auto doy = ld - local_days(y/jan/1) + days{1};
-                    detail::save_stream<CharT, Traits> _(os);
+                    save_stream<CharT, Traits> _(os);
                     os.fill('0');
                     os.flags(std::ios::dec | std::ios::right);
                     os.width(3);
@@ -4910,9 +5033,9 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                 }
 #else
                 if (fds.tod.hours() < hours{12})
-                    os << detail::ampm_names().first[0];
+                    os << ampm_names().first[0];
                 else
-                    os << detail::ampm_names().first[1];
+                    os << ampm_names().first[1];
 #endif
                 modified = CharT{};
                 command = nullptr;
@@ -4939,7 +5062,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
 #else
                 time_of_day<seconds> tod(duration_cast<seconds>(fds.tod.to_duration()));
                 tod.make12();
-                detail::save_stream<CharT, Traits> _(os);
+                save_stream<CharT, Traits> _(os);
                 os.fill('0');
                 os.width(2);
                 os << tod.hours().count() << CharT{':'};
@@ -4949,9 +5072,9 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                 os << tod.seconds().count() << CharT{' '};
                 tod.make24();
                 if (tod.hours() < hours{12})
-                    os << detail::ampm_names().first[0];
+                    os << ampm_names().first[0];
                 else
-                    os << detail::ampm_names().first[1];
+                    os << ampm_names().first[1];
 #endif
                 modified = CharT{};
                 command = nullptr;
@@ -5043,7 +5166,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
         case 'u':
             if (command)
             {
-                auto wd = detail::extract_weekday(os, fds);
+                auto wd = extract_weekday(os, fds);
                 if (os.fail())
                     return os;
 #if !ONLY_C_LOCALE
@@ -5095,7 +5218,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                 {
                     const CharT f[] = {'%', modified, *fmt};
                     tm.tm_year = static_cast<int>(ymd.year()) - 1900;
-                    tm.tm_wday = static_cast<int>(detail::extract_weekday(os, fds));
+                    tm.tm_wday = static_cast<int>(extract_weekday(os, fds));
                     if (os.fail())
                         return os;
                     tm.tm_yday = static_cast<int>((ld - local_days(ymd.year()/1/1)).count());
@@ -5138,7 +5261,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                     const CharT f[] = {'%', modified, *fmt};
                     auto const& ymd = fds.ymd;
                     tm.tm_year = static_cast<int>(ymd.year()) - 1900;
-                    tm.tm_wday = static_cast<int>(detail::extract_weekday(os, fds));
+                    tm.tm_wday = static_cast<int>(extract_weekday(os, fds));
                     if (os.fail())
                         return os;
                     tm.tm_yday = static_cast<int>((ld - local_days(ymd.year()/1/1)).count());
@@ -5158,7 +5281,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
         case 'w':
             if (command)
             {
-                auto wd = detail::extract_weekday(os, fds);
+                auto wd = extract_weekday(os, fds);
                 if (os.fail())
                     return os;
 #if !ONLY_C_LOCALE
@@ -5210,7 +5333,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
                 {
                     const CharT f[] = {'%', modified, *fmt};
                     tm.tm_year = static_cast<int>(ymd.year()) - 1900;
-                    tm.tm_wday = static_cast<int>(detail::extract_weekday(os, fds));
+                    tm.tm_wday = static_cast<int>(extract_weekday(os, fds));
                     if (os.fail())
                         return os;
                     tm.tm_yday = static_cast<int>((ld - local_days(ymd.year()/1/1)).count());
@@ -5515,7 +5638,7 @@ to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
 {
     using CT = typename std::common_type<Duration, std::chrono::seconds>::type;
     auto ld = floor<days>(tp);
-    fields<CT> fds{year_month_day{ld}, time_of_day<CT>{tp-ld}};
+    fields<CT> fds{year_month_day{ld}, time_of_day<CT>{tp-local_seconds{ld}}};
     return to_stream(os, fmt, fds, abbrev, offset_sec);
 }
 
@@ -5524,11 +5647,12 @@ std::basic_ostream<CharT, Traits>&
 to_stream(std::basic_ostream<CharT, Traits>& os, const CharT* fmt,
           const sys_time<Duration>& tp)
 {
-    using CT = typename std::common_type<Duration, std::chrono::seconds>::type;
+    using namespace std::chrono;
+    using CT = typename std::common_type<Duration, seconds>::type;
     const std::string abbrev("UTC");
-    CONSTDATA std::chrono::seconds offset{0};
+    CONSTDATA seconds offset{0};
     auto sd = floor<days>(tp);
-    fields<CT> fds{year_month_day{sd}, time_of_day<CT>{tp-sd}};
+    fields<CT> fds{year_month_day{sd}, time_of_day<CT>{tp-sys_seconds{sd}}};
     return to_stream(os, fmt, fds, &abbrev, &offset);
 }
 
@@ -5541,6 +5665,7 @@ format(const std::locale& loc, const CharT* fmt, const Streamable& tp)
                 std::basic_string<CharT>{})
 {
     std::basic_ostringstream<CharT> os;
+    os.exceptions(std::ios::failbit | std::ios::badbit);
     os.imbue(loc);
     to_stream(os, fmt, tp);
     return os.str();
@@ -5553,6 +5678,7 @@ format(const CharT* fmt, const Streamable& tp)
                 std::basic_string<CharT>{})
 {
     std::basic_ostringstream<CharT> os;
+    os.exceptions(std::ios::failbit | std::ios::badbit);
     to_stream(os, fmt, tp);
     return os.str();
 }
@@ -5565,6 +5691,7 @@ format(const std::locale& loc, const std::basic_string<CharT, Traits, Alloc>& fm
                 std::basic_string<CharT, Traits, Alloc>{})
 {
     std::basic_ostringstream<CharT, Traits, Alloc> os;
+    os.exceptions(std::ios::failbit | std::ios::badbit);
     os.imbue(loc);
     to_stream(os, fmt.c_str(), tp);
     return os.str();
@@ -5577,6 +5704,7 @@ format(const std::basic_string<CharT, Traits, Alloc>& fmt, const Streamable& tp)
                 std::basic_string<CharT, Traits, Alloc>{})
 {
     std::basic_ostringstream<CharT, Traits, Alloc> os;
+    os.exceptions(std::ios::failbit | std::ios::badbit);
     to_stream(os, fmt.c_str(), tp);
     return os.str();
 }
@@ -5679,9 +5807,8 @@ read_long_double(std::basic_istream<CharT, Traits>& is, unsigned m = 1, unsigned
                 break;
             buf += c;
             (void)is.get();
-            ++count;
         }
-        if (count == M)
+        if (++count == M)
             break;
     }
     if (count < m)
@@ -5875,7 +6002,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                 {
 #if !ONLY_C_LOCALE
                     ios_base::iostate err = ios_base::goodbit;
-                    f.get(is, 0, is, err, &tm, command, fmt+1);
+                    f.get(is, nullptr, is, err, &tm, command, fmt+1);
                     if ((err & ios::failbit) == 0)
                         wd = tm.tm_wday;
                     is.setstate(err);
@@ -5899,7 +6026,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                 {
 #if !ONLY_C_LOCALE
                     ios_base::iostate err = ios_base::goodbit;
-                    f.get(is, 0, is, err, &tm, command, fmt+1);
+                    f.get(is, nullptr, is, err, &tm, command, fmt+1);
                     if ((err & ios::failbit) == 0)
                         m = tm.tm_mon + 1;
                     is.setstate(err);
@@ -5921,7 +6048,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                 {
 #if !ONLY_C_LOCALE
                     ios_base::iostate err = ios_base::goodbit;
-                    f.get(is, 0, is, err, &tm, command, fmt+1);
+                    f.get(is, nullptr, is, err, &tm, command, fmt+1);
                     if ((err & ios::failbit) == 0)
                     {
                         Y = tm.tm_year + 1900;
@@ -5976,7 +6103,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                 {
 #if !ONLY_C_LOCALE
                     ios_base::iostate err = ios_base::goodbit;
-                    f.get(is, 0, is, err, &tm, command, fmt+1);
+                    f.get(is, nullptr, is, err, &tm, command, fmt+1);
                     if ((err & ios::failbit) == 0)
                     {
                         Y = tm.tm_year + 1900;
@@ -6000,7 +6127,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                 {
 #if !ONLY_C_LOCALE
                     ios_base::iostate err = ios_base::goodbit;
-                    f.get(is, 0, is, err, &tm, command, fmt+1);
+                    f.get(is, nullptr, is, err, &tm, command, fmt+1);
                     if ((err & ios::failbit) == 0)
                     {
                         h = hours{tm.tm_hour};
@@ -6043,7 +6170,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                     else
                     {
                         ios_base::iostate err = ios_base::goodbit;
-                        f.get(is, 0, is, err, &tm, command, fmt+1);
+                        f.get(is, nullptr, is, err, &tm, command, fmt+1);
                         if ((err & ios::failbit) == 0)
                         {
                             auto tY = tm.tm_year + 1900;
@@ -6102,7 +6229,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                     else if (modified == CharT{'O'})
                     {
                         ios_base::iostate err = ios_base::goodbit;
-                        f.get(is, 0, is, err, &tm, command, fmt+1);
+                        f.get(is, nullptr, is, err, &tm, command, fmt+1);
                         command = nullptr;
                         width = -1;
                         modified = CharT{};
@@ -6136,7 +6263,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                     else if (modified == CharT{'O'})
                     {
                         ios_base::iostate err = ios_base::goodbit;
-                        f.get(is, 0, is, err, &tm, command, fmt+1);
+                        f.get(is, nullptr, is, err, &tm, command, fmt+1);
                         if ((err & ios::failbit) == 0)
                             h = hours{tm.tm_hour};
                         is.setstate(err);
@@ -6206,7 +6333,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                     else if (modified == CharT{'O'})
                     {
                         ios_base::iostate err = ios_base::goodbit;
-                        f.get(is, 0, is, err, &tm, command, fmt+1);
+                        f.get(is, nullptr, is, err, &tm, command, fmt+1);
                         if ((err & ios::failbit) == 0)
                             min = minutes{tm.tm_min};
                         is.setstate(err);
@@ -6232,7 +6359,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                     else if (modified == CharT{'O'})
                     {
                         ios_base::iostate err = ios_base::goodbit;
-                        f.get(is, 0, is, err, &tm, command, fmt+1);
+                        f.get(is, nullptr, is, err, &tm, command, fmt+1);
                         if ((err & ios::failbit) == 0)
                             m = tm.tm_mon + 1;
                         is.setstate(err);
@@ -6287,7 +6414,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                         tm = std::tm{};
                         tm.tm_hour = I;
                         ios_base::iostate err = ios_base::goodbit;
-                        f.get(is, 0, is, err, &tm, command, fmt+1);
+                        f.get(is, nullptr, is, err, &tm, command, fmt+1);
                         if (err & ios::failbit)
                             goto broken;
                         h = hours{tm.tm_hour};
@@ -6325,7 +6452,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                 {
 #if !ONLY_C_LOCALE
                     ios_base::iostate err = ios_base::goodbit;
-                    f.get(is, 0, is, err, &tm, command, fmt+1);
+                    f.get(is, nullptr, is, err, &tm, command, fmt+1);
                     if ((err & ios::failbit) == 0)
                     {
                         h = hours{tm.tm_hour};
@@ -6407,7 +6534,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                     else if (modified == CharT{'O'})
                     {
                         ios_base::iostate err = ios_base::goodbit;
-                        f.get(is, 0, is, err, &tm, command, fmt+1);
+                        f.get(is, nullptr, is, err, &tm, command, fmt+1);
                         if ((err & ios::failbit) == 0)
                             s = duration_cast<Duration>(seconds{tm.tm_sec});
                         is.setstate(err);
@@ -6461,7 +6588,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                     else if (modified == CharT{'E'})
                     {
                         ios_base::iostate err = ios_base::goodbit;
-                        f.get(is, 0, is, err, &tm, command, fmt+1);
+                        f.get(is, nullptr, is, err, &tm, command, fmt+1);
                         if ((err & ios::failbit) == 0)
                             Y = tm.tm_year + 1900;
                         is.setstate(err);
@@ -6487,7 +6614,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                     else
                     {
                         ios_base::iostate err = ios_base::goodbit;
-                        f.get(is, 0, is, err, &tm, command, fmt+1);
+                        f.get(is, nullptr, is, err, &tm, command, fmt+1);
                         if ((err & ios::failbit) == 0)
                             Y = tm.tm_year + 1900;
                         is.setstate(err);
@@ -6591,7 +6718,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                     else if (modified == CharT{'O'})
                     {
                         ios_base::iostate err = ios_base::goodbit;
-                        f.get(is, 0, is, err, &tm, command, fmt+1);
+                        f.get(is, nullptr, is, err, &tm, command, fmt+1);
                         if ((err & ios::failbit) == 0)
                             wd = tm.tm_wday;
                         is.setstate(err);
@@ -6648,7 +6775,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                     else
                         read(is, rs{H, 1, 2}, CharT{':'}, ru{M, 2, 2});
                     if (!is.fail())
-                        temp_offset = hours{H} + minutes{M};
+                        temp_offset = hours{ H } + minutes{ H < 0 ? -M : M };
                     command = nullptr;
                     width = -1;
                     modified = CharT{};
@@ -6870,6 +6997,8 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
                 else if (day(static_cast<unsigned>(d)) != ymd.day())
                     goto broken;
             }
+            if (Y < static_cast<int>(year::min()) || Y > static_cast<int>(year::max()))
+                Y = not_a_year;
             auto ymd = year{Y}/m/d;
             if (wd != not_a_weekday && ymd.ok())
             {
@@ -7035,7 +7164,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
     if (!fds.ymd.ok() || !fds.tod.in_conventional_range())
         is.setstate(ios::failbit);
     if (!is.fail())
-        tp = round<Duration>(sys_days(fds.ymd) + fds.tod.to_duration() - *offptr);
+        tp = round<Duration>(sys_days(fds.ymd) - *offptr + fds.tod.to_duration());
     return is;
 }
 
@@ -7053,7 +7182,7 @@ from_stream(std::basic_istream<CharT, Traits>& is, const CharT* fmt,
     if (!fds.ymd.ok() || !fds.tod.in_conventional_range())
         is.setstate(ios::failbit);
     if (!is.fail())
-        tp = round<Duration>(local_days(fds.ymd) + fds.tod.to_duration());
+        tp = round<Duration>(local_seconds{local_days(fds.ymd)} + fds.tod.to_duration());
     return is;
 }
 
@@ -7324,6 +7453,7 @@ msl(CharT c) NOEXCEPT
 }
 
 CONSTCD14
+inline
 std::size_t
 to_string_len(std::intmax_t i)
 {

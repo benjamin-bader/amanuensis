@@ -1,0 +1,39 @@
+// Amanuensis - Web Traffic Inspector
+//
+// Copyright (C) 2018 Benjamin Bader
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#ifndef DATESTESTS_H
+#define DATESTESTS_H
+
+#pragma once
+
+#include <QObject>
+
+class DatesTests : public QObject
+{
+    Q_OBJECT
+public:
+    DatesTests() = default;
+
+private Q_SLOTS:
+    void parse_modern_date();
+    void parse_legacy_date();
+    void parse_asctime_date();
+
+    void parse_invalid_input_returns_false();
+};
+
+#endif // DATESTESTS_H

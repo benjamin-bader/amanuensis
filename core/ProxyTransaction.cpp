@@ -17,24 +17,17 @@
 
 #include "ProxyTransaction.h"
 
-#include <array>
 #include <cassert>
-#include <chrono>
-#include <ctime>
-#include <cstdint>
-#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <locale>
 #include <sstream>
-#include <vector>
 
 #include <QDebug>
 
 #include <asio.hpp>
 
 #include "common.h"
-#include "date.h"
 
 #include "ConnectionPool.h"
 #include "Errors.h"
@@ -49,23 +42,6 @@ QDebug operator<<(QDebug d, ama::ParsePhase phase)
 }
 
 namespace ama {
-
-namespace {
-
-enum class NotificationState : uint8_t
-{
-    None = 0,
-    RequestHeaders = 1,
-    RequestBody = 2,
-    RequestComplete = 3,
-    ResponseHeaders = 4,
-    ResponseBody = 5,
-    ResponseComplete = 6,
-
-    TLSTunnel = 7,
-
-    Error = 8,
-};
 
 std::ostream& operator<<(std::ostream& os, NotificationState ns)
 {
@@ -86,82 +62,9 @@ std::ostream& operator<<(std::ostream& os, NotificationState ns)
     }
 }
 
-} // namespace
-
-class ProxyTransaction::impl : public std::enable_shared_from_this<ProxyTransaction::impl>
-{
-public:
-    impl(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection);
-    ~impl();
-
-    int id() const { return id_; }
-    TransactionState state() const { return state_; }
-    std::error_code error() const { return error_; }
-
-    void begin(std::shared_ptr<ProxyTransaction> parent);
-
-    Request& request() { return request_; }
-    Response& response() { return response_; }
-
-    std::shared_ptr<spdlog::logger> logger() { return logger_; }
-
-private:
-    void read_client_request();
-    void open_remote_connection();
-    void send_client_request_to_remote();
-
-    void read_remote_response();
-    void send_remote_response_to_client();
-
-    void establish_tls_tunnel();
-    void send_client_request_via_tunnel();
-    void send_server_response_via_tunnel();
-
-    void notify_phase_change(ParsePhase phase);
-    void do_notification(NotificationState ns);
-    void notify_failure(std::error_code ec);
-
-    void notify_listeners(const std::function<void(const std::shared_ptr<ProxyTransaction>&, const std::shared_ptr<TransactionListener>&)>& action);
-
-    void release_connections();
-
-private:
-    int id_;
-    std::error_code error_;
-
-    std::shared_ptr<spdlog::logger> logger_;
-
-    std::shared_ptr<Conn> client_;
-    std::shared_ptr<Conn> remote_;
-
-    std::shared_ptr<ConnectionPool> connection_pool_;
-
-    TransactionState state_;
-
-    HttpMessageParser parser_;
-    std::weak_ptr<ProxyTransaction> parent_;
-
-    std::array<uint8_t, 8192> read_buffer_;
-    std::unique_ptr<std::array<uint8_t, 8192>> remote_buffer_;
-
-    // Records the exact bytes received from client/server, so that
-    // they can be relayed as-is.
-    std::vector<uint8_t> raw_input_;
-
-    ParsePhase request_parse_phase_;
-    Request request_;
-
-    ParsePhase response_parse_phase_;
-    Response response_;
-
-    NotificationState notification_state_;
-};
-
-ProxyTransaction::impl::impl(
-        int id,
-        std::shared_ptr<ConnectionPool> connectionPool,
-        std::shared_ptr<Conn> clientConnection)
-    : id_(id)
+ProxyTransaction::ProxyTransaction(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection)
+    : Transaction()
+    , id_(id)
     , error_()
     , logger_(get_logger("ProxyTransaction"))
     , client_(clientConnection)
@@ -169,7 +72,6 @@ ProxyTransaction::impl::impl(
     , connection_pool_(connectionPool)
     , state_(TransactionState::Start)
     , parser_()
-    , parent_()
     , read_buffer_()
     , remote_buffer_(nullptr)
     , raw_input_()
@@ -181,31 +83,25 @@ ProxyTransaction::impl::impl(
 {
 }
 
-ProxyTransaction::impl::~impl()
+void ProxyTransaction::begin()
 {
-    logger()->debug("dtor() id={}", id_);
-}
-
-void ProxyTransaction::impl::begin(std::shared_ptr<ProxyTransaction> parent)
-{
-    parent_ = parent;
-    notify_listeners([this](auto& parent, auto& listener)
+    notify_listeners([this](auto& listener)
     {
-        listener->on_transaction_start(*parent);
+        listener->on_transaction_start(*this);
     });
 
     raw_input_.clear();
     read_client_request();
 }
 
-void ProxyTransaction::impl::read_client_request()
+void ProxyTransaction::read_client_request()
 {
-    logger()->debug("read_client_request() id={}", id_);
+    logger_->debug("read_client_request() id={}", id_);
 
     auto self = shared_from_this();
     client_->async_read_some(read_buffer_, [self](asio::error_code ec, size_t num_read)
     {
-        self->logger()->debug("read_client_request()#async_read_some id={} ec={} num_read={}", self->id_, ec.message(), num_read);
+        self->logger_->debug("read_client_request()#async_read_some id={} ec={} num_read={}", self->id_, ec.message(), num_read);
         if (ec == asio::error::eof)
         {
             // unexpected disconnect
@@ -226,7 +122,7 @@ void ProxyTransaction::impl::read_client_request()
         auto state = self->parser_.parse(self->request(), start, stop, self->request_parse_phase_);
         while (state == HttpMessageParser::State::Incomplete && current_phase != self->request_parse_phase_)
         {
-            self->logger()->debug("read_client_request() (phase change) old={} new={}", current_phase, self->request_parse_phase_);
+            self->logger_->debug("read_client_request() (phase change) old={} new={}", current_phase, self->request_parse_phase_);
             self->notify_phase_change(self->request_parse_phase_);
 
             current_phase = self->request_parse_phase_;
@@ -235,26 +131,26 @@ void ProxyTransaction::impl::read_client_request()
 
         if (state == HttpMessageParser::State::Incomplete)
         {
-            self->logger()->debug("read_client_request() (parse: Incomplete) id={}", self->id_);
+            self->logger_->debug("read_client_request() (parse: Incomplete) id={}", self->id_);
             self->read_client_request();
             return;
         }
         else if (state == HttpMessageParser::State::Invalid)
         {
-            self->logger()->debug("read_client_request() (parse: Invalid) id={}", self->id_);
+            self->logger_->debug("read_client_request() (parse: Invalid) id={}", self->id_);
             self->notify_failure(ProxyError::MalformedRequest);
         }
         else if (state == HttpMessageParser::State::Valid)
         {
-            self->logger()->debug("read_client_request() (parse: Valid) id={}", self->id_);
+            self->logger_->debug("read_client_request() (parse: Valid) id={}", self->id_);
             if (self->request().method() == "CONNECT")
             {
-                self->logger()->debug("read_client_request() (do TLS tunnel) id={}", self->id_);
+                self->logger_->debug("read_client_request() (do TLS tunnel) id={}", self->id_);
                 self->establish_tls_tunnel();
             }
             else
             {
-                self->logger()->debug("read_client_request() (do notify and relay request) id={}", self->id_);
+                self->logger_->debug("read_client_request() (do notify and relay request) id={}", self->id_);
                 self->do_notification(NotificationState::RequestComplete);
                 self->open_remote_connection();
             }
@@ -267,12 +163,12 @@ void ProxyTransaction::impl::read_client_request()
     });
 }
 
-void ProxyTransaction::impl::open_remote_connection()
+void ProxyTransaction::open_remote_connection()
 {
     auto headerValues = request().headers().find_by_name("Host");
     if (headerValues.empty())
     {
-        logger()->warn("open_remote_connection(): Malformed request - no 'Host' header found! id={}", id_);
+        logger_->warn("open_remote_connection(): Malformed request - no 'Host' header found! id={}", id_);
         notify_failure(ProxyError::MalformedRequest);
         return;
     }
@@ -290,11 +186,11 @@ void ProxyTransaction::impl::open_remote_connection()
         }
         catch (std::out_of_range)
         {
-            logger()->warn("open_remote_connection(): Malformed request - assuming port 80.  id={}", id_);
+            logger_->warn("open_remote_connection(): Malformed request - assuming port 80.  id={}", id_);
         }
         catch (std::invalid_argument)
         {
-            logger()->warn("open_remote_connection(): Malformed request - assuming port 80.  id={}", id_);
+            logger_->warn("open_remote_connection(): Malformed request - assuming port 80.  id={}", id_);
         }
     }
 
@@ -312,7 +208,7 @@ void ProxyTransaction::impl::open_remote_connection()
     });
 }
 
-void ProxyTransaction::impl::send_client_request_to_remote()
+void ProxyTransaction::send_client_request_to_remote()
 {
     auto self = shared_from_this();
     auto formatted_request = std::make_shared<std::string>(request_.format());
@@ -333,9 +229,9 @@ void ProxyTransaction::impl::send_client_request_to_remote()
     });
 }
 
-void ProxyTransaction::impl::read_remote_response()
+void ProxyTransaction::read_remote_response()
 {
-    std::shared_ptr<ProxyTransaction::impl> self = shared_from_this();
+    std::shared_ptr<ProxyTransaction> self = shared_from_this();
     remote_->async_read_some(read_buffer_, [self](auto ec, size_t num_bytes_read)
     {
        if (ec == asio::error::eof)
@@ -361,7 +257,7 @@ void ProxyTransaction::impl::read_remote_response()
        auto state = self->parser_.parse(self->response(), begin, end, self->response_parse_phase_);
        while (state == HttpMessageParser::State::Incomplete && current_phase != self->response_parse_phase_)
        {
-           self->logger()->debug("read_remote_response() (phase change) old={} new={}", current_phase, self->response_parse_phase_);
+           self->logger_->debug("read_remote_response() (phase change) old={} new={}", current_phase, self->response_parse_phase_);
            self->notify_phase_change(self->response_parse_phase_);
 
            current_phase = self->response_parse_phase_;
@@ -392,7 +288,7 @@ void ProxyTransaction::impl::read_remote_response()
     });
 }
 
-void ProxyTransaction::impl::send_remote_response_to_client()
+void ProxyTransaction::send_remote_response_to_client()
 {
     auto self = shared_from_this();
     client_->async_write(asio::buffer(raw_input_), [self](auto ec, size_t num_bytes_written)
@@ -412,16 +308,16 @@ void ProxyTransaction::impl::send_remote_response_to_client()
         }
 
         // We're done!
-        self->notify_listeners([self](auto& parent, auto& listener)
+        self->notify_listeners([self](auto& listener)
         {
-            listener->on_transaction_complete(*parent);
+            listener->on_transaction_complete(*self);
         });
 
         self->release_connections();
     });
 }
 
-void ProxyTransaction::impl::establish_tls_tunnel()
+void ProxyTransaction::establish_tls_tunnel()
 {
     std::string host = request().uri();
     std::string port = "443";
@@ -436,11 +332,11 @@ void ProxyTransaction::impl::establish_tls_tunnel()
         }
         catch (std::out_of_range)
         {
-            logger()->warn("Malformed request - assuming port 443 id={}", id_);
+            logger_->warn("Malformed request - assuming port 443 id={}", id_);
         }
         catch (std::invalid_argument)
         {
-            logger()->warn("Malformed request - assuming port 443 id={}", id_);
+            logger_->warn("Malformed request - assuming port 443 id={}", id_);
         }
     }
 
@@ -478,7 +374,7 @@ void ProxyTransaction::impl::establish_tls_tunnel()
             if (ec2)
             {
                 // (double?) fail
-                self->logger()->warn("Failed to send CONNECT reply to client: {}", ec2.message());
+                self->logger_->warn("Failed to send CONNECT reply to client: {}", ec2.message());
                 localSuccess = false;
             }
 
@@ -500,7 +396,7 @@ void ProxyTransaction::impl::establish_tls_tunnel()
     });
 }
 
-void ProxyTransaction::impl::send_client_request_via_tunnel()
+void ProxyTransaction::send_client_request_via_tunnel()
 {
     if (client_ == nullptr || remote_ == nullptr)
     {
@@ -546,7 +442,7 @@ void ProxyTransaction::impl::send_client_request_via_tunnel()
     });
 }
 
-void ProxyTransaction::impl::send_server_response_via_tunnel()
+void ProxyTransaction::send_server_response_via_tunnel()
 {
     if (client_ == nullptr || remote_ == nullptr)
     {
@@ -592,13 +488,13 @@ void ProxyTransaction::impl::send_server_response_via_tunnel()
     });
 }
 
-void ProxyTransaction::impl::notify_phase_change(ParsePhase phase)
+void ProxyTransaction::notify_phase_change(ParsePhase phase)
 {
     NotificationState ns;
     switch (phase)
     {
     case ParsePhase::Start:
-        logger()->error("Should not notify for {}", phase);
+        logger_->error("Should not notify for {}", phase);
         assert(false);
         return;
     case ParsePhase::ReceivedMessageLine:
@@ -620,7 +516,7 @@ void ProxyTransaction::impl::notify_phase_change(ParsePhase phase)
                 : NotificationState::ResponseComplete;
         break;
     default:
-        logger()->critical("Unexpected ParsePhase value: {}", phase);
+        logger_->critical("Unexpected ParsePhase value: {}", phase);
         assert(false);
         return;
     }
@@ -628,15 +524,15 @@ void ProxyTransaction::impl::notify_phase_change(ParsePhase phase)
     do_notification(ns);
 }
 
-void ProxyTransaction::impl::do_notification(NotificationState ns)
+void ProxyTransaction::do_notification(NotificationState ns)
 {
-    logger()->debug("tx({}): do_notification(ns={})", id_, ns);
+    logger_->debug("tx({}): do_notification(ns={})", id_, ns);
     while (notification_state_ < ns)
     {
         uint8_t ns_int = static_cast<uint8_t>(notification_state_);
         auto current_state = notification_state_;
         notification_state_ = static_cast<NotificationState>(ns_int + 1);
-        SPDLOG_TRACE(logger(), "tx({}): notifying {}", id_, current_state);
+        SPDLOG_TRACE(logger_, "tx({}): notifying {}", id_, current_state);
         switch (current_state)
         {
         case NotificationState::None:
@@ -649,132 +545,54 @@ void ProxyTransaction::impl::do_notification(NotificationState ns)
             // ditto
             break;
         case NotificationState::RequestComplete:
-            notify_listeners([this](auto& parent, auto listener)
+            notify_listeners([this](auto& listener)
             {
-                listener->on_request_read(*parent);
+                listener->on_request_read(*this);
             });
             break;
         case NotificationState::ResponseHeaders:
-            notify_listeners([this](auto& parent, auto listener)
+            notify_listeners([this](auto& listener)
             {
-                listener->on_response_headers_read(*parent);
+                listener->on_response_headers_read(*this);
             });
             break;
         case NotificationState::ResponseBody:
             // nothing
             break;
         case NotificationState::ResponseComplete:
-            notify_listeners([this](auto& parent, auto listener)
+            notify_listeners([this](auto& listener)
             {
-                listener->on_response_read(*parent);
-                listener->on_transaction_complete(*parent);
+                listener->on_response_read(*this);
+                listener->on_transaction_complete(*this);
             });
             break;
         case NotificationState::TLSTunnel:
             // nothing
             break;
         case NotificationState::Error:
-            logger()->critical("Errors should use notify_failure, not do_notification");
+            logger_->critical("Errors should use notify_failure, not do_notification");
             assert(false);
             break;
         }
     }
 }
 
-
-void ProxyTransaction::impl::notify_listeners(const std::function<void(const std::shared_ptr<ProxyTransaction>&, const std::shared_ptr<TransactionListener>&)>& action)
-{
-    using namespace std::placeholders;
-
-    if (auto p = parent_.lock())
-    {
-        std::function<void(const std::shared_ptr<TransactionListener>&)> fn = std::bind(action, p, _1);
-        p->notify_listeners(fn);
-    }
-}
-
-void ProxyTransaction::impl::notify_failure(std::error_code error)
+void ProxyTransaction::notify_failure(std::error_code error)
 {
     release_connections();
 
     error_ = error;
     notification_state_ = NotificationState::Error;
-    notify_listeners([](auto& parent, auto listener)
+    notify_listeners([this](auto& listener)
     {
-        listener->on_transaction_failed(*parent);
+        listener->on_transaction_failed(*this);
     });
 }
 
-void ProxyTransaction::impl::release_connections()
+void ProxyTransaction::release_connections()
 {
     client_.reset();
     remote_.reset();
-}
-
-/////////////////////////////////
-
-ProxyTransaction::ProxyTransaction(int id, std::shared_ptr<ConnectionPool> connectionPool, std::shared_ptr<Conn> clientConnection)
-    : Transaction()
-    , impl_(std::make_shared<impl>(id, connectionPool, clientConnection))
-{
-}
-
-int ProxyTransaction::id() const
-{
-    return impl_->id();
-}
-
-TransactionState ProxyTransaction::state() const
-{
-    return impl_->state();
-}
-
-std::error_code ProxyTransaction::error() const
-{
-    return impl_->error();
-}
-
-Request& ProxyTransaction::request()
-{
-    return impl_->request();
-}
-
-Response& ProxyTransaction::response()
-{
-    return impl_->response();
-}
-
-void ProxyTransaction::begin()
-{
-    impl_->begin(shared_from_this());
-}
-
-time_point ProxyTransaction::parse_http_date(const std::string &text)
-{
-    // per RFC 7231, we MUST accept dates in the following formats:
-    // 1. IMF-fixdate (e.g. Sun, 06 Nov 1994 08:49:37 GMT)
-    // 2. RFC 859     (e.g. Sunday, 06-Nov-94 08:49:37 GMT)
-    // 3. asctime()   (e.g. Sun Nov  6 08:49:37 1994)
-
-    // see std::get_time for format-string documentation
-    const std::string IMF_FIXDATE = "%a, %d %b %Y %H:%M:%S GMT";
-    const std::string RFC_850     = "%a, %d-%b-%y %H:%M:%S GMT";
-    const std::string ASCTIME     = "%a %b %d %H:%M:%S %Y";
-
-    for (auto &format : { IMF_FIXDATE, RFC_850, ASCTIME })
-    {
-        time_point tp = {};
-        std::istringstream input(text);
-
-        input >> date::parse(format, tp);
-
-        if (input)
-        {
-            return tp;
-        }
-    }
-
-    throw std::invalid_argument("Invalid date-time value");
 }
 
 } // namespace ama
