@@ -20,7 +20,7 @@ QT       -= gui
 TARGET = core
 TEMPLATE = lib
 
-CONFIG += c++14
+CONFIG += c++17
 
 DEFINES += CORE_LIBRARY
 

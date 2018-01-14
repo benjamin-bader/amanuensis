@@ -4,7 +4,7 @@ CONFIG -= qt
 TARGET = trusty-interface
 TEMPLATE = lib
 
-CONFIG += staticlib c++14
+CONFIG += staticlib c++17
 
 DEFINES += TRUSTY_INTERFACE_LIBRARY SPDLOG_ENABLE_SYSLOG
 
