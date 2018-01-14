@@ -24,7 +24,7 @@
 #include <QtTest>
 
 #include "HttpMessageParserTests.h"
-#include "ProxyTransactionTests.h"
+#include "DatesTests.h"
 #include "RequestTest.h"
 
 int main(int argc, char **argv)
@@ -34,8 +34,8 @@ int main(int argc, char **argv)
 
     std::unordered_map<std::string, std::unique_ptr<QObject>> tests;
     tests.emplace("RequestParser", std::make_unique<HttpMessageParserTests>());
-    tests.emplace("ProxyTransaction", std::make_unique<ProxyTransactionTests>());
-    tests.emplace("RequestTest", std::make_unique<RequestTest>());
+    tests.emplace("Dates", std::make_unique<DatesTests>());
+    tests.emplace("Request", std::make_unique<RequestTest>());
 
     int status = 0;
     for (auto& kvp : tests)

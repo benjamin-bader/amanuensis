@@ -60,7 +60,8 @@ SOURCES += \
     Request.cpp \
     Response.cpp \
     Errors.cpp \
-    Logging.cpp
+    Logging.cpp \
+    Dates.cpp
 
 HEADERS += \
     Proxy.h \
@@ -76,12 +77,12 @@ HEADERS += \
     Transaction.h \
     ProxyTransaction.h \
     ConnectionPool.h \
-    date.h \
     common.h \
     Request.h \
     Response.h \
     Errors.h \
-    Logging.h
+    Logging.h \
+    Dates.h
 
 windows {
     SOURCES += \
