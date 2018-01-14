@@ -29,12 +29,14 @@ DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
 HEADERS += \
     HttpMessageParserTests.h \
-    ProxyTransactionTests.h
+    ProxyTransactionTests.h \
+    RequestTest.h
 
 SOURCES += \
     main.cpp \
     HttpMessageParserTests.cpp \
-    ProxyTransactionTests.cpp
+    ProxyTransactionTests.cpp \
+    RequestTest.cpp
 
 DEFINES += SRCDIR=\\\"$$PWD/\\\"
 

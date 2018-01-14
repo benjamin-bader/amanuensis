@@ -55,6 +55,7 @@ public:
     void set_major_version(int major_version);
     void set_minor_version(int minor_version);
     void set_body(const std::vector<uint8_t> &body);
+    void set_body(std::vector<uint8_t>&& body);
 
     void set_status_code(int status_code);
     void set_status_message(const std::string &message);

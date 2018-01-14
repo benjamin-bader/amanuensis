@@ -42,9 +42,9 @@ void ProxyTransactionTests::parseModernDate()
     {
         ProxyTransaction::parse_http_date("Sun, 06 Nov 1994 08:49:37 GMT");
     }
-    catch (std::exception &ex)
+    catch (const std::exception& ex)
     {
-        QFAIL("wtf");
+        QFAIL(ex.what());
     }
 }
 
@@ -65,7 +65,7 @@ void ProxyTransactionTests::parseInvalidInputThrowsInvalidArgument()
         ProxyTransaction::parse_http_date("ceci n'est pas un date");
         QFAIL("Expected an invalid_argument exception, but none was thrown");
     }
-    catch (std::invalid_argument &ex)
+    catch (const std::invalid_argument&)
     {
         // good
     }

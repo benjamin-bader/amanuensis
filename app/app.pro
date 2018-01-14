@@ -56,7 +56,7 @@ DEPENDPATH += $$PWS/../core
 
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
 
-win32 {
+windows {
     HEADERS += \
         win/WindowsLogSetup.h \
 
