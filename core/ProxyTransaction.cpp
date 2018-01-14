@@ -22,6 +22,7 @@
 #include <chrono>
 #include <ctime>
 #include <cstdint>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <locale>
@@ -85,7 +86,7 @@ std::ostream& operator<<(std::ostream& os, NotificationState ns)
     }
 }
 
-}
+} // namespace
 
 class ProxyTransaction::impl : public std::enable_shared_from_this<ProxyTransaction::impl>
 {
@@ -120,6 +121,8 @@ private:
     void do_notification(NotificationState ns);
     void notify_failure(std::error_code ec);
 
+    void notify_listeners(const std::function<void(const std::shared_ptr<ProxyTransaction>&, const std::shared_ptr<TransactionListener>&)>& action);
+
     void release_connections();
 
 private:
@@ -136,7 +139,7 @@ private:
     TransactionState state_;
 
     HttpMessageParser parser_;
-    std::shared_ptr<ProxyTransaction> parent_;
+    std::weak_ptr<ProxyTransaction> parent_;
 
     std::array<uint8_t, 8192> read_buffer_;
     std::unique_ptr<std::array<uint8_t, 8192>> remote_buffer_;
@@ -166,7 +169,7 @@ ProxyTransaction::impl::impl(
     , connection_pool_(connectionPool)
     , state_(TransactionState::Start)
     , parser_()
-    , parent_(nullptr)
+    , parent_()
     , read_buffer_()
     , remote_buffer_(nullptr)
     , raw_input_()
@@ -186,9 +189,9 @@ ProxyTransaction::impl::~impl()
 void ProxyTransaction::impl::begin(std::shared_ptr<ProxyTransaction> parent)
 {
     parent_ = parent;
-    parent_->notify_listeners([this](auto &listener)
+    notify_listeners([this](auto& parent, auto& listener)
     {
-        listener->on_transaction_start(*parent_);
+        listener->on_transaction_start(*parent);
     });
 
     raw_input_.clear();
@@ -409,9 +412,9 @@ void ProxyTransaction::impl::send_remote_response_to_client()
         }
 
         // We're done!
-        self->parent_->notify_listeners([self](auto &listener)
+        self->notify_listeners([self](auto& parent, auto& listener)
         {
-            listener->on_transaction_complete(*self->parent_);
+            listener->on_transaction_complete(*parent);
         });
 
         self->release_connections();
@@ -646,25 +649,25 @@ void ProxyTransaction::impl::do_notification(NotificationState ns)
             // ditto
             break;
         case NotificationState::RequestComplete:
-            parent_->notify_listeners([this](auto& listener)
+            notify_listeners([this](auto& parent, auto listener)
             {
-                listener->on_request_read(*parent_);
+                listener->on_request_read(*parent);
             });
             break;
         case NotificationState::ResponseHeaders:
-            parent_->notify_listeners([this](auto& listener)
+            notify_listeners([this](auto& parent, auto listener)
             {
-                listener->on_response_headers_read(*parent_);
+                listener->on_response_headers_read(*parent);
             });
             break;
         case NotificationState::ResponseBody:
             // nothing
             break;
         case NotificationState::ResponseComplete:
-            parent_->notify_listeners([this](auto& listener)
+            notify_listeners([this](auto& parent, auto listener)
             {
-                listener->on_response_read(*parent_);
-                listener->on_transaction_complete(*parent_);
+                listener->on_response_read(*parent);
+                listener->on_transaction_complete(*parent);
             });
             break;
         case NotificationState::TLSTunnel:
@@ -678,15 +681,27 @@ void ProxyTransaction::impl::do_notification(NotificationState ns)
     }
 }
 
+
+void ProxyTransaction::impl::notify_listeners(const std::function<void(const std::shared_ptr<ProxyTransaction>&, const std::shared_ptr<TransactionListener>&)>& action)
+{
+    using namespace std::placeholders;
+
+    if (auto p = parent_.lock())
+    {
+        std::function<void(const std::shared_ptr<TransactionListener>&)> fn = std::bind(action, p, _1);
+        p->notify_listeners(fn);
+    }
+}
+
 void ProxyTransaction::impl::notify_failure(std::error_code error)
 {
     release_connections();
 
     error_ = error;
     notification_state_ = NotificationState::Error;
-    parent_->notify_listeners([this](auto &listener)
+    notify_listeners([](auto& parent, auto listener)
     {
-        listener->on_transaction_failed(*parent_);
+        listener->on_transaction_failed(*parent);
     });
 }
 
