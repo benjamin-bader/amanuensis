@@ -35,8 +35,9 @@ constexpr const char* ASCTIME     = "%a %b %d %H:%M:%S %Y";
 
 } // namespace
 
-bool parse_http_date(const std::string &text, time_point& tp) noexcept
+std::optional<time_point> parse_http_date(const std::string &text) noexcept
 {
+    time_point tp;
     for (const auto& format : { IMF_FIXDATE, RFC_850, ASCTIME })
     {
         tp = {};
@@ -46,11 +47,11 @@ bool parse_http_date(const std::string &text, time_point& tp) noexcept
 
         if (input)
         {
-            return true;
+            return tp;
         }
     }
 
-    return false;
+    return std::nullopt;
 }
 
 }} // ama::Dates

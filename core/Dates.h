@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
 
 #include "common.h"
@@ -35,7 +36,7 @@ namespace ama { namespace Dates {
  * @param tp when this method returns successfully, will contain the parsed value.
  * @return true if @c text was successfully parsed, otherwise false.
  */
-bool A_EXPORT parse_http_date(const std::string& text, time_point& tp) noexcept;
+std::optional<time_point> A_EXPORT parse_http_date(const std::string& text) noexcept;
 
 }} // ama::Dates
 

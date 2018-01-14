@@ -96,6 +96,8 @@ windows {
         win/OutputDebugStringSink.h \
 
     LIBS += -lwininet
+
+    QMAKE_CXXFLAGS += -std:c++17
 }
 
 macx {

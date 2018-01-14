@@ -62,6 +62,8 @@ windows {
 
     SOURCES += \
         win/WindowsLogSetup.cpp \
+
+    QMAKE_CXXFLAGS += -std:c++17
 }
 
 macx {

@@ -46,3 +46,7 @@ else:unix: LIBS += -L$$OUT_PWD/../core/ -lcore
 
 INCLUDEPATH += $$PWD/../core $$PWD/../include
 DEPENDPATH += $$PWS/../core
+
+windows {
+    QMAKE_CXXFLAGS += -std:c++17
+}
