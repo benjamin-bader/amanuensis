@@ -20,6 +20,22 @@
 
 #pragma once
 
+#if defined(Q_OS_MAC)
+#include <experimental/optional>
+
+template <typename T>
+using optional = std::experimental::optional<T>;
+
+using std::experimental::nullopt;
+#else
+#include <optional>
+
+template <typename T>
+using optional = std::optional<T>;
+
+using std::nullopt;
+#endif
+
 #include <string>
 
 #include "common.h"
@@ -35,7 +51,7 @@ namespace ama { namespace Dates {
  * @param tp when this method returns successfully, will contain the parsed value.
  * @return true if @c text was successfully parsed, otherwise false.
  */
-bool A_EXPORT parse_http_date(const std::string& text, time_point& tp) noexcept;
+optional<time_point> A_EXPORT parse_http_date(const std::string& text) noexcept;
 
 }} // ama::Dates
 

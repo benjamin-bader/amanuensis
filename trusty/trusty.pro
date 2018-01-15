@@ -3,7 +3,7 @@ CONFIG -= qt
 
 TARGET = com.bendb.amanuensis.Trusty
 
-CONFIG += console c++14
+CONFIG += console c++1z
 CONFIG -= app_bundle
 
 TEMPLATE = app

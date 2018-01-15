@@ -20,7 +20,7 @@ QT       -= gui
 TARGET = core
 TEMPLATE = lib
 
-CONFIG += c++14
+CONFIG += c++1z
 
 DEFINES += CORE_LIBRARY
 
@@ -96,6 +96,8 @@ windows {
         win/OutputDebugStringSink.h \
 
     LIBS += -lwininet
+
+    QMAKE_CXXFLAGS += -std:c++17
 }
 
 macx {
