@@ -30,23 +30,23 @@ using namespace ama;
 void DatesTests::parse_modern_date()
 {
     auto tp = Dates::parse_http_date("Sun, 06 Nov 1994 08:49:37 GMT");
-    QVERIFY(tp != std::nullopt);
+    QVERIFY(tp != nullopt);
 }
 
 void DatesTests::parse_legacy_date()
 {
     auto tp = Dates::parse_http_date("Sunday, 06-Nov-94 08:49:37 GMT");
-    QVERIFY(tp != std::nullopt);
+    QVERIFY(tp != nullopt);
 }
 
 void DatesTests::parse_asctime_date()
 {
     auto tp = Dates::parse_http_date("Sun Nov  6 08:49:37 1994");
-    QVERIFY(tp != std::nullopt);
+    QVERIFY(tp != nullopt);
 }
 
 void DatesTests::parse_invalid_input_returns_false()
 {
     auto tp = Dates::parse_http_date("ceci n'est pas un date");
-    QVERIFY(tp == std::nullopt);
+    QVERIFY(tp == nullopt);
 }
