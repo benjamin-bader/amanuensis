@@ -44,5 +44,11 @@ win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../core/release/ -lcor
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../core/debug/ -lcore
 else:unix: LIBS += -L$$OUT_PWD/../core/ -lcore
 
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../log/release/ -llog
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../log/debug/ -llog
+else:unix: LIBS += -L$$OUT_PWD/../log/ -llog
+
 INCLUDEPATH += $$PWD/../core $$PWD/../include
-DEPENDPATH += $$PWS/../core
+DEPENDPATH += \
+    $$PWD/../core \
+    $$PWD/../log \
