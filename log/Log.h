@@ -25,6 +25,28 @@
 #include <string>
 #include <system_error>
 
+#if defined(QT_CORE_LIB)
+
+#include <QtCore/qglobal.h>
+
+#if defined(LOG_LIBRARY)
+#  define L_EXPORT Q_DECL_EXPORT
+#  define L_EXPORT_ONLY Q_DECL_EXPORT
+#else
+#  define L_EXPORT Q_DECL_IMPORT
+#  define L_EXPORT_ONLY
+#endif // defined(LOG_LIBRARY)
+
+#else
+
+// trusty doesn't use anything from QT, but luckily
+// it doesn't need declspec(dllexport), either!
+
+#define L_EXPORT
+#define L_EXPORT_ONLY
+
+#endif // defined(QT_CORE_LIB)
+
 namespace ama { namespace log {
 
 enum class Severity : uint8_t
@@ -60,7 +82,7 @@ public:
     virtual void visit(const LogValue<uint64_t>&) noexcept = 0;
 };
 
-class ILogValue // todo: suppress vtable?
+class L_EXPORT ILogValue // todo: suppress vtable?
 {
 public:
     virtual ~ILogValue() = default;
@@ -69,7 +91,7 @@ public:
 };
 
 template <typename T>
-class LogValue : public ILogValue
+class L_EXPORT_ONLY LogValue : public ILogValue
 {
 public:
     LogValue(const char* name, const T& value) noexcept
@@ -150,7 +172,7 @@ using TracedU64 = LogValue<uint64_t>;
 using TracedCStr = LogValue<const char*>;
 using TracedString = LogValue<std::string>;
 
-class LogValueCollection : public ILogValue
+class L_EXPORT LogValueCollection : public ILogValue
 {
 public:
     LogValueCollection(const ILogValue** begin, const ILogValue**end)
@@ -176,7 +198,7 @@ private:
  * @param severity
  * @return
  */
-bool is_enabled_for_severity(Severity severity);
+L_EXPORT bool is_enabled_for_severity(Severity severity);
 
 /**
  * Logs a structured event with the given ILogValue.
@@ -185,7 +207,7 @@ bool is_enabled_for_severity(Severity severity);
  * @param message
  * @param structuredData
  */
-void do_log_event(Severity severity, const char *message, const ILogValue& structuredData);
+L_EXPORT void do_log_event(Severity severity, const char *message, const ILogValue& structuredData);
 
 /**
  * Logs a structured event with zero or more values.
