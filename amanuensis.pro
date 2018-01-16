@@ -22,10 +22,12 @@ INCLUDEPATH += $$PWD/include
 SUBDIRS += \
     core \
     app \
-    core-test
+    log \
+    core-test \
 
-app.depends = core
+app.depends = core log
 core-test.depends = core
+core.depends = log
 
 macx {
     QMAKE_MAC_SDK = macosx10.13
@@ -54,12 +56,6 @@ macx {
     # 'organizer' will place all build output into an application bundle directory
     organizer.depends += app trusty
 
-    # organizer.commands += rm -rf $${BUNDLE_DIR};
-
-    # Move the core lib to the bundle
-    organizer.commands += $(MKDIR) $${BUNDLE_DIR}/Contents/Frameworks;
-    organizer.commands += $(COPY) $$OUT_PWD/core/libcore.1.0.0.dylib $${BUNDLE_DIR}/Contents/Frameworks;
-
     # Set up the trusted-helper files in the bundle
     organizer.commands += $(MKDIR) $${BUNDLE_DIR}/Contents/Library/LaunchServices;
     organizer.commands += $(MKDIR) $${BUNDLE_DIR}/Contents/Resources;
@@ -73,14 +69,16 @@ macx {
 
     # The 'codesigner' target does a few things that are intertwined with codesigning:
     # - debug symbols are generated for the app
-    # - the executable is patched to link to libcore in the correct location
     # - macdeployqt is invoked to both copy and sign the QT frameworks
     #
     # After all that, we sign the bundle again.
     codesigner.commands += dsymutil $${BUNDLE_DIR}/Contents/MacOS/$${BUNDLEAPP} -o $${OUT_PWD}/app/$${BUNDLEAPP}.app.dSYM;
     codesigner.commands += $(COPY_DIR) $${BUNDLE_DIR}.dSYM $${BUNDLE_DIR}/Contents/MacOS/$${BUNDLEAPP}.dSYM;
-    codesigner.commands += install_name_tool -change libcore.1.dylib @executable_path/../Frameworks/libcore.1.0.0.dylib $${BUNDLE_DIR}/Contents/MacOS/$${BUNDLEAPP};
-    codesigner.commands += $(EXPORT_MACDEPLOYQT) $${BUNDLE_DIR} -always-overwrite -codesign=$${CERTSHA1};
+    codesigner.commands += $(EXPORT_MACDEPLOYQT) $${BUNDLE_DIR} \
+            -libpath=$${OUT_PWD}/core/ \
+            -libpath=$${OUT_PWD}/log/ \
+            -always-overwrite \
+            -codesign=$${CERTSHA1};
     codesigner.commands += touch -c $${BUNDLE_DIR};
 
     CODESIGN_ALLOCATE_PATH=$$system(xcrun -find codesign_allocate)

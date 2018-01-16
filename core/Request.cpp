@@ -38,7 +38,7 @@ const std::string Request::format() const noexcept
     ss << method() << " " << this->uri() << " HTTP/" << this->message_.major_version() << "." << message_.minor_version() << "\r\n";
 
     auto hds = headers();
-    for (auto i = 0; i < hds.size(); ++i)
+    for (size_t i = 0; i < hds.size(); ++i)
     {
         const auto& name = hds.names()[i];
         const auto& value = hds.values()[i];

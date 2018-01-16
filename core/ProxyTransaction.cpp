@@ -34,6 +34,8 @@
 #include "HttpMessageParser.h"
 #include "Logging.h"
 
+#include "Log.h"
+
 QDebug operator<<(QDebug d, ama::ParsePhase phase)
 {
     std::stringstream ss;
@@ -532,7 +534,14 @@ void ProxyTransaction::do_notification(NotificationState ns)
         uint8_t ns_int = static_cast<uint8_t>(notification_state_);
         auto current_state = notification_state_;
         notification_state_ = static_cast<NotificationState>(ns_int + 1);
-        SPDLOG_TRACE(logger_, "tx({}): notifying {}", id_, current_state);
+
+        ama::log::log_event(
+                    ama::log::Severity::Verbose,
+                    "sending tx notification",
+                    ama::log::TracedInt("tx", id_),
+                    ama::log::TracedU8("old state", ns_int),
+                    ama::log::TracedU8("new state", ns_int + 1));
+
         switch (current_state)
         {
         case NotificationState::None:

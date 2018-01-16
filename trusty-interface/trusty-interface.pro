@@ -10,6 +10,7 @@ DEFINES += TRUSTY_INTERFACE_LIBRARY SPDLOG_ENABLE_SYSLOG
 
 INCLUDEPATH += \
     $$PWD/../include \
+    $$PWD/../log \
 
 include(../trusty-constants.pri)
 

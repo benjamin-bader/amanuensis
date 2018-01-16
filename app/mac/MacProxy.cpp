@@ -31,6 +31,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <QDebug>
+
 #include <CoreFoundation/CFDictionary.h>
 #include <CoreFoundation/CFError.h>
 #include <CoreFoundation/CFString.h>
@@ -38,6 +40,7 @@
 #include <Security/Security.h>
 #include <ServiceManagement/ServiceManagement.h>
 
+#include "Log.h"
 #include "TrustyCommon.h"
 #include "Service.h"
 
@@ -64,6 +67,13 @@ inline void assert_success(OSStatus status)
 
 void init_auth()
 {
+    ama::log::log_event(
+                ama::log::Severity::Info,
+                "Initializing global auth ref",
+                ama::log::TracedString("std::string", "this is a c++ string"),
+                ama::log::TracedCStr("char*", "this is a C string"),
+                ama::log::TracedI32("n", 16));
+
     OSStatus status = AuthorizationCreate(NULL, NULL, 0, &g_auth);
     assert_success(status);
 

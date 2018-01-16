@@ -51,7 +51,15 @@ win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../core/release/ -lcor
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../core/debug/ -lcore
 else:unix: LIBS += -L$$OUT_PWD/../core/ -lcore
 
-INCLUDEPATH += $$PWD/../core $$PWD/../include
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../log/release/ -llog
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../log/debug/ -llog
+else:unix: LIBS += -L$$OUT_PWD/../log/ -llog
+
+INCLUDEPATH += \
+    $$PWD/../core \
+    $$PWD/../log \
+    $$PWD/../include \
+
 DEPENDPATH += $$PWS/../core
 
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE

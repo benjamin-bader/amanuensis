@@ -37,12 +37,29 @@
 #include "TrustyCommon.h"
 #include "TrustyService.h"
 
+#include "Log.h"
+
 // I wish ASIO would have worked out, but it just couldn't
 // seem to handle UNIX sockets on macOS.  Pity, because
 // writing socket code the old way works, but is endlessly
 // tedious.
 
 using namespace ama::trusty;
+
+// We're not linking in the log library, so here's a barebones implementation.
+namespace ama { namespace log {
+
+bool is_enabled_for_severity(Severity severity)
+{
+    return severity >= Severity::Info;
+}
+
+void do_log_event(Severity severity, const char *message, const ILogValue &structuredData)
+{
+    // todo: log
+}
+
+}}
 
 std::error_code lookup_socket_endpoint(int *fd)
 {
