@@ -18,61 +18,39 @@
 #include "Server.h"
 
 #include <algorithm>
-#include <memory>
-#include <thread>
 
 #include <QDebug>
-
-#include <asio.hpp>
 
 #include "ConnectionPool.h"
 #include "ProxyTransaction.h"
 
-using namespace ama;
+namespace ama {
 
-class Server::impl
+Server::Server(const int port)
+    : port_(port)
+    , io_service_()
+    , signals_(io_service_)
+    , acceptor_(io_service_)
+    , socket_(io_service_)
+    , workers_()
+    , connection_pool_(std::make_shared<ConnectionPool>(io_service_))
 {
-public:
-    impl(int port) :
-        port_(port),
-        io_service_(),
-        signals_(io_service_),
-        acceptor_(io_service_),
-        socket_(io_service_),
-        workers_(),
-        connection_pool_(std::make_shared<ConnectionPool>(io_service_))
-    {}
-
-    int port_;
-    asio::io_service io_service_;
-    asio::signal_set signals_;
-    asio::ip::tcp::acceptor acceptor_;
-    asio::ip::tcp::socket socket_;
-
-    std::vector<std::thread> workers_;
-
-    std::shared_ptr<ConnectionPool> connection_pool_;
-};
-
-Server::Server(const int port) :
-    impl_(std::make_unique<Server::impl>(port))
-{
-    impl_->signals_.add(SIGINT);
-    impl_->signals_.add(SIGTERM);
+    signals_.add(SIGINT);
+    signals_.add(SIGTERM);
 #if defined(SIGQUIT)
-    impl_->signals_.add(SIGQUIT);
+    signals_.add(SIGQUIT);
 #endif // defined(SIGQUIT)
 
-    impl_->signals_.async_wait([this](std::error_code /*ec*/, int /*signo*/) {
-       impl_->acceptor_.close();
+    signals_.async_wait([this](std::error_code /*ec*/, int /*signo*/) {
+        acceptor_.close();
     });
 
     asio::ip::tcp::endpoint endpoint(asio::ip::tcp::v4(), port);
 
-    impl_->acceptor_.open(endpoint.protocol());
-    impl_->acceptor_.set_option(asio::ip::tcp::acceptor::reuse_address(true));
-    impl_->acceptor_.bind(endpoint);
-    impl_->acceptor_.listen();
+    acceptor_.open(endpoint.protocol());
+    acceptor_.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+    acceptor_.bind(endpoint);
+    acceptor_.listen();
 
     do_accept();
 
@@ -96,38 +74,38 @@ Server::Server(const int port) :
 
     for (int i = 0; i < numSupportedThreads; ++i)
     {
-        auto thread = std::thread([this] { impl_->io_service_.run(); });
-        impl_->workers_.push_back(std::move(thread));
+        auto thread = std::thread([&] { io_service_.run(); });
+        workers_.push_back(std::move(thread));
     }
 }
 
 Server::~Server()
 {
-    impl_->signals_.clear();
-    impl_->acceptor_.close();
-    impl_->io_service_.stop();
+    signals_.clear();
+    acceptor_.close();
+    io_service_.stop();
 
-    impl_->connection_pool_ = nullptr;
+    connection_pool_ = nullptr;
 
-    std::for_each(impl_->workers_.begin(), impl_->workers_.end(), [](std::thread &t) {
+    std::for_each(workers_.begin(), workers_.end(), [](std::thread &t) {
         if (t.joinable())
         {
             t.join();
         }
     });
 
-    impl_ = nullptr;
+    workers_.clear();
 }
 
 std::shared_ptr<ConnectionPool> Server::connection_pool() const
 {
-    return impl_->connection_pool_;
+    return connection_pool_;
 }
 
 void Server::do_accept()
 {
-    impl_->acceptor_.async_accept(impl_->socket_, [this] (asio::error_code ec) {
-        if (!impl_->acceptor_.is_open())
+    acceptor_.async_accept(socket_, [this] (asio::error_code ec) {
+        if (!acceptor_.is_open())
         {
             qDebug() << "Acceptor has closed, abandoning accept";
             return;
@@ -135,7 +113,7 @@ void Server::do_accept()
 
         if (!ec)
         {
-            impl_->connection_pool_->make_connection(std::move(impl_->socket_));
+            connection_pool_->make_connection(std::move(socket_));
             do_accept();
         }
         else
@@ -144,3 +122,5 @@ void Server::do_accept()
         }
     });
 }
+
+} // ama
