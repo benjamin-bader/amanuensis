@@ -19,12 +19,9 @@
 
 #include <Security/Security.h>
 
-#include <os/log.h>
-#include <syslog.h>
-
+#include "Log.h"
 #include "MessageProcessor.h"
 #include "Service.h"
-#include "TLog.h"
 #include "TrustyCommon.h"
 
 namespace ama { namespace trusty {
@@ -102,7 +99,7 @@ uint32_t AuthorizedService::get_current_version()
 
 void AuthorizedService::assert_right(const char *right)
 {
-    log_debug("Asserting a right: {}", right);
+    log::log_event(log::Severity::Debug, "Asserting a right", log::CStrValue("right", right));
     AuthorizationItem item = { right, 0, NULL, 0 };
     AuthorizationRights rights = { 1, &item };
 
@@ -115,7 +112,9 @@ void AuthorizedService::assert_right(const char *right)
 
     if (status != errAuthorizationSuccess)
     {
-        log_debug("Could not obtain right non-interactively; trying again, with interaction (status={})", status);
+        log::log_event(log::Severity::Debug,
+                       "Could not obtain right non-interactively; trying again, with interaction",
+                       log::I32Value("status", static_cast<int32_t>(status)));
 
         status = AuthorizationCopyRights(
                     auth_,
@@ -126,7 +125,9 @@ void AuthorizedService::assert_right(const char *right)
 
         if (status != errAuthorizationSuccess)
         {
-            log_error("Right not present; status={}", status);
+            log::log_event(log::Severity::Error,
+                           "Right not present",
+                           log::I32Value("status", static_cast<int32_t>(status)));
             throw std::invalid_argument("Authorization denied");
         }
     }
@@ -196,7 +197,10 @@ void ClientConnection::impl::handle()
             catch (const std::exception& ex2)
             {
                 // don't crash while reporting an error
-                log_critical("Error while sending error reply: %s", ex2.what());
+                log::log_event(log::Severity::Fatal,
+                               "Error while sending error reply",
+                               log::CStrValue("original_error", ex.what()),
+                               log::CStrValue("second_error", ex2.what()));
             }
 
             break;
@@ -254,7 +258,9 @@ MessageType ClientConnection::impl::handle_one()
 
     default:
     {
-        log_critical("ERROR: Received response message-type from a client!  type={}", msg.type);
+        log::log_event(log::Severity::Fatal,
+                       "Received response message-type from a client!",
+                       log::U8Value("type", static_cast<uint8_t>(msg.type)));
         break;
     }
 

@@ -5,4 +5,4 @@ CERT_CN = "\"Amanuensis Authors\""
 CERT_OU = bendb.com
 
 # Sha1 of the siging certificate
-CERTSHA1 = 1eb56b3549184241a3fba3b687b4ef9e6b612c14
+CERTSHA1 = 7b59db17792b0ce01641eca2ceedb03f863c7201

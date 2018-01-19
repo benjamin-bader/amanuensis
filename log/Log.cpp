@@ -18,120 +18,59 @@
 #include "Log.h"
 
 #include <iostream>
-#include <string>
-#include <sstream>
+#include <mutex>
 #include <thread>
+#include <vector>
+
+#include "StringStreamLogValueVisitor.h"
 
 namespace ama { namespace log {
 
 namespace {
 
-volatile Severity g_min_severity = Severity::Debug;
-
-std::ostream& operator<<(std::ostream& os, Severity severity)
+std::string severity_name(Severity severity)
 {
     switch (severity)
     {
-    case Severity::Verbose: return os << "V";
-    case Severity::Debug: return os << "D";
-    case Severity::Info: return os << "I";
-    case Severity::Warn: return os << "W";
-    case Severity::Error: return os << "E";
-    case Severity::Fatal: return os << "F";
+    case Severity::Verbose: return "V";
+    case Severity::Debug: return "D";
+    case Severity::Info: return "I";
+    case Severity::Warn: return "W";
+    case Severity::Error: return "E";
+    case Severity::Fatal: return "F";
     default:
-        return os << "Unknown severity (" << static_cast<uint8_t>(severity) << ")";
+        {
+            std::stringstream ss;
+            ss << "Unknown severity (" << static_cast<uint8_t>(severity) << ")";
+            return ss.str();
+        }
     }
 }
 
-class SimpleVisitor : public LogValueVisitor
+class SimpleLogWriter : public ILogWriter
 {
 public:
-    SimpleVisitor(Severity severity, const char* msg)
+    void write(Severity severity, const char *message, const ILogValue &value) override
     {
-        ss_ << "[ tid=" << std::this_thread::get_id() << " sev=" << severity << " msg=\"" << msg << "\"";
+        StringStreamLogValueVisitor visitor;
+        visitor.visit(StringValue("sev", severity_name(severity)));
+        visitor.visit(CStrValue("msg", message));
+        value.accept(visitor);
+        std::cerr << visitor.str() << std::endl;
     }
-
-    void visit(const LogValue<bool>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<const char*>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<const wchar_t*>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<std::string>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<std::wstring>& value) noexcept
-    {
-        //ss_ << value.name() << ": " << value.value() << std::endl;
-    }
-
-    void visit(const LogValue<int8_t>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<int16_t>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<int32_t>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<int64_t>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<uint8_t>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<uint16_t>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<uint32_t>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<uint64_t>& value) noexcept
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    std::string str()
-    {
-        if (!finished_)
-        {
-            ss_ << " ]" << std::endl;
-            finished_ = true;
-        }
-        return ss_.str();
-    }
-
-private:
-    std::stringstream ss_;
-    bool finished_ = false;
-
 };
 
+volatile Severity g_min_severity = Severity::Debug;
+
+std::mutex g_writer_lock;
+std::shared_ptr<ILogWriter> g_writer = std::make_shared<SimpleLogWriter>();
+
+} // namespace
+
+void register_log_writer(std::shared_ptr<ILogWriter>&& writer)
+{
+    std::lock_guard<std::mutex> lock(g_writer_lock);
+    g_writer = std::move(writer);
 }
 
 bool is_enabled_for_severity(Severity severity)
@@ -141,10 +80,8 @@ bool is_enabled_for_severity(Severity severity)
 
 void do_log_event(Severity severity, const char *message, const ILogValue &structuredData)
 {
-
-    SimpleVisitor visitor(severity, message);
-    structuredData.accept(visitor);
-    std::cerr << visitor.str() << std::endl;
+    std::lock_guard<std::mutex> lock(g_writer_lock);
+    g_writer->write(severity, message, structuredData);
 }
 
-}}
+}} // ama::log

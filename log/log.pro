@@ -11,7 +11,8 @@ INCLUDEPATH += \
     $$PWD/../include \
 
 HEADERS += \
-    Log.h
+    Log.h \
+    StringStreamLogValueVisitor.h
 
 SOURCES += \
     Log.cpp

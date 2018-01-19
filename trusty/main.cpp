@@ -22,6 +22,7 @@
 
 // Apple stuff
 #include <launch.h>
+#include <os/log.h>
 
 // UNIX stuff
 #include <syslog.h>
@@ -33,21 +34,27 @@
 
 // our stuff
 #include "Server.h"
-#include "TLog.h"
 #include "TrustyCommon.h"
 #include "TrustyService.h"
 
 #include "Log.h"
+#include "StringStreamLogValueVisitor.h"
 
 // I wish ASIO would have worked out, but it just couldn't
 // seem to handle UNIX sockets on macOS.  Pity, because
 // writing socket code the old way works, but is endlessly
 // tedious.
 
+using namespace ama::log;
 using namespace ama::trusty;
 
 // We're not linking in the log library, so here's a barebones implementation.
 namespace ama { namespace log {
+
+void register_log_writer(std::shared_ptr<ILogWriter> &&writer)
+{
+    // no-op
+}
 
 bool is_enabled_for_severity(Severity severity)
 {
@@ -56,10 +63,31 @@ bool is_enabled_for_severity(Severity severity)
 
 void do_log_event(Severity severity, const char *message, const ILogValue &structuredData)
 {
-    // todo: log
+    os_log_type_t log_type;
+    switch (severity)
+    {
+    case Severity::Verbose: log_type = OS_LOG_TYPE_DEBUG; break;
+    case Severity::Debug:   log_type = OS_LOG_TYPE_INFO; break;
+    case Severity::Info:    log_type = OS_LOG_TYPE_DEFAULT; break;
+    case Severity::Warn:    log_type = OS_LOG_TYPE_ERROR; break;
+    case Severity::Error:   log_type = OS_LOG_TYPE_ERROR; break;
+    case Severity::Fatal:   log_type = OS_LOG_TYPE_FAULT; break;
+    default:
+        std::cerr << "Unexpected log severity: " << static_cast<uint8_t>(severity) << std::endl;
+        log_type = OS_LOG_TYPE_DEFAULT;
+        break;
+    }
+
+    if (os_log_type_enabled(OS_LOG_DEFAULT, log_type))
+    {
+        StringStreamLogValueVisitor visitor;
+        structuredData.accept(visitor);
+
+        os_log_with_type(OS_LOG_DEFAULT, log_type, "%{public}s %{public}s", message, visitor.str().c_str());
+    }
 }
 
-}}
+}} // ama::log
 
 std::error_code lookup_socket_endpoint(int *fd)
 {
@@ -94,13 +122,11 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
-    init_logging("trusty");
-
     int fd;
     std::error_code ec = lookup_socket_endpoint(&fd);
     if (ec)
     {
-        log_critical("Failed to open launchd socket list: ec=%d", ec.value());
+        log_event(Severity::Fatal, "Failed to open launchd socket list", IntValue("ec", ec.value()));
         return -1;
     }
 
@@ -112,10 +138,10 @@ int main(int argc, char *argv[])
     }
     catch (std::exception &ex)
     {
-        log_critical("failed, somehow: %s", ex.what());
+        log_event(Severity::Fatal, "failed, somehow", CStrValue("ex", ex.what()));
     }
 
-    log_info("Hanging up now!");
+    log_event(Severity::Info, "Hanging up now!");
 
     return 0;
 }

@@ -41,9 +41,9 @@ INCLUDEPATH += \
     $$PWD/../include \
     $$PWD/../log \
 
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../log/release/ -llog
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../log/debug/ -llog
-else:unix: LIBS += -L$$OUT_PWD/../log/ -llog
+include(../amanuensis-common.pri)
+
+includeNeighborLib(log)
 
 DEFINES += \
     ONLY_C_LOCALE

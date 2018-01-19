@@ -22,6 +22,7 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <system_error>
 
@@ -62,7 +63,7 @@ enum class Severity : uint8_t
 template <typename T>
 class LogValue;
 
-class LogValueVisitor
+class L_EXPORT LogValueVisitor
 {
 public:
     virtual ~LogValueVisitor() = default;
@@ -106,33 +107,11 @@ public:
     {
     }
 
-    LogValue(const LogValue<T>& that) noexcept
-    {
-        this->name_ = that.name_;
-        this->value_ = that.value_;
-    }
+    LogValue(const LogValue<T>&) = default;
+    LogValue(LogValue<T>&&) = default;
 
-    LogValue(LogValue<T>&& that) noexcept
-    {
-        this->name_ = that.name_;
-        this->value_ = std::move(that.value_);
-        that.name_ = nullptr;
-    }
-
-    LogValue& operator=(const LogValue<T>& that) noexcept
-    {
-        this->name_ = that.name_;
-        this->value_ = that.value_;
-        return *this;
-    }
-
-    LogValue& operator=(LogValue<T>&& that) noexcept
-    {
-        this->name_ = that.name_;
-        this->value_ = std::move(that.value_);
-        that.name_ = nullptr;
-        return *this;
-    }
+    LogValue& operator=(const LogValue<T>&) = default;
+    LogValue& operator=(LogValue<T>&&) = default;
 
     void accept(LogValueVisitor& visitor) const override
     {
@@ -144,7 +123,7 @@ public:
         return name_;
     }
 
-    const T& value() const
+    const T& value() const noexcept
     {
         return value_;
     }
@@ -154,23 +133,23 @@ private:
     const T value_;
 };
 
-using TracedBool = LogValue<bool>;
-using TracedShort = LogValue<short>;
-using TracedInt = LogValue<int>;
-using TracedLong = LogValue<long>;
-using TracedUShort = LogValue<unsigned short>;
-using TracedUInt = LogValue<unsigned int>;
-using TracedULong = LogValue<unsigned long>;
-using TracedI8 = LogValue<int8_t>;
-using TracedI16 = LogValue<int16_t>;
-using TracedI32 = LogValue<int32_t>;
-using TracedI64 = LogValue<int64_t>;
-using TracedU8 = LogValue<uint8_t>;
-using TracedU16 = LogValue<uint16_t>;
-using TracedU32 = LogValue<uint32_t>;
-using TracedU64 = LogValue<uint64_t>;
-using TracedCStr = LogValue<const char*>;
-using TracedString = LogValue<std::string>;
+using BoolValue = LogValue<bool>;
+using ShortValue = LogValue<short>;
+using IntValue = LogValue<int>;
+using LongValue = LogValue<long>;
+using UShortValue = LogValue<unsigned short>;
+using UIntValue = LogValue<unsigned int>;
+using ULongValue = LogValue<unsigned long>;
+using I8Value = LogValue<int8_t>;
+using I16Value = LogValue<int16_t>;
+using I32Value = LogValue<int32_t>;
+using I64Value = LogValue<int64_t>;
+using U8Value = LogValue<uint8_t>;
+using U16Value = LogValue<uint16_t>;
+using U32Value = LogValue<uint32_t>;
+using U64Value = LogValue<uint64_t>;
+using CStrValue = LogValue<const char*>;
+using StringValue = LogValue<std::string>;
 
 class L_EXPORT LogValueCollection : public ILogValue
 {
@@ -192,6 +171,14 @@ private:
     const ILogValue** begin_;
     const ILogValue** end_;
 };
+
+class L_EXPORT ILogWriter {
+public:
+    virtual ~ILogWriter() noexcept {}
+    virtual void write(Severity severity, const char *message, const ILogValue& value) = 0;
+};
+
+L_EXPORT void register_log_writer(std::shared_ptr<ILogWriter>&& writer);
 
 /**
  * @brief is_trace_enabled

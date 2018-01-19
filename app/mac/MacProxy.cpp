@@ -70,9 +70,9 @@ void init_auth()
     ama::log::log_event(
                 ama::log::Severity::Info,
                 "Initializing global auth ref",
-                ama::log::TracedString("std::string", "this is a c++ string"),
-                ama::log::TracedCStr("char*", "this is a C string"),
-                ama::log::TracedI32("n", 16));
+                ama::log::StringValue("std::string", "this is a c++ string"),
+                ama::log::CStrValue("char*", "this is a C string"),
+                ama::log::I32Value("n", 16));
 
     OSStatus status = AuthorizationCreate(NULL, NULL, 0, &g_auth);
     assert_success(status);
@@ -260,8 +260,11 @@ void MacProxy::enable()
         return;
     }
 
+    qInfo() << "Checking if tool version is current";
+
     if (should_install_helper_tool())
     {
+        qInfo() << "Tool is missing or outdated; installing anew";
         std::error_code ec;
         for (int attempts = 0; attempts < 3; attempts++)
         {

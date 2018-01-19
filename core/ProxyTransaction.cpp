@@ -538,9 +538,9 @@ void ProxyTransaction::do_notification(NotificationState ns)
         ama::log::log_event(
                     ama::log::Severity::Verbose,
                     "sending tx notification",
-                    ama::log::TracedInt("tx", id_),
-                    ama::log::TracedU8("old state", ns_int),
-                    ama::log::TracedU8("new state", ns_int + 1));
+                    ama::log::IntValue("tx", id_),
+                    ama::log::U8Value("old state", ns_int),
+                    ama::log::U8Value("new state", ns_int + 1));
 
         switch (current_state)
         {
