@@ -21,6 +21,7 @@
 #pragma once
 
 #include <codecvt>
+#include <locale>
 #include <sstream>
 
 #include "Log.h"

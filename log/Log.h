@@ -20,33 +20,21 @@
 
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <system_error>
 
-#if defined(QT_CORE_LIB)
-
-#include <QtCore/qglobal.h>
-
-#if defined(LOG_LIBRARY)
-#  define L_EXPORT Q_DECL_EXPORT
-#  define L_EXPORT_ONLY Q_DECL_EXPORT
+#ifdef _WIN32
+#  ifdef LOG_LIBRARY
+#    define L_EXPORT __declspec(dllexport)
+#  else
+#    define L_EXPORT __declspec(dllimport)
+#  endif // LOG_LIBRARY
 #else
-#  define L_EXPORT Q_DECL_IMPORT
-#  define L_EXPORT_ONLY
-#endif // defined(LOG_LIBRARY)
+#  define L_EXPORT __attribute__((visibility("default")))
+#endif // _WIN32
 
-#else
-
-// trusty doesn't use anything from QT, but luckily
-// it doesn't need declspec(dllexport), either!
-
-#define L_EXPORT
-#define L_EXPORT_ONLY
-
-#endif // defined(QT_CORE_LIB)
 
 namespace ama { namespace log {
 
@@ -92,7 +80,7 @@ public:
 };
 
 template <typename T>
-class L_EXPORT_ONLY LogValue : public ILogValue
+class LogValue : public ILogValue
 {
 public:
     LogValue(const char* name, const T& value) noexcept
@@ -211,8 +199,11 @@ void log_event(Severity severity, const char* message, LogValues&&... values)
         return;
     }
 
-    std::array<const ILogValue*, sizeof...(LogValues)> valuesArray = { { std::addressof(values)... } };
-    LogValueCollection collection(valuesArray.data(), valuesArray.data() + sizeof...(LogValues));
+    const ILogValue* valuesArray[sizeof...(LogValues)] = { std::addressof(values)... };
+    const ILogValue** begin = &valuesArray[0];
+    const ILogValue** end = begin + sizeof...(LogValues);
+
+    LogValueCollection collection(begin, end);
     do_log_event(severity, message, collection);
 }
 

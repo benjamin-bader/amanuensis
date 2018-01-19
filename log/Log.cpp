@@ -17,6 +17,7 @@
 
 #include "Log.h"
 
+#include <codecvt>
 #include <iostream>
 #include <mutex>
 #include <thread>

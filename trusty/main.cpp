@@ -24,9 +24,6 @@
 #include <launch.h>
 #include <os/log.h>
 
-// UNIX stuff
-#include <syslog.h>
-
 // cpp stuff
 #include <iostream>
 #include <memory>

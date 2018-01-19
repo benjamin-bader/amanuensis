@@ -1,9 +1,10 @@
-QT -= gui
+QT =
 
 TARGET = log
 TEMPLATE = lib
 
 CONFIG += c++14
+CONFIG -= qt
 
 DEFINES += LOG_LIBRARY
 
