@@ -40,15 +40,16 @@ SOURCES += \
 
 DEFINES += SRCDIR=\\\"$$PWD/\\\"
 
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../core/release/ -lcore
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../core/debug/ -lcore
-else:unix: LIBS += -L$$OUT_PWD/../core/ -lcore
+include(../amanuensis-common.pri)
 
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../log/release/ -llog
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../log/debug/ -llog
-else:unix: LIBS += -L$$OUT_PWD/../log/ -llog
+includeNeighborLib(core)
+includeNeighborLib(log)
 
-INCLUDEPATH += $$PWD/../core $$PWD/../include
+INCLUDEPATH += \
+    $$PWD/../core \
+    $$PWD/../log \
+    $$PWD/../include
+
 DEPENDPATH += \
     $$PWD/../core \
     $$PWD/../log \
