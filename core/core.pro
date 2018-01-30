@@ -94,12 +94,10 @@ windows {
     SOURCES += \
         win/RegistryKey.cpp \
         win/WindowsProxy.cpp \
-        win/OutputDebugStringSink.cpp \
 
     HEADERS += \
         win/RegistryKey.h \
         win/WindowsProxy.h \
-        win/OutputDebugStringSink.h \
 
     LIBS += -lwininet
 }

@@ -26,6 +26,10 @@
 #include <system_error>
 
 #ifdef _WIN32
+#
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#
 #  ifdef LOG_LIBRARY
 #    define L_EXPORT __declspec(dllexport)
 #  else
@@ -138,6 +142,40 @@ using U32Value = LogValue<uint32_t>;
 using U64Value = LogValue<uint64_t>;
 using CStrValue = LogValue<const char*>;
 using StringValue = LogValue<std::string>;
+
+#ifdef _WIN32
+
+class L_EXPORT LastErrorValue : public ILogValue
+{
+public:
+    LastErrorValue()
+        : last_error_(GetLastError())
+    {}
+
+    const char* name() const override
+    {
+        return "LastError";
+    }
+
+    void accept(LogValueVisitor &visitor) const override
+    {
+        char buffer[256] = {};
+        FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM,
+                       NULL,
+                       last_error_,
+                       MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                       buffer,
+                       255,
+                       NULL);
+
+        visitor.visit(CStrValue(name(), buffer));
+    }
+
+private:
+    DWORD last_error_;
+};
+
+#endif
 
 class L_EXPORT LogValueCollection : public ILogValue
 {

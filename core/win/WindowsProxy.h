@@ -24,7 +24,6 @@
 
 #include "Proxy.h"
 
-#include <windows.h>
 #include <wininet.h>
 
 namespace ama { namespace win {
