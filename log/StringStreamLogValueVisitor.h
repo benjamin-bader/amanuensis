@@ -45,24 +45,24 @@ public:
 
     void visit(const LogValue<const char*>& value) noexcept override
     {
-        ss_ << " " << value.name() << "=" << value.value();
+        ss_ << " " << value.name() << "=\"" << value.value() << "\"";
     }
 
     void visit(const LogValue<const wchar_t*>& value) noexcept override
     {
-        ss_ << " " << value.name() << "=" << value.value();
+        ss_ << " " << value.name() << "=\"" << value.value() << "\"";
     }
 
     void visit(const LogValue<std::string>& value) noexcept override
     {
-        ss_ << " " << value.name() << "=" << value.value();
+        ss_ << " " << value.name() << "=\"" << value.value() << "\"";
     }
 
     void visit(const LogValue<std::wstring>& value) noexcept override
     {
         using cvt = std::codecvt_utf8<wchar_t>;
         std::wstring_convert<cvt> converter;
-        ss_ << " " << value.name() << "=" << converter.to_bytes(value.value());
+        ss_ << " " << value.name() << "=\"" << converter.to_bytes(value.value()) << "\"";
     }
 
     void visit(const LogValue<int8_t>& value) noexcept override

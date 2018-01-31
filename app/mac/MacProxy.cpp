@@ -67,12 +67,7 @@ inline void assert_success(OSStatus status)
 
 void init_auth()
 {
-    ama::log::log_event(
-                ama::log::Severity::Info,
-                "Initializing global auth ref",
-                ama::log::StringValue("std::string", "this is a c++ string"),
-                ama::log::CStrValue("char*", "this is a C string"),
-                ama::log::I32Value("n", 16));
+    log::log_event(log::Severity::Verbose, "Initializing global auth ref");
 
     OSStatus status = AuthorizationCreate(NULL, NULL, 0, &g_auth);
     assert_success(status);
@@ -142,7 +137,9 @@ void acquire_rights(std::vector<const char *> &vector)
         AuthorizationItem item = pResultRights->items[i];
         if (item.flags & kAuthorizationFlagCanNotPreAuthorize)
         {
-            os_log_error(OS_LOG_DEFAULT, "can not preauthorize right %{public}s", item.name);
+            log::log_event(log::Severity::Error,
+                           "can not preauthorize right",
+                           log::CStrValue("right", item.name));
         }
     }
 
@@ -153,6 +150,8 @@ void acquire_rights(std::vector<const char *> &vector)
 
 bool should_install_helper_tool()
 {
+    log::log_event(log::Severity::Info, "Checking helper-tool installation");
+
     struct stat stat_data;
     int stat_result = ::stat(ama::kHelperSocketPath.c_str(), &stat_data);
 
@@ -161,7 +160,7 @@ bool should_install_helper_tool()
         int error_code = errno;
         if (error_code == ENOENT || error_code == ENOTDIR)
         {
-            os_log_info(OS_LOG_DEFAULT, "Helper socket file not found");
+            log::log_event(log::Severity::Info, "Helper socket file not found, installation required");
             return true;
         }
 
@@ -171,7 +170,7 @@ bool should_install_helper_tool()
     //
     if (! S_ISSOCK(stat_data.st_mode))
     {
-        os_log_info(OS_LOG_DEFAULT, "Helper socket file exists but isn't a socket?");
+        log::log_event(log::Severity::Warn, "Helper socket file exists, but is not a socket");
         return true;
     }
 
@@ -187,10 +186,14 @@ bool should_install_helper_tool()
 
     try
     {
+        log::log_event(log::Severity::Info, "Connecting to helper tool");
         auto client = ama::trusty::create_client(ama::kHelperSocketPath, authBytes);
         auto version = client->get_current_version();
 
-        os_log_error(OS_LOG_DEFAULT, "Installed tool reports version %{public}d; current version is %{public}d", version, ama::kToolVersion);
+        log::log_event(log::Severity::Info,
+                       "Helper tool reported its version",
+                       log::IntValue("installed_version", version),
+                       log::IntValue("current_version", kToolVersion));
 
         return version != ama::kToolVersion;
     }
@@ -200,7 +203,9 @@ bool should_install_helper_tool()
         // we can't understand the protocol of the existing tool, and
         // treat connection failures as such - reinstalling won't hurt,
         // and we can do this better, later.
-        os_log_error(OS_LOG_DEFAULT, "Error connecting to helper: %{public}s", ex.what());
+        log::log_event(log::Severity::Warn,
+                       "Error connecting to helper",
+                       log::CStrValue("ex", ex.what()));
         return true;
     }
 }
@@ -243,7 +248,9 @@ MacProxy::~MacProxy()
     }
     catch (const std::exception& ex)
     {
-        os_log_error(OS_LOG_DEFAULT, "Error disabling MacProxy: %{public}s", ex.what());
+        log::log_event(log::Severity::Error,
+                       "Error disabling MacProxy",
+                       log::CStrValue("ex", ex.what()));
     }
 }
 
@@ -336,15 +343,22 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
         CFErrorRef error;
         if (! SMJobBless(kSMDomainSystemLaunchd, helperLabel, g_auth, &error))
         {
-            syslog(LOG_NOTICE, "SMJobBless failed!  %ld", CFErrorGetCode(error));
-
             CFStringRef desc = CFErrorCopyDescription(error);
 
             char buffer[256];
             buffer[255] = '\0';
             if (CFStringGetCString(desc, buffer, 255, kCFStringEncodingUTF8))
             {
-                syslog(LOG_NOTICE, "SMJobBless error: %s", buffer);
+                log::log_event(log::Severity::Error,
+                               "SMJobBless failed!",
+                               log::I64Value("code", CFErrorGetCode(error)),
+                               log::CStrValue("description", buffer));
+            }
+            else
+            {
+                log::log_event(log::Severity::Error,
+                               "SMJobBless failed, and so did CFStringGetCString",
+                               log::I64Value("code", CFErrorGetCode(error)));
             }
 
             ec.assign(CFErrorGetCode(error), std::system_category());
@@ -360,7 +374,9 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
     }
     else
     {
-        syslog(LOG_NOTICE, "AuthorizationCopyRights failed!");
+        log::log_event(log::Severity::Error,
+                       "AuthorizationCopyRights failed",
+                       log::I32Value("status", status));
 
         ec.assign(static_cast<int>(status), std::system_category());
     }

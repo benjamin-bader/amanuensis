@@ -48,7 +48,7 @@ using namespace ama::trusty;
 // We're not linking in the log library, so here's a barebones implementation.
 namespace ama { namespace log {
 
-void register_log_writer(std::shared_ptr<ILogWriter> &&writer)
+void register_log_writer(std::shared_ptr<ILogWriter> && /*writer*/)
 {
     // no-op
 }

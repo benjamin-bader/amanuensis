@@ -39,7 +39,7 @@ macx {
 
     trusty.depends = trusty-interface
     app.depends += trusty-interface
-    trusty-test.depends = trusty
+    trusty-test.depends = trusty log
 
     BUNDLEAPP = Amanuensis
     HELPERAPP = com.bendb.amanuensis.Trusty

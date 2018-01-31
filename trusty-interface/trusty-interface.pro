@@ -6,7 +6,7 @@ TEMPLATE = lib
 
 CONFIG += staticlib c++14
 
-DEFINES += TRUSTY_INTERFACE_LIBRARY SPDLOG_ENABLE_SYSLOG
+DEFINES += TRUSTY_INTERFACE_LIBRARY
 
 INCLUDEPATH += \
     $$PWD/../include \
@@ -21,15 +21,11 @@ HEADERS += \
     CFRef.h \
     ProxyState.h \
     UnixSocket.h \
-    Bytes.h \
-    OsLogSink.h \
-    TLog.h
+    Bytes.h
 
 SOURCES += \
     MessageProcessor.cpp \
     Service.cpp \
     TrustyCommon.cpp \
     ProxyState.cpp \
-    UnixSocket.cpp \
-    OsLogSink.cpp \
-    TLog.cpp
+    UnixSocket.cpp

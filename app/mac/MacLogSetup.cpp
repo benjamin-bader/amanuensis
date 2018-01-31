@@ -22,12 +22,12 @@
 #include <os/log.h>
 
 #include <QApplication>
+#include <QDebug>
 #include <spdlog/spdlog.h>
 
 #include "Log.h"
 #include "Logging.h"
 #include "StringStreamLogValueVisitor.h"
-#include "TLog.h"
 
 namespace ama {
 
@@ -64,13 +64,13 @@ void OsLogWriter::write(log::Severity severity, const char *msg, const log::ILog
         value.accept(visitor);
 
         os_log_with_type(OS_LOG_DEFAULT, log_type, "%{public}s %{public}s", msg, visitor.str().c_str());
+        qInfo() << msg << visitor.str().c_str();
     }
 }
 
 void MacLogSetup::configure_logging()
 {
     std::string app_name = QCoreApplication::applicationName().toStdString();
-    ama::trusty::init_logging(app_name);
 
     set_default_sinks({
         LogSinks::stderr_sink(),
