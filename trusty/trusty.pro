@@ -17,7 +17,8 @@ QMAKE_CXXFLAGS += \
 
 INCLUDEPATH += \
     $$PWD/../include \
-    $$PWD/../trusty-interface
+    $$PWD/../trusty-interface \
+    $$PWD/../log \
 
 QMAKE_LFLAGS += \
     -F /System/Library/Frameworks/SystemConfiguration.framework/ \
@@ -27,6 +28,7 @@ QMAKE_LFLAGS += \
 LIBS += \
     -framework SystemConfiguration
 
+# Note: Don't link in 'log'; we'll have a stripped-down implementation of our own here.
 LIBS += -L$${OUT_PWD}/../trusty-interface/ -ltrusty-interface
 
 SOURCES += main.cpp \

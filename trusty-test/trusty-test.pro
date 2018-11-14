@@ -35,9 +35,12 @@ SOURCES += \
 
 DEFINES += SRCDIR=\\\"$$PWD/\\\"
 
-LIBS += -L$$OUT_PWD/../trusty-interface/ -ltrusty-interface
+LIBS += \
+    -L$$OUT_PWD/../trusty-interface/ -ltrusty-interface \
+    -L$$OUT_PWD/../log/ -llog \
 
 INCLUDEPATH += \
+    $$PWD/../log \
     $$PWD/../trusty-interface \
     $$PWD/../trusty \
     $$PWD/../include \

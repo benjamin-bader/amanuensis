@@ -21,9 +21,7 @@
 #include <mutex>
 #include <vector>
 
-#if defined(Q_OS_WIN)
-#include "win/OutputDebugStringSink.h"
-#elif defined(Q_OS_DARWIN)
+#if defined(Q_OS_DARWIN)
 #include "mac/OsLogSink.h"
 #endif
 
@@ -53,11 +51,7 @@ void init_sinks()
 
         g_stderr_sink = std::make_shared<spdlog::sinks::stderr_sink_mt>();
 
-#ifdef Q_OS_WIN
-        g_windows_debug_sink = std::make_shared<ama::OutputDebugStringSink>();
-#else
         g_windows_debug_sink = nullptr;
-#endif
 
 #ifdef Q_OS_DARWIN
         g_mac_os_log_sink = std::make_shared<ama::OsLogSink>();

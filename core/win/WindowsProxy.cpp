@@ -15,10 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "win/WindowsProxy.h"
+
+#define WIN32_LEAN_AND_MEAN
+
 #include <string>
 #include <sstream>
 
-#include "win/WindowsProxy.h"
+#include <windows.h>
+
+#include "Log.h"
 
 using namespace ama::win;
 
@@ -42,7 +48,9 @@ WindowsProxy::WindowsProxy(int port) :
 
     if (! InternetQueryOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION, &originalOptionList, &optionListSize))
     {
-        DWORD lastError = GetLastError();
+        log::log_event(log::Severity::Error,
+                       "Could not query current proxy settings",
+                       log::LastErrorValue());
         throw std::domain_error("Could not query current proxy settings");
     }
 
@@ -72,20 +80,10 @@ WindowsProxy::WindowsProxy(int port) :
 
     if (! InternetSetOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION, &optionList, sizeof(INTERNET_PER_CONN_OPTION_LIST)))
     {
-        DWORD lastError = GetLastError();
-        char buffer[256];
-        buffer[255] = 0;
-        FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM,
-                       NULL,
-                       lastError,
-                       MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                       buffer,
-                       255,
-                       NULL);
-        std::stringstream err_ss("Could not set proxy options: ");
-        std::string msg(buffer);
-        err_ss << msg;
-        throw std::domain_error(err_ss.str());
+        log::log_event(log::Severity::Error,
+                       "Could not set proxy options",
+                       log::LastErrorValue());
+        throw std::domain_error("Could not set proxy options");
     }
 
     InternetSetOption(NULL, INTERNET_OPTION_PROXY_SETTINGS_CHANGED, NULL, 0);
@@ -97,7 +95,9 @@ WindowsProxy::~WindowsProxy()
     unsigned long nSize = sizeof(INTERNET_PER_CONN_OPTION_LIST);
     if (! InternetSetOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION, &originalOptionList, nSize))
     {
-        // wtf
+        log::log_event(log::Severity::Error,
+                       "Could not clear proxy options on shutdown",
+                       log::LastErrorValue());
     }
 
     InternetSetOption(NULL, INTERNET_OPTION_PROXY_SETTINGS_CHANGED, NULL, 0);

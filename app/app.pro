@@ -47,11 +47,16 @@ HEADERS  += \
 
 FORMS    += MainWindow.ui
 
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../core/release/ -lcore
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../core/debug/ -lcore
-else:unix: LIBS += -L$$OUT_PWD/../core/ -lcore
+include(../amanuensis-common.pri)
 
-INCLUDEPATH += $$PWD/../core $$PWD/../include
+includeNeighborLib(core)
+includeNeighborLib(log)
+
+INCLUDEPATH += \
+    $$PWD/../core \
+    $$PWD/../log \
+    $$PWD/../include \
+
 DEPENDPATH += $$PWS/../core
 
 DEFINES += ASIO_STANDALONE ASIO_HAS_STD_CHRONO ASIO_HAS_MOVE
