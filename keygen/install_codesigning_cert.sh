@@ -78,3 +78,5 @@ openssl req -x509 -new -config ama.conf -nodes -key ama.key -sha256 -out ama.crt
 openssl pkcs12 -export -inkey ama.key -in ama.crt -out ama.p12 $PASSWD_OPENSSL_OPTS
 security import ama.p12 -t agg -f pkcs12 $PASSWD_SECURITY_OPTS $CODESIGN_OPTS $KEYCHAIN_OPTS
 
+FINGERPRINT=$(openssl x509 -noout -inform pem -fingerprint -in ama.crt | cut -d= -f2 | sed  's/://g')
+
