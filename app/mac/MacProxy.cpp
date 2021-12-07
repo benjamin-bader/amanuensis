@@ -249,6 +249,11 @@ void MacProxy::enable()
     {
         return;
     }
+    else
+    {
+        enabled_ = true;
+        return;
+    }
 
     if (should_install_helper_tool())
     {
