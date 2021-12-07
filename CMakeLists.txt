@@ -49,7 +49,6 @@ add_subdirectory(log)
 if(APPLE)
     add_subdirectory(trusty-interface)
     add_subdirectory(trusty)
-    add_subdirectory(trusty-test)
 endif()
 
 add_subdirectory(core)

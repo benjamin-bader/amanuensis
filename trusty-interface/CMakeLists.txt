@@ -36,3 +36,9 @@ target_compile_definitions(
     -DTRUSTY_INTERFACE_LIBRARY
     -DSPDLOG_ENABLE_SYSLOG
 )
+
+if(BUILD_TESTS)
+    add_test_case(trusty_interface bytes src/BytesTest.cpp)
+    add_test_case(trusty_interface message_processor src/MessageProcessorTest.cpp)
+    add_test_case(trusty_interface proxy_state src/ProxyStateTest.cpp)
+endif()

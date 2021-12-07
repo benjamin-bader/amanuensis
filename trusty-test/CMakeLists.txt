@@ -1,5 +1,0 @@
-if(BUILD_TESTS)
-    add_test_case(trusty-lib bytes BytesTest.cpp)
-    add_test_case(trusty-lib message_processor MessageProcessorTest.cpp)
-    add_test_case(trusty-lib proxy_state ProxyStateTest.cpp)
-endif()
