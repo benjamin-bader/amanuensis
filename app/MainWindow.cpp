@@ -25,9 +25,9 @@
 #include <QLabel>
 #include <QSettings>
 
-#include "Proxy.h"
-#include "ProxyFactory.h"
-#include "Transaction.h"
+#include "core/Proxy.h"
+#include "core/ProxyFactory.h"
+#include "core/Transaction.h"
 
 #ifdef Q_OS_MAC
 #include "mac/MacProxy.h"

@@ -25,11 +25,12 @@
 #include <exception>
 #include <memory>
 
-#include "HttpMessage.h"
+#include "core/HttpMessage.h"
+#include "core/Proxy.h"
+#include "core/ProxyFactory.h"
+#include "core/Server.h"
+
 #include "LogSetup.h"
-#include "Proxy.h"
-#include "ProxyFactory.h"
-#include "Server.h"
 
 //Q_DECLARE_METATYPE(std::shared_ptr<ama::Connection>)
 //Q_DECLARE_METATYPE(ama::HttpMessage)

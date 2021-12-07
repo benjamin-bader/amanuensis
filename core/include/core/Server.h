@@ -15,27 +15,47 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "MacLogSetup.h"
+#ifndef SERVER_H
+#define SERVER_H
 
-#include <string>
+#pragma once
 
-#include <QApplication>
-#include <spdlog/spdlog.h>
+#include <memory>
+#include <thread>
+#include <vector>
 
-#include "core/Logging.h"
-#include "TLog.h"
+#include <asio.hpp>
 
-namespace ama {
+#include "core/global.h"
 
-void MacLogSetup::configure_logging()
+namespace ama
 {
-    std::string app_name = QCoreApplication::applicationName().toStdString();
-    ama::trusty::init_logging(app_name);
 
-    set_default_sinks({
-        LogSinks::stderr_sink(),
-        LogSinks::mac_os_log_sink()
-    });
-}
+class ConnectionPool;
 
-}
+class A_EXPORT Server
+{
+public:
+    Server(const int port = 9999);
+    ~Server();
+
+    std::shared_ptr<ConnectionPool> connection_pool() const;
+
+private:
+    void do_accept();
+
+private:
+    int port_;
+    asio::io_context io_context_;
+    asio::signal_set signals_;
+    asio::ip::tcp::acceptor acceptor_;
+    asio::ip::tcp::socket socket_;
+
+    std::vector<std::thread> workers_;
+
+    std::shared_ptr<ConnectionPool> connection_pool_;
+};
+
+} // namespace ama
+
+#endif // SERVER_H

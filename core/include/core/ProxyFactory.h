@@ -15,27 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "MacLogSetup.h"
+#ifndef PROXYFACTORY_H
+#define PROXYFACTORY_H
 
-#include <string>
+#pragma once
 
-#include <QApplication>
-#include <spdlog/spdlog.h>
+#include <memory>
 
-#include "core/Logging.h"
-#include "TLog.h"
+#include "core/global.h"
 
-namespace ama {
-
-void MacLogSetup::configure_logging()
+namespace ama
 {
-    std::string app_name = QCoreApplication::applicationName().toStdString();
-    ama::trusty::init_logging(app_name);
 
-    set_default_sinks({
-        LogSinks::stderr_sink(),
-        LogSinks::mac_os_log_sink()
-    });
-}
+class Proxy;
 
-}
+class A_EXPORT ProxyFactory
+{   
+public:
+    ProxyFactory();
+
+    std::shared_ptr<Proxy> create(const int port);
+};
+
+} // ama
+
+#endif // PROXYFACTORY_H

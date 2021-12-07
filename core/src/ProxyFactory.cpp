@@ -15,27 +15,27 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "MacLogSetup.h"
+#include "core/ProxyFactory.h"
 
-#include <string>
+#include "core/Proxy.h"
 
-#include <QApplication>
-#include <spdlog/spdlog.h>
+#if defined(Q_OS_WIN)
+#include "win/WindowsProxy.h"
+#endif
 
-#include "core/Logging.h"
-#include "TLog.h"
+using namespace ama;
 
-namespace ama {
-
-void MacLogSetup::configure_logging()
+ProxyFactory::ProxyFactory()
 {
-    std::string app_name = QCoreApplication::applicationName().toStdString();
-    ama::trusty::init_logging(app_name);
 
-    set_default_sinks({
-        LogSinks::stderr_sink(),
-        LogSinks::mac_os_log_sink()
-    });
 }
 
+std::shared_ptr<Proxy> ProxyFactory::create(const int port)
+{
+#if defined(Q_OS_WIN)
+    return std::make_shared<ama::win::WindowsProxy>(port);
+#else
+#warning No platform support implemented for this OS, returning generic proxy.
+    return std::make_shared<Proxy>(port);
+#endif
 }

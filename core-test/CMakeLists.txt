@@ -1,5 +1,0 @@
-if(BUILD_TESTS)
-    add_test_case(core dates DatesTests.cpp)
-    add_test_case(core http_message_parser HttpMessageParserTests.cpp)
-    add_test_case(core request RequestTest.cpp)
-endif()

@@ -15,27 +15,42 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "MacLogSetup.h"
+#ifndef HEADERS_H
+#define HEADERS_H
+
+#pragma once
 
 #include <string>
+#include <vector>
 
-#include <QApplication>
-#include <spdlog/spdlog.h>
+#include "core/global.h"
 
-#include "core/Logging.h"
-#include "TLog.h"
-
-namespace ama {
-
-void MacLogSetup::configure_logging()
+namespace ama
 {
-    std::string app_name = QCoreApplication::applicationName().toStdString();
-    ama::trusty::init_logging(app_name);
 
-    set_default_sinks({
-        LogSinks::stderr_sink(),
-        LogSinks::mac_os_log_sink()
-    });
-}
+class A_EXPORT Headers
+{
+private:
+    std::vector<std::string> names_;
+    std::vector<std::string> values_;
 
-}
+public:
+    Headers();
+    Headers(const Headers &headers);
+
+    std::vector<std::string> find_by_name(const std::string &name) const;
+
+    Headers normalize() const;
+
+    bool empty() const;
+    size_t size() const;
+
+    const std::vector<std::string>& names() const { return names_; }
+    const std::vector<std::string>& values() const { return values_; }
+
+    void insert(const std::string &name, const std::string &value);
+};
+
+} // namespace ama
+
+#endif // HEADERS_H

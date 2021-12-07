@@ -24,7 +24,8 @@
 #include <mutex>
 #include <system_error>
 
-#include "Proxy.h"
+#include "core/Proxy.h"
+
 #include "ProxyState.h"
 
 #include "TrustyCommon.h"

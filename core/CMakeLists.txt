@@ -1,46 +1,35 @@
 set(PLATFORM_SOURCES )
 if(APPLE)
     list(APPEND PLATFORM_SOURCES
-        mac/OsLogSink.cpp
-        mac/OsLogSink.h
+        src/mac/OsLogSink.cpp
     )
 endif()
 
+set(SOURCES
+    src/ConnectionPool.cpp
+    src/Dates.cpp
+    src/Errors.cpp
+    src/Headers.cpp
+    src/HttpMessage.cpp
+    src/HttpMessageParser.cpp
+    src/Logging.cpp
+    src/Proxy.cpp
+    src/ProxyFactory.cpp
+    src/ProxyTransaction.cpp
+    src/Request.cpp
+    src/Response.cpp
+    src/Server.cpp
+)
+
 add_library(core SHARED
-    asiofwd.h
-    common.h
-    ConnectionPool.cpp
-    ConnectionPool.h
-    Dates.cpp
-    Dates.h
-    Errors.cpp
-    Errors.h
-    global.h
-    Headers.cpp
-    Headers.h
-    HttpMessage.cpp
-    HttpMessage.h
-    HttpMessageParser.cpp
-    HttpMessageParser.h
-    Listenable.h
-    Logging.cpp
-    Logging.h
-    ObjectPool.h
-    Proxy.cpp
-    Proxy.h
-    ProxyFactory.cpp
-    ProxyFactory.h
-    ProxyTransaction.cpp
-    ProxyTransaction.h
-    Request.cpp
-    Request.h
-    Response.cpp
-    Response.h
-    Server.cpp
-    Server.h
-    Transaction.h
+    ${SOURCES}
     ${PLATFORM_SOURCES}
 )
+
+# Ensure MOC runs on public headers
+file(GLOB PUBLIC_HEADERS include/**/*.h)
+target_sources(core PUBLIC ${PUBLIC_HEADERS})
+
 
 set(PLATFORM_LIBS )
 if(APPLE)
@@ -58,4 +47,15 @@ target_link_libraries(
     ${PLATFORM_LIBS}
 )
 
-target_include_directories(core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(core
+    PUBLIC include
+    PRIVATE src
+)
+
+target_compile_definitions(core PRIVATE -DCORE_LIBRARY=1)
+
+if(BUILD_TESTS)
+    add_test_case(core dates src/DatesTests.cpp)
+    add_test_case(core http_message_parser src/HttpMessageParserTests.cpp)
+    add_test_case(core request src/RequestTest.cpp)
+endif()

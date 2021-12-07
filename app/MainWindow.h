@@ -25,7 +25,7 @@
 #include <QStringListModel>
 #include <QVector>
 
-#include "Transaction.h"
+#include "core/Transaction.h"
 
 namespace ama
 {

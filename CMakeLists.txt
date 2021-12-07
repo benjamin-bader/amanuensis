@@ -51,6 +51,5 @@ if(APPLE)
 endif()
 
 add_subdirectory(core)
-add_subdirectory(core-test)
 add_subdirectory(app)
 
