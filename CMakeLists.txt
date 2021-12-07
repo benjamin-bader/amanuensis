@@ -44,6 +44,8 @@ include(ext/asio)
 include(ext/date)
 include(ext/spdlog)
 
+add_subdirectory(log)
+
 if(APPLE)
     add_subdirectory(trusty-interface)
     add_subdirectory(trusty)

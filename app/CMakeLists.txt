@@ -21,6 +21,7 @@ add_executable(
 
 target_link_libraries(amanuensis
     core
+    log
     Qt6::Gui
     Qt6::Widgets
 )

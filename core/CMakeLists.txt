@@ -38,6 +38,7 @@ endif()
 
 target_link_libraries(
     core
+    log
     Qt6::Core
     OpenSSL::SSL
     OpenSSL::Crypto

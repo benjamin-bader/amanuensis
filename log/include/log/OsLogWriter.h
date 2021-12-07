@@ -1,6 +1,6 @@
 // Amanuensis - Web Traffic Inspector
 //
-// Copyright (C) 2017 Benjamin Bader
+// Copyright (C) 2021 Benjamin Bader
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,34 +15,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "MacLogSetup.h"
+#pragma once
 
-#include <memory>
-#include <string>
-
-#include <QApplication>
-#include <spdlog/spdlog.h>
-
-#include "core/Logging.h"
 #include "log/Log.h"
-#include "log/OsLogWriter.h"
-#include "TLog.h"
 
-namespace ama {
+#ifndef __APPLE__
+#error "Can't use os_log on non-Apple platforms"
+#endif
 
-void MacLogSetup::configure_logging()
+#include <os/log.h>
+
+namespace ama::log {
+
+class OsLogWriter : public ILogWriter
 {
-    std::string app_name = QCoreApplication::applicationName().toStdString();
-    ama::trusty::init_logging(app_name);
+public:
+    void write(Severity severity, const char* message, const ILogValue& value) override;
 
-    set_default_sinks({
-        LogSinks::stderr_sink(),
-        LogSinks::mac_os_log_sink()
-    });
+private:
+    os_log_type_t log_type_for_severity(Severity severity);
+};
 
-    log::register_log_writer(std::make_shared<log::OsLogWriter>());
-
-    log::info("OS logger registered", log::IntValue("code", 1337));
-}
-
-}
+} // ama::log
