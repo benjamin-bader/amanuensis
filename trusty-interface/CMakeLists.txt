@@ -5,22 +5,18 @@ find_library(SERVICE_MANAGEMENT ServiceManagement REQUIRED)
 find_library(SYSTEM System REQUIRED)
 
 add_library(trusty_interface STATIC
-    Bytes.h
-    CFRef.h
-    MessageProcessor.cpp
-    MessageProcessor.h
-    OsLogSink.cpp
-    OsLogSink.h
-    ProxyState.cpp
-    ProxyState.h
-    Service.cpp
-    Service.h
-    TLog.cpp
-    TLog.h
-    TrustyCommon.cpp
-    TrustyCommon.h
-    UnixSocket.cpp
-    UnixSocket.h
+    src/MessageProcessor.cpp
+    src/OsLogSink.cpp
+    src/ProxyState.cpp
+    src/Service.cpp
+    src/TLog.cpp
+    src/TrustyCommon.cpp
+    src/UnixSocket.cpp
+)
+
+target_include_directories(trusty_interface
+    PUBLIC include
+    PRIVATE src
 )
 
 target_link_libraries(
@@ -39,10 +35,4 @@ target_compile_definitions(
     PRIVATE
     -DTRUSTY_INTERFACE_LIBRARY
     -DSPDLOG_ENABLE_SYSLOG
-)
-
-target_include_directories(
-    trusty_interface
-    PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
 )

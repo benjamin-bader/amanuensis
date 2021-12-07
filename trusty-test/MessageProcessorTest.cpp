@@ -23,8 +23,8 @@
 
 #include <QtTest>
 
-#include "MessageProcessor.h"
-#include "UnixSocket.h"
+#include "trusty/MessageProcessor.h"
+#include "trusty/ISocket.h"
 
 using namespace ama::trusty;
 

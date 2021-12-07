@@ -26,7 +26,7 @@
 #include "core/Logging.h"
 #include "log/Log.h"
 #include "log/OsLogWriter.h"
-#include "TLog.h"
+#include "trusty/TLog.h"
 
 namespace ama {
 

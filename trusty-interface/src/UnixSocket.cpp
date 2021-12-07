@@ -28,8 +28,8 @@
 #include <stdexcept>
 #include <system_error>
 
-#include "TLog.h"
-#include "TrustyCommon.h"
+#include "trusty/TLog.h"
+#include "trusty/TrustyCommon.h"
 
 namespace ama { namespace trusty {
 

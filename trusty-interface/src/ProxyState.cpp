@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "ProxyState.h"
+#include "trusty/ProxyState.h"
 
-#include "Bytes.h"
+#include "trusty/Bytes.h"
 
 namespace ama { namespace trusty {
 

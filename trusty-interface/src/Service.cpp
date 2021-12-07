@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "Service.h"
+#include "trusty/Service.h"
 
 #include <algorithm>
 #include <utility>
 
-#include "MessageProcessor.h"
+#include "trusty/MessageProcessor.h"
 
 namespace ama { namespace trusty {
 

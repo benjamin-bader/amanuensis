@@ -31,10 +31,11 @@
 #include <memory>
 #include <string>
 
+#include "trusty/TLog.h"
+#include "trusty/TrustyCommon.h"
+
 // our stuff
 #include "Server.h"
-#include "TLog.h"
-#include "TrustyCommon.h"
 #include "TrustyService.h"
 
 // I wish ASIO would have worked out, but it just couldn't

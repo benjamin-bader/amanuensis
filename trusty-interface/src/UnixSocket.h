@@ -18,35 +18,12 @@
 #ifndef UNIXSOCKET_H
 #define UNIXSOCKET_H
 
+#include "trusty/ISocket.h"
+
 #include <cstdint>
 #include <string>
 
 namespace ama { namespace trusty {
-
-class ISocket
-{
-public:
-    virtual ~ISocket() = default;
-
-    /**
-     * Fully writes the given data, throwing if all the data cannot be written.
-     *
-     * @param data a pointer to the data to be written
-     * @param len the number of bytes to be written
-     * @throws std::system_error on failure.
-     */
-    virtual void checked_write(const uint8_t* data, size_t len) = 0;
-
-    /**
-     * Fully reads the given amount of data, throwing if the expected amount
-     * of data cannot be read.
-     *
-     * @param data a pointer to the data buffer.
-     * @param len the number of bytes to read.
-     * @throws std::system_error on failure.
-     */
-    virtual void checked_read(uint8_t* data, size_t len) = 0;
-};
 
 /**
  * Implements ISocket using a UNIX-family socket, initialized

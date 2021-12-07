@@ -38,8 +38,8 @@
 #include <Security/Security.h>
 #include <ServiceManagement/ServiceManagement.h>
 
-#include "TrustyCommon.h"
-#include "Service.h"
+#include "trusty/TrustyCommon.h"
+#include "trusty/Service.h"
 
 namespace ama {
 

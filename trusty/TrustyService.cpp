@@ -23,9 +23,9 @@
 
 #include <SystemConfiguration/SystemConfiguration.h>
 
-#include "CFRef.h"
-#include "TLog.h"
-#include "TrustyCommon.h"
+#include "trusty/CFRef.h"
+#include "trusty/TLog.h"
+#include "trusty/TrustyCommon.h"
 
 namespace ama { namespace trusty {
 

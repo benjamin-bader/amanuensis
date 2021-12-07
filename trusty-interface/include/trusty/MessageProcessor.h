@@ -20,12 +20,12 @@
 
 #pragma once
 
+#include "trusty/ISocket.h"
+
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "UnixSocket.h"
 
 namespace ama { namespace trusty {
 

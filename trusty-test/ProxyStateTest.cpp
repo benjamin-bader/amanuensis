@@ -23,7 +23,7 @@
 #include <QString>
 #include <QtTest>
 
-#include "ProxyState.h"
+#include "trusty/ProxyState.h"
 
 using namespace ama::trusty;
 

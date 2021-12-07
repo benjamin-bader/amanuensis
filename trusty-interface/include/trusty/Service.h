@@ -21,7 +21,7 @@
 #include <cstdint>
 #include <memory>
 
-#include "ProxyState.h"
+#include "trusty/ProxyState.h"
 
 namespace ama { namespace trusty {
 

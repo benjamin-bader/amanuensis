@@ -25,7 +25,7 @@
 #include <system_error>
 
 #include "ClientConnection.h"
-#include "TLog.h"
+#include "trusty/TLog.h"
 
 namespace ama { namespace trusty {
 

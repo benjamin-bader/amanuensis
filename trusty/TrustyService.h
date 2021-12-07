@@ -21,7 +21,7 @@
 #include <cstdint>
 #include <string>
 
-#include "Service.h"
+#include "trusty/Service.h"
 
 namespace ama { namespace trusty {
 

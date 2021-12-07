@@ -26,9 +26,8 @@
 
 #include "core/Proxy.h"
 
-#include "ProxyState.h"
-
-#include "TrustyCommon.h"
+#include "trusty/ProxyState.h"
+#include "trusty/TrustyCommon.h"
 
 namespace ama {
 

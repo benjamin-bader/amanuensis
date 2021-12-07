@@ -22,10 +22,10 @@
 #include <os/log.h>
 #include <syslog.h>
 
-#include "MessageProcessor.h"
-#include "Service.h"
-#include "TLog.h"
-#include "TrustyCommon.h"
+#include "trusty/MessageProcessor.h"
+#include "trusty/Service.h"
+#include "trusty/TLog.h"
+#include "trusty/TrustyCommon.h"
 
 namespace ama { namespace trusty {
 

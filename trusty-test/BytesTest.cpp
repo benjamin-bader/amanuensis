@@ -22,7 +22,7 @@
 
 #include <QtTest>
 
-#include "Bytes.h"
+#include "trusty/Bytes.h"
 
 using namespace ama::trusty;
 
