@@ -50,3 +50,5 @@ void DatesTests::parse_invalid_input_returns_false()
     time_point tp;
     QVERIFY(! Dates::parse_http_date("ceci n'est pas un date", tp));
 }
+
+QTEST_GUILESS_MAIN(DatesTests)

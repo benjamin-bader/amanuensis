@@ -40,8 +40,8 @@ class ConnectionPool;
 class A_EXPORT Conn : public std::enable_shared_from_this<Conn>
 {
 public:
-    Conn(asio::io_service &service);
-    Conn(asio::ip::tcp::socket &&socket);
+    Conn(asio::io_context& ctx);
+    Conn(asio::ip::tcp::socket&& socket);
 
     ~Conn();
 
@@ -92,10 +92,14 @@ public:
     virtual void on_client_connected(std::shared_ptr<Conn> connection) = 0;
 };
 
-class ConnectionPool : public Listenable<ConnectionPoolListener>
+class ConnectionPool : public Listenable<ConnectionPoolListener>, public std::enable_shared_from_this<ConnectionPool>
 {
 public:
-    ConnectionPool(asio::io_service &service);
+    ConnectionPool(asio::io_context& context)
+        : context_(context)
+        , resolver_(context)
+    {}
+
     ~ConnectionPool();
 
     std::shared_ptr<Conn> make_connection(asio::ip::tcp::socket &&socket);
@@ -111,8 +115,8 @@ public:
     void try_open(const std::string &host, const std::string &port, std::function<void(std::shared_ptr<Conn>, std::error_code)> &&callback);
 
 private:
-    class impl;
-    const std::shared_ptr<impl> impl_;
+    asio::io_context& context_;
+    asio::ip::tcp::resolver resolver_;
 };
 
 } // namespace ama

@@ -110,3 +110,5 @@ void MessageProcessorTest::get_string_payload()
     std::string expected{"hi there"};
     QCOMPARE(expected, msg.get_string_payload());
 }
+
+QTEST_GUILESS_MAIN(MessageProcessorTest)

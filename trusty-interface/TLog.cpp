@@ -20,6 +20,8 @@
 #include <iostream>
 #include <string>
 
+#include "spdlog/sinks/stdout_sinks.h"
+
 namespace ama { namespace trusty {
 
 namespace details {

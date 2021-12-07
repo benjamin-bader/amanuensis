@@ -47,3 +47,5 @@ void ProxyStateTest::deserialize_empty_host()
     QCOMPARE(false, state.is_enabled());
     QCOMPARE(0, state.get_port());
 }
+
+QTEST_GUILESS_MAIN(ProxyStateTest)

@@ -54,3 +54,5 @@ void BytesTest::from_network_order()
     bytes = { 0, 0, 0, 0, 0xFF };
     QCOMPARE(0, Bytes::from_network_order<int32_t>(bytes.data()));
 }
+
+QTEST_GUILESS_MAIN(BytesTest)

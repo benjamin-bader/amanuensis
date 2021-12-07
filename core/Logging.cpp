@@ -27,6 +27,8 @@
 #include "mac/OsLogSink.h"
 #endif
 
+#include "spdlog/sinks/stdout_sinks.h"
+
 namespace ama {
 
 namespace LogSinks {

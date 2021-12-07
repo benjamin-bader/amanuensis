@@ -36,8 +36,8 @@ public:
     OsLogSink(os_log_t log);
 
 protected:
-    void _sink_it(const spdlog::details::log_msg& msg) override;
-    void _flush() override;
+    void sink_it_(const spdlog::details::log_msg& msg) override;
+    void flush_() override;
 
 private:
     inline os_log_type_t log_type_for_level(const spdlog::level::level_enum level) const;

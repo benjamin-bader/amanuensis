@@ -68,3 +68,6 @@ void RequestTest::format_simple_post()
 
     QCOMPARE(actual, expected);
 }
+
+
+QTEST_GUILESS_MAIN(RequestTest)

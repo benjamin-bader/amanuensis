@@ -24,6 +24,7 @@
 
 namespace asio {
 
+class io_context;
 class io_service;
 
 template <typename Protocol>

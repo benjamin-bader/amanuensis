@@ -52,8 +52,8 @@ void HttpMessageParserTests::simpleGet()
 
     QCOMPARE(state, HttpMessageParser::State::Valid);
 
-    QCOMPARE(request.method(), std::string("GET"));
-    QCOMPARE(request.uri(), std::string("/foo/bar"));
+    QCOMPARE(request.method(), "GET");
+    QCOMPARE(request.uri(), "/foo/bar");
     QCOMPARE(request.major_version(), 1);
     QCOMPARE(request.minor_version(), 1);
 
@@ -66,7 +66,7 @@ void HttpMessageParserTests::simpleGet()
     }
 
     auto value = headerFindResult[0];
-    QCOMPARE(value, {"application/html"});
+    QCOMPARE(value, "application/html");
 }
 
 void HttpMessageParserTests::fixedLengthSimplePost()
@@ -132,12 +132,12 @@ void HttpMessageParserTests::chunkedSimplePost()
     std::string actual = request.body_as_string();
     QCOMPARE(actual, expected);
 
-    QCOMPARE(request.method(), {"POST"});
-    QCOMPARE(request.uri(), {"/foo/bar"});
+    QCOMPARE(request.method(), "POST");
+    QCOMPARE(request.uri(), "/foo/bar");
 
-    QCOMPARE(request.headers().find_by_name("Accept")[0], {"application/html"});
-    QCOMPARE(request.headers().find_by_name("Content-Type")[0], {"text/plain"});
-    QCOMPARE(request.headers().find_by_name("Transfer-Encoding")[0], {"gzip, chunked"});
+    QCOMPARE(request.headers().find_by_name("Accept")[0], "application/html");
+    QCOMPARE(request.headers().find_by_name("Content-Type")[0], "text/plain");
+    QCOMPARE(request.headers().find_by_name("Transfer-Encoding")[0], "gzip, chunked");
 }
 
 void HttpMessageParserTests::simpleOkResponse()
@@ -162,9 +162,9 @@ void HttpMessageParserTests::simpleOkResponse()
     QCOMPARE(state, HttpMessageParser::State::Valid);
 
     QCOMPARE(message.status_code(), 200);
-    QCOMPARE(message.status_message(), {"OK"});
+    QCOMPARE(message.status_message(), "OK");
 
-    QCOMPARE(message.body_as_string(), {"zzzzz"});
+    QCOMPARE(message.body_as_string(), "zzzzz");
 }
 
 void HttpMessageParserTests::simpleForbiddenResponse()
@@ -208,7 +208,7 @@ void HttpMessageParserTests::simpleForbiddenResponse()
     QCOMPARE(state, HttpMessageParser::State::Valid);
 
     QCOMPARE(message.status_code(), 403);
-    QCOMPARE(message.status_message(), {"Forbidden"});
+    QCOMPARE(message.status_message(), "Forbidden");
 
     std::stringstream expected;
     expected << "<html>\r\n";
@@ -242,7 +242,7 @@ void HttpMessageParserTests::connectFromEdge()
     auto state = parser.parse(request, begin, end);
 
     QCOMPARE(state, HttpMessageParser::State::Valid);
-    QCOMPARE(request.method(), {"CONNECT"});
+    QCOMPARE(request.method(), "CONNECT");
 }
 
 void HttpMessageParserTests::pauses_on_phase_transitions()
@@ -320,3 +320,4 @@ void HttpMessageParserTests::zero_prefixed_chunk_lengths()
     QCOMPARE(HttpMessageParser::State::Valid, state);
 }
 
+QTEST_GUILESS_MAIN(HttpMessageParserTests)

@@ -46,7 +46,7 @@ private:
 
 private:
     int port_;
-    asio::io_service io_service_;
+    asio::io_context io_context_;
     asio::signal_set signals_;
     asio::ip::tcp::acceptor acceptor_;
     asio::ip::tcp::socket socket_;

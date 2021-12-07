@@ -28,12 +28,12 @@ namespace ama {
 
 Server::Server(const int port)
     : port_(port)
-    , io_service_()
-    , signals_(io_service_)
-    , acceptor_(io_service_)
-    , socket_(io_service_)
+    , io_context_()
+    , signals_(io_context_)
+    , acceptor_(io_context_)
+    , socket_(io_context_)
     , workers_()
-    , connection_pool_(std::make_shared<ConnectionPool>(io_service_))
+    , connection_pool_(std::make_shared<ConnectionPool>(io_context_))
 {
     signals_.add(SIGINT);
     signals_.add(SIGTERM);
@@ -54,7 +54,7 @@ Server::Server(const int port)
 
     do_accept();
 
-    // We will multiplex running the io_service across multiple threads.
+    // We will multiplex running the io_context across multiple threads.
     // The number of threads ideally will be one less than the STL's
     // self-reported hardware_concurrency amount, so that the main thread
     // remains free even if we're getting slammed with requests.  Practically
@@ -74,7 +74,7 @@ Server::Server(const int port)
 
     for (int i = 0; i < numSupportedThreads; ++i)
     {
-        auto thread = std::thread([&] { io_service_.run(); });
+        auto thread = std::thread([&] { io_context_.run(); });
         workers_.push_back(std::move(thread));
     }
 }
@@ -83,7 +83,7 @@ Server::~Server()
 {
     signals_.clear();
     acceptor_.close();
-    io_service_.stop();
+    io_context_.stop();
 
     connection_pool_ = nullptr;
 

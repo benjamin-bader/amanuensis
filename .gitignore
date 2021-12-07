@@ -43,3 +43,9 @@ Makefile*
 
 # OS detritus
 .DS_Store
+
+# cmake
+build*/
+
+# vscode
+.vscode/

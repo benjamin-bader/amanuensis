@@ -17,6 +17,8 @@
 
 #include "OsLogSink.h"
 
+#include <string>
+
 namespace ama { namespace trusty {
 
 OsLogSink::OsLogSink() : OsLogSink(OS_LOG_DEFAULT)
@@ -34,13 +36,14 @@ OsLogSink::OsLogSink(os_log_t log) : log_(log)
     log_types_by_level_[spdlog::level::off] = OS_LOG_TYPE_DEBUG;
 }
 
-void OsLogSink::_sink_it(const spdlog::details::log_msg &msg)
+void OsLogSink::sink_it_(const spdlog::details::log_msg &msg)
 {
-    const char* formatted = msg.formatted.c_str();
+    std::string text{std::begin(msg.payload), std::end(msg.payload)};
+    const char* formatted = text.c_str();
     os_log_with_type(log_, log_type_for_level(msg.level), "%{public}s", formatted);
 }
 
-void OsLogSink::_flush()
+void OsLogSink::flush_()
 {
     // no-op
 }
