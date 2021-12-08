@@ -70,6 +70,7 @@ public:
     virtual void visit(const LogValue<uint16_t>&) noexcept = 0;
     virtual void visit(const LogValue<uint32_t>&) noexcept = 0;
     virtual void visit(const LogValue<uint64_t>&) noexcept = 0;
+    virtual void visit(const LogValue<size_t>&) noexcept = 0;
     virtual void visit(const LogValue<long>&) noexcept = 0;
 };
 
@@ -138,6 +139,7 @@ using U8Value = LogValue<uint8_t>;
 using U16Value = LogValue<uint16_t>;
 using U32Value = LogValue<uint32_t>;
 using U64Value = LogValue<uint64_t>;
+using SizeValue = LogValue<size_t>;
 using CStrValue = LogValue<const char*>;
 using StringValue = LogValue<std::string>;
 

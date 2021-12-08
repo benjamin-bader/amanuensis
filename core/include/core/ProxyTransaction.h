@@ -27,8 +27,6 @@
 #include <system_error>
 #include <vector>
 
-#include <spdlog/spdlog.h>
-
 #include "core/common.h"
 #include "core/global.h"
 
@@ -95,8 +93,6 @@ private:
 private:
     int id_;
     std::error_code error_;
-
-    std::shared_ptr<spdlog::logger> logger_;
 
     std::shared_ptr<Conn> client_;
     std::shared_ptr<Conn> remote_;

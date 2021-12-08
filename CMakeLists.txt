@@ -42,7 +42,6 @@ find_package(Threads)
 
 include(ext/asio)
 include(ext/date)
-include(ext/spdlog)
 
 add_subdirectory(log)
 

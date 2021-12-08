@@ -619,7 +619,7 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
                     // strtok modifies its arguments, so we need to
                     // make a copy here.
                     MemoryBuffer<char> data = MemoryBuffer<char>::allocate(value.size() + 1);
-                    ::strcpy(data, value.c_str());
+                    ::strlcpy(data, value.c_str(), value.size());
 
                     const char delimiters[] = ", ";
 

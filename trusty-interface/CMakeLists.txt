@@ -6,7 +6,6 @@ find_library(SYSTEM System REQUIRED)
 
 add_library(trusty_interface STATIC
     src/MessageProcessor.cpp
-    src/OsLogSink.cpp
     src/ProxyState.cpp
     src/Service.cpp
     src/TrustyCommon.cpp
@@ -22,7 +21,6 @@ target_link_libraries(
     trusty_interface
     PUBLIC
     log
-    spdlog::spdlog
     ${COCOA}
     ${FOUNDATION}
     ${SECURITY}

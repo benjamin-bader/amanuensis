@@ -1,8 +1,6 @@
 set(PLATFORM_SOURCES )
 if(APPLE)
-    list(APPEND PLATFORM_SOURCES
-        src/mac/OsLogSink.cpp
-    )
+    list(APPEND PLATFORM_SOURCES )
 endif()
 
 set(SOURCES
@@ -12,7 +10,6 @@ set(SOURCES
     src/Headers.cpp
     src/HttpMessage.cpp
     src/HttpMessageParser.cpp
-    src/Logging.cpp
     src/Proxy.cpp
     src/ProxyFactory.cpp
     src/ProxyTransaction.cpp
@@ -43,7 +40,6 @@ target_link_libraries(
     OpenSSL::SSL
     OpenSSL::Crypto
     asio::asio
-    spdlog::spdlog
     date::date
     ${PLATFORM_LIBS}
 )

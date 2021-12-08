@@ -21,9 +21,7 @@
 #include <string>
 
 #include <QApplication>
-#include <spdlog/spdlog.h>
 
-#include "core/Logging.h"
 #include "log/Log.h"
 #include "log/OsLogWriter.h"
 
@@ -32,11 +30,6 @@ namespace ama {
 void MacLogSetup::configure_logging()
 {
     std::string app_name = QCoreApplication::applicationName().toStdString();
-
-    set_default_sinks({
-        LogSinks::stderr_sink(),
-        LogSinks::mac_os_log_sink()
-    });
 
     log::register_log_writer(std::make_shared<log::OsLogWriter>());
 

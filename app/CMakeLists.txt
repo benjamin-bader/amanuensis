@@ -27,3 +27,16 @@ target_link_libraries(amanuensis
 )
 
 target_include_directories(amanuensis PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(APPLE)
+
+    set_target_properties(
+        amanuensis
+
+        PROPERTIES
+
+        MACOSX_BUNDLE TRUE
+        MACOSC_BUNDLE_INFO_PLIST Info.plist
+    )
+
+endif()
