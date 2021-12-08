@@ -9,7 +9,6 @@ add_library(trusty_interface STATIC
     src/OsLogSink.cpp
     src/ProxyState.cpp
     src/Service.cpp
-    src/TLog.cpp
     src/TrustyCommon.cpp
     src/UnixSocket.cpp
 )
@@ -22,6 +21,7 @@ target_include_directories(trusty_interface
 target_link_libraries(
     trusty_interface
     PUBLIC
+    log
     spdlog::spdlog
     ${COCOA}
     ${FOUNDATION}

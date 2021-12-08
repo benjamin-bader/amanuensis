@@ -24,8 +24,9 @@
 
 #include <system_error>
 
+#include "log/Log.h"
+
 #include "ClientConnection.h"
-#include "trusty/TLog.h"
 
 namespace ama { namespace trusty {
 
@@ -63,20 +64,20 @@ int Server::accept_next_client()
     if (ready_count == -1)
     {
         // womp womp
-        log_error("poll() failed: errno=%d (%s)", errno, ::strerror(errno));
+        log::error("poll() failed", log::CStrValue("err", ::strerror(errno)));
         return -2;
     }
 
     if (ready_count == 0)
     {
-        log_error("poll(): no connection?");
+        log::error("poll(): no connection?");
         return -1;
     }
 
     int connection_fd = ::accept(server_fd_, addr, &size);
     if (connection_fd < 0)
     {
-        log_error("accept() failed: errno=%d (%s)", errno, ::strerror(errno));
+        log::error("accept() failed", log::CStrValue("err", ::strerror(errno)));
         return -2;
     }
 
@@ -92,7 +93,7 @@ void Server::handle_client_session(int client_fd)
     }
     catch (const std::exception &ex)
     {
-        log_critical("Exception in handle_client_session(): %s", ex.what());
+        log::error("Exception in handle_client_session()", log::CStrValue("what", ex.what()));
     }
 }
 

@@ -25,8 +25,6 @@
 #include <vector>
 
 #include <errno.h>
-#include <os/log.h>
-#include <syslog.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -37,6 +35,8 @@
 
 #include <Security/Security.h>
 #include <ServiceManagement/ServiceManagement.h>
+
+#include "log/Log.h"
 
 #include "trusty/TrustyCommon.h"
 #include "trusty/Service.h"
@@ -132,7 +132,7 @@ void acquire_rights(std::vector<const char *> &vector)
         AuthorizationItem item = pResultRights->items[i];
         if (item.flags & kAuthorizationFlagCanNotPreAuthorize)
         {
-            os_log_error(OS_LOG_DEFAULT, "can not preauthorize right %{public}s", item.name);
+            log::error("can not preauthorize right", log::CStrValue("right", item.name));
         }
     }
 
@@ -151,7 +151,7 @@ bool should_install_helper_tool()
         int error_code = errno;
         if (error_code == ENOENT || error_code == ENOTDIR)
         {
-            os_log_info(OS_LOG_DEFAULT, "Helper socket file not found");
+            log::info("Helper socket file not found");
             return true;
         }
 
@@ -161,7 +161,7 @@ bool should_install_helper_tool()
     //
     if (! S_ISSOCK(stat_data.st_mode))
     {
-        os_log_info(OS_LOG_DEFAULT, "Helper socket file exists but isn't a socket?");
+        log::info("Helper socket file exists but isn't a socket?");
         return true;
     }
 
@@ -180,7 +180,7 @@ bool should_install_helper_tool()
         auto client = ama::trusty::create_client(ama::kHelperSocketPath, authBytes);
         auto version = client->get_current_version();
 
-        os_log_error(OS_LOG_DEFAULT, "Installed tool reports version %{public}d; current version is %{public}d", version, ama::kToolVersion);
+        log::error("Tool version detected", log::U32Value("installed_version", version), log::U32Value("current_version", ama::kToolVersion));
 
         return version != ama::kToolVersion;
     }
@@ -190,7 +190,7 @@ bool should_install_helper_tool()
         // we can't understand the protocol of the existing tool, and
         // treat connection failures as such - reinstalling won't hurt,
         // and we can do this better, later.
-        os_log_error(OS_LOG_DEFAULT, "Error connecting to helper: %{public}s", ex.what());
+        log::error("Error connecting to helper", log::CStrValue("what", ex.what()));
         return true;
     }
 }
@@ -233,7 +233,7 @@ MacProxy::~MacProxy()
     }
     catch (const std::exception& ex)
     {
-        os_log_error(OS_LOG_DEFAULT, "Error disabling MacProxy: %{public}s", ex.what());
+        log::error("Error disabling MacProxy", log::CStrValue("what", ex.what()));
     }
 }
 
@@ -288,7 +288,7 @@ void MacProxy::enable()
     }
     else
     {
-        os_log_info(OS_LOG_DEFAULT, "Proxy already enabled, no action needed");
+        log::info("Proxy already enabled, no action needed");
     }
 
     enabled_ = true;
@@ -328,7 +328,7 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
         CFErrorRef error;
         if (! SMJobBless(kSMDomainSystemLaunchd, helperLabel, g_auth, &error))
         {
-            syslog(LOG_NOTICE, "SMJobBless failed!  %ld", CFErrorGetCode(error));
+            log::error("SMJobBless failed!", log::LongValue("code", CFErrorGetCode(error)));
 
             CFStringRef desc = CFErrorCopyDescription(error);
 
@@ -336,7 +336,7 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
             buffer[255] = '\0';
             if (CFStringGetCString(desc, buffer, 255, kCFStringEncodingUTF8))
             {
-                syslog(LOG_NOTICE, "SMJobBless error: %s", buffer);
+                log::error("Error message", log::CStrValue("message", buffer));
             }
 
             ec.assign(CFErrorGetCode(error), std::system_category());
@@ -352,7 +352,7 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
     }
     else
     {
-        syslog(LOG_NOTICE, "AuthorizationCopyRights failed!");
+        log::error("AuthorizationCopyRights failed!");
 
         ec.assign(static_cast<int>(status), std::system_category());
     }
@@ -363,12 +363,12 @@ void MacProxy::say_hi()
     auto client = create_client_with_rights();
 
     ama::trusty::ProxyState state = client->get_http_proxy_state();
-    os_log_info(OS_LOG_DEFAULT, "before: host=%{public}s port=%d enabled=%d", state.get_host().c_str(), state.get_port(), state.is_enabled());
+    log::info("before", log::StringValue("host", state.get_host()), log::I32Value("port", state.get_port()), log::BoolValue("enabled", state.is_enabled()));
 
     client->set_http_proxy_state(ama::trusty::ProxyState{ true, "localhost", port() });
 
     state = client->get_http_proxy_state();
-    os_log_info(OS_LOG_DEFAULT, "after: host=%{public}s port=%d enabled=%d", state.get_host().c_str(), state.get_port(), state.is_enabled());
+    log::info("after", log::StringValue("host", state.get_host()), log::I32Value("port", state.get_port()), log::BoolValue("enabled", state.is_enabled()));
 
     client->reset_proxy_settings();
 }

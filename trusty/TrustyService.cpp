@@ -23,8 +23,9 @@
 
 #include <SystemConfiguration/SystemConfiguration.h>
 
+#include "log/Log.h"
+
 #include "trusty/CFRef.h"
-#include "trusty/TLog.h"
 #include "trusty/TrustyCommon.h"
 
 namespace ama { namespace trusty {
@@ -36,6 +37,8 @@ template <> class is_cfref<SCNetworkServiceRef> : public std::true_type {};
 template <> class is_cfref<SCNetworkProtocolRef> : public std::true_type {};
 
 namespace {
+
+using CFIndexValue = log::LogValue<CFIndex>;
 
 /*! The PreferencesLocker class is an RAII wrapper around SCPreferencesLock
  *  and SCPreferencesUnlock.
@@ -70,7 +73,7 @@ public:
         }
         catch (const std::exception& ex)
         {
-            log_error("Exception in PreferencesLocker dtor: %s", ex.what());
+            log::error("Exception in PreferencesLocker dtor", log::CStrValue("what", ex.what()));
             // ignore exceptions in dtor
         }
     }
@@ -201,6 +204,37 @@ CFStringRef get_primary_service_id()
     return primaryServiceId;
 }
 
+struct CFStringValue : public log::ILogValue
+{
+public:
+    CFStringValue(const char* name, CFStringRef value)
+        : name_(name)
+        , value_(value)
+    {}
+
+    void accept(log::LogValueVisitor& visitor) const override
+    {
+        const char* maybeCStr = CFStringGetCStringPtr(value_, CFStringGetSystemEncoding());
+        if (maybeCStr != nullptr)
+        {
+            visitor.visit(log::CStrValue(name_, maybeCStr));
+        }
+        else
+        {
+            visitor.visit(log::StringValue(name_, cfstring_as_std_string(value_)));
+        }
+    }
+
+    const char* name() const override
+    {
+        return name_;
+    }
+
+private:
+    const char* name_;
+    CFStringRef value_;
+};
+
 } // anonymous namespace
 
 ProxyState TrustyService::get_http_proxy_state()
@@ -215,7 +249,8 @@ ProxyState TrustyService::get_http_proxy_state()
     {
         SCNetworkServiceRef service = (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
 
-        if (! CFEqual(primaryServiceId, SCNetworkServiceGetServiceID(service)))
+        CFStringRef serviceId = SCNetworkServiceGetServiceID(service);
+        if (! CFEqual(primaryServiceId, serviceId))
         {
             continue;
         }
@@ -223,13 +258,13 @@ ProxyState TrustyService::get_http_proxy_state()
         CFRef<SCNetworkProtocolRef> proxies = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies);
         if (proxies == nullptr)
         {
-            log_warn("Proxy protocol does not exist for primary network service");
+            log::warn("Proxy protocol does not exist for primary network service", CFStringValue("id", serviceId));
             continue;
         }
 
         if (! SCNetworkProtocolGetEnabled(proxies))
         {
-            log_warn("Proxy protocol disabled for primary network service");
+            log::warn("Proxy protocol disabled for primary network service", CFStringValue("id", serviceId));
             continue;
         }
 
@@ -252,13 +287,21 @@ ProxyState TrustyService::get_http_proxy_state()
         return { enabled, host, port };
     }
 
-    log_critical("No proxy-aware network service defined for the current NetworkSet");
+    log::error(
+        "No proxy-aware network service defined for the current NetworkSet",
+        CFStringValue("set_name", SCNetworkSetGetName(netset)),
+        CFStringValue("set_id", SCNetworkSetGetSetID(netset))
+    );
+
     return { false, "", 0 };
 }
 
 void TrustyService::set_http_proxy_state(const ProxyState &state)
 {
-    log_info("Setting proxy state: enabled={} host={} port={}", state.is_enabled(), state.get_host(), state.get_port());
+    log::info("Setting proxy state",
+              log::BoolValue("enabled", state.is_enabled()),
+              log::StringValue("host", state.get_host()),
+              log::I32Value("port", state.get_port()));
 
     CFRef<SCPreferencesRef> prefs = SCPreferencesCreate(kCFAllocatorDefault, CFSTR("com.bendb.amanuensis.Trusty"), nullptr);
     PreferencesLocker locker{prefs, /* wait */ true};
@@ -275,9 +318,10 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
     {
         SCNetworkServiceRef service = (SCNetworkServiceRef) CFArrayGetValueAtIndex(services, i);
 
-        log_trace("Examining one network service; ix={}", i);
+        log::verbose("Examining one network service", CFIndexValue("index", i));
 
-        if (! CFEqual(primaryServiceId, SCNetworkServiceGetServiceID(service)))
+        CFStringRef serviceId = SCNetworkServiceGetServiceID(service);
+        if (! CFEqual(primaryServiceId, serviceId))
         {
             continue;
         }
@@ -285,13 +329,13 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
         CFRef<SCNetworkProtocolRef> proxies = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies);
         if (proxies == nullptr)
         {
-            log_warn("Proxy protocol does not exist for primary network service");
+            log::warn("Proxy protocol does not exist for primary network service", CFStringValue("id", serviceId));
             continue;
         }
 
         if (! SCNetworkProtocolGetEnabled(proxies))
         {
-            log_warn("Proxy protocol disabled for primary network service");
+            log::warn("Proxy protocol disabled for primary network service", CFStringValue("id", serviceId));
             continue;
         }
 
@@ -330,7 +374,11 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
         }
         else
         {
-            log_critical("Error saving proxy protocol configuration: %s", SCErrorString(SCError()));
+            log::error(
+                "Error saving proxy protocol configuration",
+                CFStringValue("service_id", serviceId),
+                log::CStrValue("error", SCErrorString(SCError()))
+            );
         }
 
         break;
@@ -340,17 +388,17 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
     {
         if (! SCPreferencesCommitChanges(prefs))
         {
-            log_error("SCPreferencesCommitChanges failed: %s", SCErrorString(SCError()));
+            log::error("SCPreferencesCommitChanges failed", log::CStrValue("error", SCErrorString(SCError())));
         }
 
         if (! SCPreferencesApplyChanges(prefs))
         {
-            log_error("SCPreferencesApplyChanges failed: %s", SCErrorString(SCError()));
+            log::error("SCPreferencesApplyChanges failed", log::CStrValue("error", SCErrorString(SCError())));
         }
     }
     else
     {
-        log_warn("Active network set did not contain any proxy-enabled service");
+        log::warn("Active network set did not contain any proxy-enabled service");
     }
 
     locker.unlock();
@@ -358,7 +406,7 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
 
 void TrustyService::reset_proxy_settings()
 {
-    log_info("TrustyService::reset_proxy_settings()");
+    log::info("TrustyService::reset_proxy_settings()");
 }
 
 uint32_t TrustyService::get_current_version()

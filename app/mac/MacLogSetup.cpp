@@ -26,14 +26,12 @@
 #include "core/Logging.h"
 #include "log/Log.h"
 #include "log/OsLogWriter.h"
-#include "trusty/TLog.h"
 
 namespace ama {
 
 void MacLogSetup::configure_logging()
 {
     std::string app_name = QCoreApplication::applicationName().toStdString();
-    ama::trusty::init_logging(app_name);
 
     set_default_sinks({
         LogSinks::stderr_sink(),

@@ -102,6 +102,11 @@ public:
         ss_ << " " << value.name() << "=" << value.value();
     }
 
+    void visit(const LogValue<long>& value) noexcept override
+    {
+        ss_ << " " << value.name() << "=" << value.value();
+    }
+
     std::string str()
     {
         if (!finished_)

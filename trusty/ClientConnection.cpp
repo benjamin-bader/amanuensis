@@ -22,9 +22,10 @@
 #include <os/log.h>
 #include <syslog.h>
 
+#include "log/Log.h"
+
 #include "trusty/MessageProcessor.h"
 #include "trusty/Service.h"
-#include "trusty/TLog.h"
 #include "trusty/TrustyCommon.h"
 
 namespace ama { namespace trusty {
@@ -102,7 +103,7 @@ uint32_t AuthorizedService::get_current_version()
 
 void AuthorizedService::assert_right(const char *right)
 {
-    log_debug("Asserting a right: {}", right);
+    log::debug("Asserting a right", log::CStrValue("right", right));
     AuthorizationItem item = { right, 0, NULL, 0 };
     AuthorizationRights rights = { 1, &item };
 
@@ -115,7 +116,7 @@ void AuthorizedService::assert_right(const char *right)
 
     if (status != errAuthorizationSuccess)
     {
-        log_debug("Could not obtain right non-interactively; trying again, with interaction (status={})", status);
+        log::debug("Could not obtain right non-interactively; trying again, with interaction", log::I32Value("status", static_cast<int>(status)));
 
         status = AuthorizationCopyRights(
                     auth_,
@@ -126,7 +127,7 @@ void AuthorizedService::assert_right(const char *right)
 
         if (status != errAuthorizationSuccess)
         {
-            log_error("Right not present; status={}", status);
+            log::error("Right not present", log::CStrValue("right", right), log::I32Value("status", static_cast<int>(status)));
             throw std::invalid_argument("Authorization denied");
         }
     }
@@ -196,7 +197,7 @@ void ClientConnection::impl::handle()
             catch (const std::exception& ex2)
             {
                 // don't crash while reporting an error
-                log_critical("Error while sending error reply: %s", ex2.what());
+                log::error("Error while sending error reply", log::CStrValue("what", ex2.what()));
             }
 
             break;
@@ -254,7 +255,7 @@ MessageType ClientConnection::impl::handle_one()
 
     default:
     {
-        log_critical("ERROR: Received response message-type from a client!  type={}", msg.type);
+        log::error("ERROR: Received response message-type from a client!", log::U8Value("type", static_cast<std::uint8_t>(msg.type)));
         break;
     }
 

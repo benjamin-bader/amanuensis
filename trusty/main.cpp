@@ -31,7 +31,9 @@
 #include <memory>
 #include <string>
 
-#include "trusty/TLog.h"
+#include "log/Log.h"
+#include "log/OsLogWriter.h"
+
 #include "trusty/TrustyCommon.h"
 
 // our stuff
@@ -43,6 +45,7 @@
 // writing socket code the old way works, but is endlessly
 // tedious.
 
+using namespace ama;
 using namespace ama::trusty;
 
 std::error_code lookup_socket_endpoint(int *fd)
@@ -68,7 +71,10 @@ std::error_code lookup_socket_endpoint(int *fd)
         ec.assign(err, std::system_category());
     }
 
-    free(fds);
+    if (fds != nullptr)
+    {
+        free(fds);
+    }
 
     return ec;
 }
@@ -78,13 +84,14 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
-    init_logging("trusty");
+    log::register_log_writer(std::make_shared<log::OsLogWriter>());
 
     int fd;
     std::error_code ec = lookup_socket_endpoint(&fd);
     if (ec)
     {
-        log_critical("Failed to open launchd socket list: ec=%d", ec.value());
+
+        log::error("Failed to open launchd socket", log::IntValue("ec", ec.value()));
         return -1;
     }
 
@@ -96,10 +103,10 @@ int main(int argc, char *argv[])
     }
     catch (std::exception &ex)
     {
-        log_critical("failed, somehow: %s", ex.what());
+        log::error("Failed, somehow", log::CStrValue("what", ex.what()));
     }
 
-    log_info("Hanging up now!");
+    log::info("Hanging up now!");
 
     return 0;
 }

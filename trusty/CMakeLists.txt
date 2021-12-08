@@ -15,6 +15,7 @@ target_link_libraries(
 
     PUBLIC
     trusty_interface
+    log
     ${SYSTEM_CONFIG}
 )
 
@@ -32,4 +33,10 @@ target_link_options(
     PRIVATE
     LINKER:-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_SOURCE_DIR}/trusty-info.plist
     LINKER:-sectcreate,__TEXT,__launchd_plist,${CMAKE_CURRENT_SOURCE_DIR}/trusty-launchd.plist
+)
+
+set_target_properties(
+    trusty
+    PROPERTIES
+    OUTPUT_NAME com.bendb.amanuensis.Trusty
 )

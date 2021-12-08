@@ -70,6 +70,7 @@ public:
     virtual void visit(const LogValue<uint16_t>&) noexcept = 0;
     virtual void visit(const LogValue<uint32_t>&) noexcept = 0;
     virtual void visit(const LogValue<uint64_t>&) noexcept = 0;
+    virtual void visit(const LogValue<long>&) noexcept = 0;
 };
 
 class L_EXPORT ILogValue // todo: suppress vtable?

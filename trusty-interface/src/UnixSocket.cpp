@@ -28,7 +28,7 @@
 #include <stdexcept>
 #include <system_error>
 
-#include "trusty/TLog.h"
+#include "log/Log.h"
 #include "trusty/TrustyCommon.h"
 
 namespace ama { namespace trusty {
@@ -40,7 +40,10 @@ UnixSocket::UnixSocket(const std::string &path)
     if (socket_fd == -1)
     {
         int error_code = errno;
-        log_critical("socket() failed: {}", error_code);
+        log::log_event(log::Severity::Fatal,
+                       "socket() failed",
+                       log::IntValue("errno", error_code),
+                       log::CStrValue("strerror", ::strerror(error_code)));
         throw std::system_error(error_code, std::system_category());
     }
 
@@ -50,9 +53,16 @@ UnixSocket::UnixSocket(const std::string &path)
     address.sun_family = AF_UNIX;
     ::strncpy(address.sun_path, path.c_str(), sizeof(address.sun_path) - 1);
 
-    long opts = ::fcntl(socket_fd, F_GETFL, NULL);
-    opts |= O_NONBLOCK;
-    ::fcntl(socket_fd, F_SETFL, opts);
+    if (::fcntl(socket_fd, F_SETFL, O_NONBLOCK) < 0)
+    {
+        log::log_event(log::Severity::Error,
+                       "Failed to set O_NONBLOCK on socket",
+                       log::I32Value("errno", errno),
+                       log::CStrValue("err", ::strerror(errno)));
+
+        ::close(socket_fd);
+        throw std::runtime_error{"Failed to set O_NONBLOCK on socket"};
+    }
 
     int connect_result = ::connect(socket_fd, (const struct sockaddr *) &address, sizeof(address));
     if (connect_result == -1)
@@ -60,15 +70,23 @@ UnixSocket::UnixSocket(const std::string &path)
         int error_value = errno;
         if (error_value != EINPROGRESS)
         {
-            log_critical("Failed to connect; errno={}", error_value);
+            log::log_event(log::Severity::Fatal,
+                           "Failed to connect",
+                           log::IntValue("errno", error_value),
+                           log::CStrValue("strerror", ::strerror(error_value)));
 
             ::close(socket_fd);
             throw std::system_error(errno, std::system_category());
         }
 
+        log::debug("EINPROGRESS in connect() - selecting");
+
         do
         {
-            timeval tv { 0, 100000 }; // 1/10 of a second
+            struct timeval tv;
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000; // 1/10 of a second
+
             fd_set fds;
             FD_ZERO(&fds);
             FD_SET(socket_fd, &fds);
@@ -79,15 +97,23 @@ UnixSocket::UnixSocket(const std::string &path)
                 // problem
                 int error_value = errno;
                 ::close(socket_fd);
-                log_critical("select() failed; errno={}", error_value);
+                log::log_event(log::Severity::Fatal,
+                               "select() failed",
+                               log::IntValue("errno", error_value),
+                               log::CStrValue("strerror", ::strerror(error_value)));
                 throw std::system_error(error_value, std::system_category());
+            }
+
+            if (select_result < 0 && errno == EINTR)
+            {
+                continue;
             }
 
             if (select_result == 0)
             {
                 // timeout
                 ::close(socket_fd);
-                log_critical("select() timed out");
+                log::log_event(log::Severity::Fatal, "select() timed out");
                 throw ama::timeout_exception();
             }
 
@@ -98,7 +124,10 @@ UnixSocket::UnixSocket(const std::string &path)
                 // Can't getsockopt
                 int error_value = errno;
                 ::close(socket_fd);
-                log_critical("Can't getsockopt(); errno={}", error_value);
+                log::log_event(log::Severity::Fatal,
+                               "Can't getsockopt()",
+                               log::IntValue("errno", error_value),
+                               log::CStrValue("strerror", ::strerror(error_value)));
                 throw std::system_error(error_value, std::system_category());
             }
 
@@ -115,10 +144,30 @@ UnixSocket::UnixSocket(const std::string &path)
         } while(true);
     }
 
+    log::log_event(log::Severity::Debug, "Connected to helper tool");
+
     // Clear O_NONBLOCK
-    opts = ::fcntl(socket_fd, F_GETFL, NULL);
+    long opts = ::fcntl(socket_fd, F_GETFL, NULL);
+    if (opts == -1)
+    {
+        log::log_event(log::Severity::Error,
+                       "Failed to get flags for a connected UNIX socket",
+                       log::I32Value("errno", errno),
+                       log::CStrValue("msg", ::strerror(errno)));
+        ::close(socket_fd);
+        throw std::runtime_error{"Failed to get flags for a connected UNIX socket"};
+    }
+
     opts &= (~O_NONBLOCK);
-    ::fcntl(socket_fd, F_SETFL, opts);
+    if (::fcntl(socket_fd, F_SETFL, opts) == -1)
+    {
+        log::log_event(log::Severity::Error,
+                       "Failed to clear O_NONBLOCK for a connected UNIX socket",
+                       log::I32Value("errno", errno),
+                       log::CStrValue("msg", ::strerror(errno)));
+        ::close(socket_fd);
+        throw std::runtime_error{"Failed to clear O_NONBLOCK for a connected UNIX socket"};
+    }
 
     this->fd_ = socket_fd;
 }
