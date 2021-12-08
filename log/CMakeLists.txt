@@ -1,6 +1,8 @@
 set(PLATFORM_SOURCES )
 if(APPLE)
     list(APPEND PLATFORM_SOURCES src/OsLogWriter.cpp)
+elseif(WIN32)
+    list(APPEND PLATFORM_SOURCES src/OutputDebugStringWriter.cpp)
 endif()
 
 add_library(log STATIC

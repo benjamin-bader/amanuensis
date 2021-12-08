@@ -22,7 +22,7 @@
 
 #include "global.h"
 
-#include "Proxy.h"
+#include "core/Proxy.h"
 
 #include <windows.h>
 #include <wininet.h>

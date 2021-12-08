@@ -1,6 +1,8 @@
 set(PLATFORM_SOURCES )
 if(APPLE)
     list(APPEND PLATFORM_SOURCES )
+elseif(WIN32)
+    list(APPEND PLATFORM_SOURCES src/win/RegistryKey.cpp src/win/WindowsProxy.cpp)
 endif()
 
 set(SOURCES
@@ -28,11 +30,6 @@ file(GLOB PUBLIC_HEADERS include/**/*.h)
 target_sources(core PUBLIC ${PUBLIC_HEADERS})
 
 
-set(PLATFORM_LIBS )
-if(APPLE)
-    list(APPEND PLATFORM_LIBS trusty_interface)
-endif()
-
 target_link_libraries(
     core
     log
@@ -41,7 +38,6 @@ target_link_libraries(
     OpenSSL::Crypto
     asio::asio
     date::date
-    ${PLATFORM_LIBS}
 )
 
 target_include_directories(core

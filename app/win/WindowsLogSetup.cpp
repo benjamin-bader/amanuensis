@@ -17,12 +17,13 @@
 
 #include "WindowsLogSetup.h"
 
+#include <memory>
 #include <string>
 
 #include <QApplication>
-#include <spdlog/spdlog.h>
 
-#include "Logging.h"
+#include "log/Log.h"
+#include "log/OutputDebugStringWriter.h"
 
 namespace ama {
 
@@ -30,10 +31,7 @@ void WindowsLogSetup::configure_logging()
 {
     std::string app_name = QCoreApplication::applicationName().toStdString();
 
-    ama::set_default_sinks({
-        ama::LogSinks::stderr_sink(),
-        ama::LogSinks::windows_debug_sink()
-    });
+    log::register_log_writer(std::make_shared<log::OutputDebugStringWriter>());
 }
 
 }

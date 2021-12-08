@@ -1,6 +1,6 @@
 // Amanuensis - Web Traffic Inspector
 //
-// Copyright (C) 2018 Benjamin Bader
+// Copyright (C) 2021 Benjamin Bader
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,26 +15,31 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OSLOGSINK_H
-#define OSLOGSINK_H
+#include "log/OutputDebugStringWriter.h"
 
-#pragma once
+#include "log/StringStreamLogValueVisitor.h"
 
-#include <mutex>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 
-#include <spdlog/sinks/base_sink.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 
-#include "global.h"
+#include <windows.h>
 
-namespace ama {
+namespace ama::log {
 
-class A_EXPORT OutputDebugStringSink : public spdlog::sinks::base_sink<std::mutex>
+void OutputDebugStringWriter::write(Severity severity, const char *message, const ILogValue &value)
 {
-protected:
-    void _sink_it(const spdlog::details::log_msg& msg) override;
-    void _flush() override;
-};
+    StringStreamLogValueVisitor visitor;
+    value.accept(visitor);
 
-} // namespace ama::trusty
+    std::string messageStr = message;
+    messageStr += " " + visitor.str();
 
-#endif // OSLOGSINK_H
+    OutputDebugStringA(messageStr.c_str());
+}
+
+} // ama::log
