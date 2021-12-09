@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef CLIENTCONNECTION_H
-#define CLIENTCONNECTION_H
+#pragma once
 
 #include <memory>
 
@@ -38,5 +37,3 @@ private:
 };
 
 }} // ama::trusty
-
-#endif // CLIENTCONNECTION_H

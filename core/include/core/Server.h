@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef SERVER_H
-#define SERVER_H
-
 #pragma once
 
 #include "core/global.h"
@@ -65,5 +62,3 @@ private:
 };
 
 } // namespace ama
-
-#endif // SERVER_H

@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef ISERVICE_H
-#define ISERVICE_H
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -96,6 +95,3 @@ public:
 std::unique_ptr<IService> create_client(const std::string &path, const std::vector<uint8_t> &auth);
 
 }} // namespace ama::trusty
-
-
-#endif // ISERVICE_H

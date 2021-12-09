@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef RESPONSE_H
-#define RESPONSE_H
-
 #pragma once
 
 #include "core/common.h"
@@ -49,5 +46,3 @@ private:
 };
 
 } // namespace ama
-
-#endif // RESPONSE_H

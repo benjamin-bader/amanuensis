@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef REQUEST_H
-#define REQUEST_H
-
 #pragma once
 
 #include <algorithm>
@@ -82,5 +79,3 @@ private:
 };
 
 } // namespace ama
-
-#endif // REQUEST_H

@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef LOGSETUP_H
-#define LOGSETUP_H
+#pragma once
 
 #include <memory>
 
@@ -34,5 +33,3 @@ public:
 std::unique_ptr<LogSetup> make_log_configurer();
 
 } // namespace ama
-
-#endif // LOGSETUP_H

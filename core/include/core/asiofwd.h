@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef ASIOFWD_H
-#define ASIOFWD_H
-
 #pragma once
 
 // Useful forward-declarations for keeping ASIO out of headers.
@@ -52,5 +49,3 @@ class tcp;
 } // namespace ip
 
 } // namespace asio
-
-#endif // ASIOFWD_H

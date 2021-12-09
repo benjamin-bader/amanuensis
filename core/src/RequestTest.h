@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef REQUESTTEST_H
-#define REQUESTTEST_H
+#pragma once
 
 #include <QObject>
 
@@ -31,5 +30,3 @@ private Q_SLOTS:
     void format_simple_get();
     void format_simple_post();
 };
-
-#endif // REQUESTTEST_H

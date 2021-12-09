@@ -17,9 +17,6 @@
 
 // Copyright (C)
 
-#ifndef HTTPMESSAGEPARSER_H
-#define HTTPMESSAGEPARSER_H
-
 #pragma once
 
 #include <cstdint>
@@ -244,5 +241,3 @@ HttpMessageParser::State HttpMessageParser::parse(HttpMessage &message, InputIte
 } // namespace ama
 
 std::ostream& operator<<(std::ostream& os, ama::ParsePhase phase);
-
-#endif // HTTPMESSAGEPARSER_H

@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef COMMAND_H
-#define COMMAND_H
-
 #pragma once
 
 #include "trusty/ISocket.h"
@@ -172,5 +169,3 @@ private:
 };
 
 }} // ama::trusty
-
-#endif // COMMAND_H

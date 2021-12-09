@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DATES_H
-#define DATES_H
-
 #pragma once
 
 #include <string>
@@ -38,5 +35,3 @@ namespace ama { namespace Dates {
 bool A_EXPORT parse_http_date(const std::string& text, time_point& tp) noexcept;
 
 }} // ama::Dates
-
-#endif // DATES_H

@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DATESTESTS_H
-#define DATESTESTS_H
-
 #pragma once
 
 #include <QObject>
@@ -35,5 +32,3 @@ private Q_SLOTS:
 
     void parse_invalid_input_returns_false();
 };
-
-#endif // DATESTESTS_H

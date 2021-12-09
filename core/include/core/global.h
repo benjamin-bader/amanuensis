@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef CORE_GLOBAL_H
-#define CORE_GLOBAL_H
-
 #pragma once
 
 #include <QtCore/qglobal.h>
@@ -29,5 +26,3 @@
 #  define A_EXPORT Q_DECL_IMPORT
 #  define A_EXPORT_ONLY
 #endif
-
-#endif // CORE_GLOBAL_H

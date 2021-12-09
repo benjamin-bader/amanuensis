@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef CONNECTIONPOOL_H
-#define CONNECTIONPOOL_H
-
 #pragma once
 
 #include "core/common.h"
@@ -113,5 +110,3 @@ private:
 };
 
 } // namespace ama
-
-#endif // CONNECTIONPOOL_H

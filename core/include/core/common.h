@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef COMMON_H
-#define COMMON_H
-
 #pragma once
 
 #include <chrono>
@@ -30,5 +27,3 @@ namespace ama
 typedef std::chrono::system_clock::time_point time_point;
 
 } // namespace ama
-
-#endif // COMMON_H

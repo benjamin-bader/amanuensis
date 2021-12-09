@@ -15,13 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef WINDOWSPROXY_H
-#define WINDOWSPROXY_H
-
 #pragma once
 
-#include "global.h"
-
+#include "core/global.h"
 #include "core/Proxy.h"
 
 #include <windows.h>
@@ -42,5 +38,3 @@ private:
 
 } // namespace ama::win
 } // namespace ama
-
-#endif // WINDOWSPROXY_H

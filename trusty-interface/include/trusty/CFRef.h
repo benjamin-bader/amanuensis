@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef CFREF_H
-#define CFREF_H
-
 #pragma once
 
 #include <type_traits>
@@ -158,5 +155,3 @@ template <typename T>
 using CFRef = RefHolder<T, CFRefTraits<T>>;
 
 }} // ama::trusty
-
-#endif // CFREF_H

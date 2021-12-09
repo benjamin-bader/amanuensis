@@ -15,9 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HTTPMESSAGE_H
-#define HTTPMESSAGE_H
-
 #pragma once
 
 #include <cstdint>
@@ -86,5 +83,3 @@ private:
 };
 
 } // namespace ama
-
-#endif // HTTPMESSAGE_H

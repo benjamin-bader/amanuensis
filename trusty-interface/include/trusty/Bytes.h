@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef BYTES_H
-#define BYTES_H
+#pragma once
 
 #include <cassert>
 #include <cstdint>
@@ -55,5 +54,3 @@ inline void to_network_order(const T val, uint8_t* bytes)
 } // namespace Bytes
 
 }} // ama::trusty
-
-#endif // BYTES_H

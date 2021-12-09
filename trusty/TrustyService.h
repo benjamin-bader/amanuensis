@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef TRUSTYSERVICE_H
-#define TRUSTYSERVICE_H
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -43,5 +42,3 @@ public:
 };
 
 }} // ama::trusty
-
-#endif // TRUSTYSERVICE_H
