@@ -1,6 +1,6 @@
 // Amanuensis - Web Traffic Inspector
 //
-// Copyright (C) 2017 Benjamin Bader
+// Copyright (C) 2021 Benjamin Bader
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,45 +15,36 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef TRANSACTION_H
-#define TRANSACTION_H
-
 #pragma once
 
-#include <memory>
-#include <string>
-#include <system_error>
-#include <utility>
-
-#include "core/global.h"
-
-#include "core/Listenable.h"
+#include "core/ConnectionPool.h"
+#include "core/HttpMessageParser.h"
 #include "core/Request.h"
 #include "core/Response.h"
 
-namespace ama
+#include <QObject>
+
+#include <array>
+#include <cstdint>
+#include <memory>
+#include <system_error>
+#include <vector>
+
+namespace ama {
+
+enum class NotificationState : uint8_t
 {
+    None = 0,
+    RequestHeaders = 1,
+    RequestBody = 2,
+    RequestComplete = 3,
+    ResponseHeaders = 4,
+    ResponseBody = 5,
+    ResponseComplete = 6,
 
-class Transaction;
+    TLSTunnel = 7,
 
-/**
- * @brief
- * A listener interface that receives events in the lifecycle of a Transaction.
- */
-class A_EXPORT TransactionListener
-{
-public:
-    virtual ~TransactionListener() {}
-
-    virtual void on_transaction_start(Transaction &tx) = 0;
-    virtual void on_request_read(Transaction &tx) = 0;
-
-    virtual void on_response_headers_read(Transaction &tx) = 0;
-    virtual void on_response_read(Transaction &tx) = 0;
-
-    virtual void on_transaction_complete(Transaction &tx) = 0;
-
-    virtual void on_transaction_failed(Transaction &tx) = 0;
+    Error = 8,
 };
 
 /**
@@ -127,62 +118,77 @@ enum A_EXPORT TransactionState
     Error = 0xFFFF
 };
 
-/**
- * Manually exporting the Listenable specialization, because MSVC can't figure it out on its own.
- */
-template class A_EXPORT Listenable<TransactionListener>;
-
-/**
- * @brief
- * A Transaction represents the lifecycle of an HTTP Request/Response pair.
- *
- * It provides access to a series of well-defined events in the process
- * of handling client requests and server responses, as well as its own
- * state and, if applicable, error information.
- *
- * Interested parties may register themselves for request/response events by
- * implementing TransactionListener, and registering themselves with add_listener.
- *
- * It's important to note that Transaction does not store request or response
- * contents, such as the request URL or the response codes.  Such data is emitted
- * in TransactionListener events only - listener implementations are responsible
- * for managing their own storage, as their needs dictate.
- *
- * Transaction instances are created and owned by a Proxy object.
- *
- * @remarks
- * A Transaction is modeled as a state machine, defined by the TransactionState
- * enum.
- */
-class A_EXPORT Transaction : public Listenable<TransactionListener>
+class A_EXPORT Transaction : public QObject
 {
+    Q_OBJECT
+
 public:
-    Transaction() {}
+    Transaction(int id, ConnectionPool* connectionPool, const std::shared_ptr<Conn>& clientConnection, QObject* parent = nullptr);
+    virtual ~Transaction() = default;
 
-    virtual ~Transaction()
-    {
-    }
+    int id() const;
+    TransactionState state() const;
+    Request& request();
+    Response& response();
 
-    virtual int id() const = 0;
+public slots:
+    void begin();
 
-    virtual TransactionState state() const = 0;
-
-    // Gets the error state of this Transaction.
-    //
-    // If the TransactionState is not TransactionState::Error,
-    // the error code will be 0.  This does not mean that
-    // the transaction succeeded!  It merely means that it has
-    // not (yet) failed.
-    virtual std::error_code error() const = 0;
-
-    virtual Request& request() = 0;
-    virtual Response& response() = 0;
+signals:
+    void on_transaction_start(ama::Transaction *tx);
+    void on_request_read(ama::Transaction *tx);
+    void on_response_headers_read(ama::Transaction *tx);
+    void on_response_read(ama::Transaction *tx);
+    void on_transaction_complete(ama::Transaction *tx);
+    void on_transaction_failed(ama::Transaction *tx);
 
 private:
-    Transaction(const Transaction&) = delete;
-    Transaction& operator=(const Transaction&) = delete;
+    void read_client_request();
+    void open_remote_connection();
+    void send_client_request_to_remote();
+
+    void read_remote_response();
+    void send_remote_response_to_client();
+
+    void establish_tls_tunnel();
+    void send_client_request_via_tunnel();
+    void send_server_response_via_tunnel();
+
+    void notify_phase_change(ParsePhase phase);
+    void do_notification(NotificationState ns);
+    void notify_failure(std::error_code ec);
+
+    void complete_transaction();
+
+    void release_connections();
+
+private:
+    int id_;
+    std::error_code error_;
+
+    std::shared_ptr<Conn> client_;
+    std::shared_ptr<Conn> remote_;
+
+    ConnectionPool* connection_pool_;
+
+    TransactionState state_;
+
+    HttpMessageParser parser_;
+
+    std::array<uint8_t, 8192> read_buffer_;
+    std::unique_ptr<std::array<uint8_t, 8192>> remote_buffer_;
+
+    // Records the exact bytes received from client/server, so that
+    // they can be relayed as-is.
+    std::vector<uint8_t> raw_input_;
+
+    ParsePhase request_parse_phase_;
+    Request request_;
+
+    ParsePhase response_parse_phase_;
+    Response response_;
+
+    NotificationState notification_state_;
 };
 
-} // namespace ama
-
-#endif // TRANSACTION_H
+}

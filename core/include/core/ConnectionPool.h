@@ -20,15 +20,15 @@
 
 #pragma once
 
+#include "core/common.h"
+#include "core/global.h"
+
+#include <QObject>
+
 #include <functional>
 #include <memory>
 #include <string>
 #include <system_error>
-
-#include "core/common.h"
-#include "core/global.h"
-
-#include "core/Listenable.h"
 
 #include <asio.hpp>
 
@@ -84,22 +84,12 @@ private:
     friend class ConnectionPool;
 };
 
-
-
-class A_EXPORT ConnectionPoolListener
+class ConnectionPool : public QObject
 {
-public:
-    virtual void on_client_connected(std::shared_ptr<Conn> connection) = 0;
-};
+    Q_OBJECT
 
-class ConnectionPool : public Listenable<ConnectionPoolListener>, public std::enable_shared_from_this<ConnectionPool>
-{
 public:
-    ConnectionPool(asio::io_context& context)
-        : context_(context)
-        , resolver_(context)
-    {}
-
+    ConnectionPool(asio::io_context& context, QObject* parent = nullptr);
     ~ConnectionPool();
 
     std::shared_ptr<Conn> make_connection(asio::ip::tcp::socket &&socket);
@@ -113,6 +103,9 @@ public:
     std::shared_ptr<Conn> find_open_connection(const std::string &host, int port);
 
     void try_open(const std::string &host, const std::string &port, std::function<void(std::shared_ptr<Conn>, std::error_code)> &&callback);
+
+signals:
+    void client_connected(const std::shared_ptr<Conn>& connection);
 
 private:
     asio::io_context& context_;

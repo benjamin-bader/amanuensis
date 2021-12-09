@@ -20,81 +20,38 @@
 #include <atomic>
 #include <memory>
 
-#include "core/ProxyTransaction.h"
+#include "core/Transaction.h"
 
-using namespace ama;
+namespace ama {
 
-class Proxy::ProxyImpl : public std::enable_shared_from_this<ProxyImpl>,
-                         public ConnectionPoolListener
-{
-public:
-    ProxyImpl(const int port);
-
-    void init(std::shared_ptr<Proxy> proxy);
-    void deinit();
-
-    int port() const { return port_; }
-
-    virtual void on_client_connected(std::shared_ptr<Conn> connection) override;
-
-private:
-    int port_;
-    Server server_;
-
-    std::atomic_int next_id_;
-
-    std::weak_ptr<Proxy> weak_proxy_;
-};
-
-Proxy::ProxyImpl::ProxyImpl(const int port) :
-    std::enable_shared_from_this<ProxyImpl>(),
-    ConnectionPoolListener(),
-    port_(port),
-    server_(port),
-    next_id_(1),
-    weak_proxy_()
-{
-}
-
-void Proxy::ProxyImpl::init(std::shared_ptr<Proxy> proxy)
-{
-    weak_proxy_ = proxy;
-    server_.connection_pool()->add_listener(shared_from_this());
-}
-
-void Proxy::ProxyImpl::deinit()
-{
-    server_.connection_pool()->remove_listener(shared_from_this());
-    weak_proxy_.reset();
-}
-
-void Proxy::ProxyImpl::on_client_connected(std::shared_ptr<Conn> connection)
-{
-    if (auto proxy = weak_proxy_.lock())
-    {
-        auto tx = std::make_shared<ProxyTransaction>(next_id_++, server_.connection_pool(), connection);
-        emit proxy->transactionStarted(tx);
-        tx->begin();
-    }
-}
-
-
-Proxy::Proxy(const int port) :
-    impl_(std::make_shared<Proxy::ProxyImpl>(port))
+Proxy::Proxy(const int port, QObject* parent)
+    : QObject(parent)
+    , port_(port)
+    , server_(new Server(port, this))
+    , next_id_(1)
 {
 }
 
 void Proxy::init()
 {
-    impl_->init(shared_from_this());
+    connect(server_, &Server::connection_established, this, &Proxy::on_client_connected);
 }
 
 void Proxy::deinit()
 {
-    impl_->deinit();
+    disconnect(server_, &Server::connection_established, this, &Proxy::on_client_connected);
 }
 
 int Proxy::port() const
 {
-    return impl_->port();
+    return port_;
 }
+
+void Proxy::on_client_connected(const std::shared_ptr<Conn>& conn)
+{
+    auto tx = new Transaction(next_id_++, server_->connection_pool(), conn, this);
+    emit transactionStarted(tx);
+    tx->begin();
+}
+
+} // ama

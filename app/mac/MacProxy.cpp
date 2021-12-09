@@ -218,8 +218,8 @@ std::unique_ptr<ama::trusty::IService> create_client_with_rights()
 
 } // anonymous namespace
 
-MacProxy::MacProxy(int port) :
-    Proxy(port),
+MacProxy::MacProxy(int port, QObject* parent) :
+    Proxy(port, parent),
     enabled_(false)
 {
     std::call_once(auth_init_flag, init_auth);
@@ -249,11 +249,6 @@ void MacProxy::enable()
     {
         return;
     }
-    // else
-    // {
-    //     enabled_ = true;
-    //     return;
-    // }
 
     if (should_install_helper_tool())
     {

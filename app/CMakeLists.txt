@@ -55,8 +55,6 @@ set_target_properties(amanuensis
 )
 
 if(APPLE)
-    
-
     find_program(CODESIGN codesign REQUIRED)
     find_program(MACDEPLOYQT macdeployqt REQUIRED)
     find_program(PLIST_BUDDY plist_buddy HINTS /usr/libexec REQUIRED)

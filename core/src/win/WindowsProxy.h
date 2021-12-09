@@ -32,7 +32,7 @@ namespace ama { namespace win {
 class A_EXPORT WindowsProxy : public Proxy
 {
 public:
-    WindowsProxy(const int port = 9999);
+    WindowsProxy(const int port = 9999, QObject* parent = nullptr);
     virtual ~WindowsProxy();
 
 private:

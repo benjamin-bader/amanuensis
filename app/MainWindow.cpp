@@ -38,7 +38,6 @@ using namespace ama;
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    txListener(std::make_shared<TxListener>()),
     connections(),
     model(new QStringListModel)
 {
@@ -52,20 +51,15 @@ MainWindow::MainWindow(QWidget *parent) :
     int port = settings.value("Proxy/port", 9999).toInt();
 
 #ifdef Q_OS_MAC
-    proxy = std::make_shared<ama::MacProxy>(port);
+    proxy = new ama::MacProxy(port, this);
 
-    static_cast<ama::MacProxy*>(proxy.get())->enable();
+    static_cast<ama::MacProxy*>(proxy)->enable();
     //static_cast<ama::MacProxy*>(proxy.get())->say_hi();
 #else
     proxy = ProxyFactory().create(port);
 #endif
 
-    connections << connect(proxy.get(), &Proxy::transactionStarted, [this](std::shared_ptr<Transaction> tx) {
-                   qDebug() << "Got a tx! " << tx->id();
-                   tx->add_listener(txListener);
-    });
-
-    connections << connect(txListener.get(), &TxListener::message_logged, this, &MainWindow::on_message_logged, Qt::QueuedConnection);
+    connect(proxy, &Proxy::transactionStarted, this, &MainWindow::onNewTransaction);
 
     ui->listView->setModel(model);
     ui->listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -84,52 +78,63 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void TxListener::on_transaction_start(Transaction &tx)
+void MainWindow::onNewTransaction(ama::Transaction* tx)
 {
-    std::stringstream ss;
-    ss << "TX(" << tx.id() << "): started";
-
-    emit message_logged(QString{ss.str().c_str()});
+    qDebug() << "Got a tx! " << tx->id();
+    connect(tx, &ama::Transaction::on_transaction_start, this, &MainWindow::transactionStarted, Qt::QueuedConnection);
+    connect(tx, &ama::Transaction::on_request_read, this, &MainWindow::requestRead, Qt::QueuedConnection);
+    connect(tx, &ama::Transaction::on_response_headers_read, this, &MainWindow::responseHeadersRead, Qt::QueuedConnection);
+    connect(tx, &ama::Transaction::on_response_read, this, &MainWindow::responseRead, Qt::QueuedConnection);
+    connect(tx, &ama::Transaction::on_transaction_complete, this, &MainWindow::transactionComplete, Qt::QueuedConnection);
+    connect(tx, &ama::Transaction::on_transaction_failed, this, &MainWindow::transactionFailed, Qt::QueuedConnection);
 }
 
-void TxListener::on_request_read(Transaction &tx)
+void MainWindow::transactionStarted(ama::Transaction* tx)
 {
     std::stringstream ss;
-    ss << "TX(" << tx.id() << "): " << tx.request().method() << " " << tx.request().uri();
+    ss << "TX(" << tx->id() << "): started";
 
-    emit message_logged(QString{ss.str().c_str()});
+    on_message_logged(QString{ss.str().c_str()});
 }
 
-void TxListener::on_response_headers_read(Transaction &tx)
+void MainWindow::requestRead(ama::Transaction* tx)
 {
     std::stringstream ss;
-    ss << "TX(" << tx.id() << "): " << tx.response().status_code() << " " << tx.response().status_message();
+    ss << "TX(" << tx->id() << "): " << tx->request().method() << " " << tx->request().uri();
 
-    emit message_logged(QString{ss.str().c_str()});
+    on_message_logged(QString{ss.str().c_str()});
 }
 
-void TxListener::on_response_read(Transaction &tx)
+void MainWindow::responseHeadersRead(ama::Transaction* tx)
 {
     std::stringstream ss;
-    ss << "TX(" << tx.id() << "): " << tx.request().method() << " " << tx.request().uri();
+    ss << "TX(" << tx->id() << "): " << tx->response().status_code() << " " << tx->response().status_message();
 
-    emit message_logged(QString{ss.str().c_str()});
+    on_message_logged(QString{ss.str().c_str()});
 }
 
-void TxListener::on_transaction_complete(Transaction &tx)
+void MainWindow::responseRead(ama::Transaction* tx)
 {
     std::stringstream ss;
-    ss << "TX(" << tx.id() << "): complete";
+    ss << "TX(" << tx->id() << "): " << tx->request().method() << " " << tx->request().uri();
 
-    emit message_logged(QString{ss.str().c_str()});
+    on_message_logged(QString{ss.str().c_str()});
 }
 
-void TxListener::on_transaction_failed(Transaction &tx)
+void MainWindow::transactionComplete(ama::Transaction* tx)
 {
     std::stringstream ss;
-    ss << "TX(" << tx.id() << "): failed";
+    ss << "TX(" << tx->id() << "): complete";
 
-    emit message_logged(QString{ss.str().c_str()});
+    on_message_logged(QString{ss.str().c_str()});
+}
+
+void MainWindow::transactionFailed(ama::Transaction* tx)
+{
+    std::stringstream ss;
+    ss << "TX(" << tx->id() << "): failed";
+
+    on_message_logged(QString{ss.str().c_str()});
 }
 
 void MainWindow::on_message_logged(const QString& message)

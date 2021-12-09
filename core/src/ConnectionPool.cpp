@@ -38,6 +38,12 @@ Conn::~Conn()
     socket_.close();
 }
 
+ConnectionPool::ConnectionPool(asio::io_context& context, QObject* parent)
+    : QObject{parent}
+    , context_(context)
+    , resolver_(context)
+{}
+
 ConnectionPool::~ConnectionPool()
 {
 
@@ -46,10 +52,7 @@ ConnectionPool::~ConnectionPool()
 std::shared_ptr<Conn> ConnectionPool::make_connection(asio::ip::tcp::socket &&socket)
 {
     auto connection = std::make_shared<Conn>(std::move(socket));
-    notify_listeners([connection](auto &listener)
-    {
-        listener->on_client_connected(connection);
-    });
+    emit client_connected(connection);
     return connection;
 }
 
@@ -62,12 +65,11 @@ std::shared_ptr<Conn> ConnectionPool::find_open_connection(const std::string &ho
 
 void ConnectionPool::try_open(const std::string &host, const std::string &port, std::function<void (std::shared_ptr<Conn>, std::error_code)> &&callback)
 {
-    auto self = shared_from_this();
     auto conn = std::make_shared<Conn>(context_);
 
     tcp::resolver::query query(host, port);
 
-    resolver_.async_resolve(query, [this, self, conn, callback]
+    resolver_.async_resolve(query, [conn, callback]
                             (asio::error_code ec, tcp::resolver::iterator result)
     {
         if (ec)
@@ -77,7 +79,7 @@ void ConnectionPool::try_open(const std::string &host, const std::string &port, 
         }
 
         asio::async_connect(conn->socket_, result,
-                            [this, self, conn, callback]
+                            [conn, callback]
                             (asio::error_code ec, tcp::resolver::iterator /* i */)
         {
             if (ec)

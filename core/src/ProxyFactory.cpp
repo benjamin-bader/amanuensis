@@ -30,12 +30,12 @@ ProxyFactory::ProxyFactory()
 
 }
 
-std::shared_ptr<Proxy> ProxyFactory::create(const int port)
+Proxy* ProxyFactory::create(const int port, QObject* parent)
 {
 #if defined(Q_OS_WIN)
-    return std::make_shared<ama::win::WindowsProxy>(port);
+    return new ama::win::WindowsProxy(port, parent);
 #else
 #warning No platform support implemented for this OS, returning generic proxy.
-    return std::make_shared<Proxy>(port);
+    return new Proxy(port, parent);
 #endif
 }

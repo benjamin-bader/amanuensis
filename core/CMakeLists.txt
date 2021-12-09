@@ -14,10 +14,10 @@ set(SOURCES
     src/HttpMessageParser.cpp
     src/Proxy.cpp
     src/ProxyFactory.cpp
-    src/ProxyTransaction.cpp
     src/Request.cpp
     src/Response.cpp
     src/Server.cpp
+    src/Transaction.cpp
 )
 
 add_library(core SHARED

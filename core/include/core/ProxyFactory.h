@@ -20,9 +20,9 @@
 
 #pragma once
 
-#include <memory>
-
 #include "core/global.h"
+
+#include <QObject>
 
 namespace ama
 {
@@ -34,7 +34,7 @@ class A_EXPORT ProxyFactory
 public:
     ProxyFactory();
 
-    std::shared_ptr<Proxy> create(const int port);
+    Proxy* create(const int port, QObject* parent = nullptr);
 };
 
 } // ama

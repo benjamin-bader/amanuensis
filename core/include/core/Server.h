@@ -20,26 +20,34 @@
 
 #pragma once
 
+#include "core/global.h"
+
+#include <QObject>
+
 #include <memory>
 #include <thread>
 #include <vector>
 
 #include <asio.hpp>
 
-#include "core/global.h"
-
 namespace ama
 {
 
 class ConnectionPool;
+class Conn;
 
-class A_EXPORT Server
+class A_EXPORT Server : public QObject
 {
+    Q_OBJECT
+
 public:
-    Server(const int port = 9999);
+    Server(const int port = 9999, QObject* parent = nullptr);
     ~Server();
 
-    std::shared_ptr<ConnectionPool> connection_pool() const;
+    ConnectionPool* connection_pool() const;
+
+signals:
+    void connection_established(const std::shared_ptr<Conn>& conn);
 
 private:
     void do_accept();
@@ -53,7 +61,7 @@ private:
 
     std::vector<std::thread> workers_;
 
-    std::shared_ptr<ConnectionPool> connection_pool_;
+    ConnectionPool* connection_pool_;
 };
 
 } // namespace ama

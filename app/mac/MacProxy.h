@@ -34,7 +34,7 @@ namespace ama {
 class MacProxy : public Proxy
 {
 public:
-    MacProxy(int port);
+    MacProxy(int port, QObject* parent = nullptr);
     virtual ~MacProxy();
 
     bool is_enabled() const;

@@ -22,8 +22,8 @@
 
 using namespace ama::win;
 
-WindowsProxy::WindowsProxy(int port) :
-    Proxy(port)
+WindowsProxy::WindowsProxy(int port, QObject* parent) :
+    Proxy(port, parent)
 {    
     DWORD optionListSize = sizeof(INTERNET_PER_CONN_OPTION_LIST);
 

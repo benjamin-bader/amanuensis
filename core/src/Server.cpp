@@ -22,18 +22,18 @@
 #include <QDebug>
 
 #include "core/ConnectionPool.h"
-#include "core/ProxyTransaction.h"
 
 namespace ama {
 
-Server::Server(const int port)
-    : port_(port)
+Server::Server(const int port, QObject* parent)
+    : QObject(parent)
+    , port_(port)
     , io_context_()
     , signals_(io_context_)
     , acceptor_(io_context_)
     , socket_(io_context_)
     , workers_()
-    , connection_pool_(std::make_shared<ConnectionPool>(io_context_))
+    , connection_pool_(new ConnectionPool(io_context_, this))
 {
     signals_.add(SIGINT);
     signals_.add(SIGTERM);
@@ -51,6 +51,8 @@ Server::Server(const int port)
     acceptor_.set_option(asio::ip::tcp::acceptor::reuse_address(true));
     acceptor_.bind(endpoint);
     acceptor_.listen();
+
+    connect(connection_pool_, &ConnectionPool::client_connected, this, &Server::connection_established);
 
     do_accept();
 
@@ -85,8 +87,6 @@ Server::~Server()
     acceptor_.close();
     io_context_.stop();
 
-    connection_pool_ = nullptr;
-
     std::for_each(workers_.begin(), workers_.end(), [](std::thread &t) {
         if (t.joinable())
         {
@@ -97,7 +97,7 @@ Server::~Server()
     workers_.clear();
 }
 
-std::shared_ptr<ConnectionPool> Server::connection_pool() const
+ConnectionPool* Server::connection_pool() const
 {
     return connection_pool_;
 }

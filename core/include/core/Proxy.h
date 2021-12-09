@@ -25,6 +25,7 @@
 
 #include <QObject>
 
+#include <atomic>
 #include <memory>
 
 #include "core/ConnectionPool.h"
@@ -36,13 +37,12 @@ namespace ama
 
 class HttpMessage;
 
-class A_EXPORT Proxy : public QObject,
-                       public std::enable_shared_from_this<Proxy>
+class A_EXPORT Proxy : public QObject
 {
     Q_OBJECT
 
 public:
-    Proxy(const int port = 9999);
+    Proxy(const int port = 9999, QObject* parent = nullptr);
     virtual ~Proxy() = default;
 
     int port() const;
@@ -64,12 +64,15 @@ signals:
      *
      * @param tx the new transaction.
      */
-    void transactionStarted(std::shared_ptr<Transaction> tx);
+    void transactionStarted(ama::Transaction* tx);
+
+private slots:
+    void on_client_connected(const std::shared_ptr<Conn>& conn);
 
 private:
-    class ProxyImpl;
-
-    std::shared_ptr<ProxyImpl> impl_;
+    int port_;
+    Server* server_;
+    std::atomic_int next_id_;
 };
 
 } // namespace ama
