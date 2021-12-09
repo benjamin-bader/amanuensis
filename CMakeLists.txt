@@ -10,6 +10,10 @@ project(amanuensis
         LANGUAGES CXX
 )
 
+set(MACOSX_APP_IDENTIFIER "com.bendb.amanuensis.Amanuensis")
+set(MACOSX_HELPER_IDENTIFIER "com.bendb.amanuensis.Trusty")
+set(MACOSX_SIGNING_CERT_SHA1 "984BC66B1C9F4DB732791F07ED0D6AB6928CDE1A")
+
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(CMAKE_AUTOUIC ON)

@@ -27,7 +27,7 @@
         <key>SMPrivilegedExecutables</key>
         <dict>
                 <key>com.bendb.amanuensis.Trusty</key>
-                <string>identifier &quot;com.bendb.amanuensis.Trusty&quot; and certificate leaf = H&quot;@CERTSHA1@&quot;</string>
+                <string>identifier &quot;com.bendb.amanuensis.Trusty&quot; and certificate leaf = H&quot;@MACOSX_SIGNING_CERT_SHA1@&quot;</string>
         </dict>
 </dict>
 </plist>

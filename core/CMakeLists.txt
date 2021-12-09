@@ -29,7 +29,6 @@ add_library(core SHARED
 file(GLOB PUBLIC_HEADERS include/**/*.h)
 target_sources(core PUBLIC ${PUBLIC_HEADERS})
 
-
 target_link_libraries(
     core
     log
