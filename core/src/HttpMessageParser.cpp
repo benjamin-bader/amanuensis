@@ -50,6 +50,8 @@ public:
     }
 
     MemoryBuffer(size_t size)
+        : pointer_{nullptr}
+        , size_{size}
     {
         pointer_ = (T*) ::malloc(sizeof(T) * size);
         if (pointer_ == nullptr)
@@ -79,6 +81,11 @@ public:
         }
     }
 
+    size_t size() const
+    {
+        return size_;
+    }
+
     operator T*()
     {
         return pointer_;
@@ -91,6 +98,7 @@ public:
 
 private:
     T* pointer_;
+    size_t size_;
 };
 
 bool parse_uint64_t(const std::string &str, uint64_t &result, int base = 10)
@@ -619,7 +627,7 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
                     // strtok modifies its arguments, so we need to
                     // make a copy here.
                     MemoryBuffer<char> data = MemoryBuffer<char>::allocate(value.size() + 1);
-                    ::strcpy(data, value.c_str());
+                    ::strlcpy(data, value.c_str(), data.size());
 
                     const char delimiters[] = ", ";
 
