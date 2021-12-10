@@ -57,27 +57,22 @@ class L_EXPORT LogValueVisitor
 public:
     virtual ~LogValueVisitor() = default;
 
-    virtual void visit(const LogValue<bool>&) noexcept = 0;
-    virtual void visit(const LogValue<const char*>&) noexcept = 0;
-    virtual void visit(const LogValue<const wchar_t*>&) noexcept = 0;
-    virtual void visit(const LogValue<std::string>&) noexcept = 0;
-    virtual void visit(const LogValue<std::wstring>&) noexcept = 0;
-    virtual void visit(const LogValue<int8_t>&) noexcept = 0;
-    virtual void visit(const LogValue<int16_t>&) noexcept = 0;
-    virtual void visit(const LogValue<int32_t>&) noexcept = 0;
-    virtual void visit(const LogValue<int64_t>&) noexcept = 0;
-    virtual void visit(const LogValue<uint8_t>&) noexcept = 0;
-    virtual void visit(const LogValue<uint16_t>&) noexcept = 0;
-    virtual void visit(const LogValue<uint32_t>&) noexcept = 0;
-    virtual void visit(const LogValue<uint64_t>&) noexcept = 0;
-
-#ifdef __APPLE__
-    // GCC errors out if these are defined, because it seems to view overloads of LogValue<T>
-    // as equivalent if two exist with T having the same size (or maybe one T is a typedef
-    // of another?).
-    virtual void visit(const LogValue<size_t>&) noexcept = 0;
-    virtual void visit(const LogValue<long>&) noexcept = 0;
-#endif
+    virtual void visit(const LogValue<bool>& value) noexcept = 0;
+    virtual void visit(const LogValue<const char*>& value) noexcept = 0;
+    virtual void visit(const LogValue<const wchar_t*>& value) noexcept = 0;
+    virtual void visit(const LogValue<std::string>& value) noexcept = 0;
+    virtual void visit(const LogValue<std::wstring>& value) noexcept = 0;
+    virtual void visit(const LogValue<char>& value) noexcept = 0;
+    virtual void visit(const LogValue<signed char>& value) noexcept = 0;
+    virtual void visit(const LogValue<unsigned char>& value) noexcept = 0;
+    virtual void visit(const LogValue<short>& value) noexcept = 0;
+    virtual void visit(const LogValue<unsigned short>& value) noexcept = 0;
+    virtual void visit(const LogValue<int>& value) noexcept = 0;
+    virtual void visit(const LogValue<unsigned int>& value) noexcept = 0;
+    virtual void visit(const LogValue<long>& value) noexcept = 0;
+    virtual void visit(const LogValue<unsigned long>& value) noexcept = 0;
+    virtual void visit(const LogValue<long long>& value) noexcept = 0;
+    virtual void visit(const LogValue<unsigned long long>& value) noexcept = 0;
 };
 
 class L_EXPORT ILogValue // todo: suppress vtable?

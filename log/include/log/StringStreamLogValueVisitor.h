@@ -62,50 +62,37 @@ public:
         ss_ << " " << value.name() << "=\"" << converter.to_bytes(value.value()) << "\"";
     }
 
-    void visit(const LogValue<int8_t>& value) noexcept override
+    void visit(const LogValue<char>& value) noexcept override
     {
         ss_ << " " << value.name() << "=" << value.value();
     }
 
-    void visit(const LogValue<int16_t>& value) noexcept override
+    void visit(const LogValue<signed char>& value) noexcept override
     {
         ss_ << " " << value.name() << "=" << value.value();
     }
 
-    void visit(const LogValue<int32_t>& value) noexcept override
+    void visit(const LogValue<unsigned char>& value) noexcept override
     {
         ss_ << " " << value.name() << "=" << value.value();
     }
 
-    void visit(const LogValue<int64_t>& value) noexcept override
+    void visit(const LogValue<short>& value) noexcept override
     {
         ss_ << " " << value.name() << "=" << value.value();
     }
 
-    void visit(const LogValue<uint8_t>& value) noexcept override
+    void visit(const LogValue<unsigned short>& value) noexcept override
     {
         ss_ << " " << value.name() << "=" << value.value();
     }
 
-    void visit(const LogValue<uint16_t>& value) noexcept override
+    void visit(const LogValue<int>& value) noexcept override
     {
         ss_ << " " << value.name() << "=" << value.value();
     }
 
-    void visit(const LogValue<uint32_t>& value) noexcept override
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-    void visit(const LogValue<uint64_t>& value) noexcept override
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
-
-#ifdef __APPLE__
-    // see the comment in Log.h
-
-    void visit(const LogValue<size_t>& value) noexcept override
+    void visit(const LogValue<unsigned int>& value) noexcept override
     {
         ss_ << " " << value.name() << "=" << value.value();
     }
@@ -114,7 +101,21 @@ public:
     {
         ss_ << " " << value.name() << "=" << value.value();
     }
-#endif
+
+    void visit(const LogValue<unsigned long>& value) noexcept override
+    {
+        ss_ << " " << value.name() << "=" << value.value();
+    }
+
+    void visit(const LogValue<long long>& value) noexcept override
+    {
+        ss_ << " " << value.name() << "=" << value.value();
+    }
+
+    void visit(const LogValue<unsigned long long>& value) noexcept override
+    {
+        ss_ << " " << value.name() << "=" << value.value();
+    }
 
     std::string str()
     {
