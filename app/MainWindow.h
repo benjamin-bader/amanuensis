@@ -49,13 +49,13 @@ public slots:
     void on_message_logged(const QString& message);
 
 private slots:
-    void onNewTransaction(ama::Transaction* tx);
-    void transactionStarted(ama::Transaction* tx);
-    void requestRead(ama::Transaction* tx);
-    void responseHeadersRead(ama::Transaction* tx);
-    void responseRead(ama::Transaction* tx);
-    void transactionComplete(ama::Transaction* tx);
-    void transactionFailed(ama::Transaction* tx);
+    void onNewTransaction(const QSharedPointer<ama::Transaction>& tx);
+    void transactionStarted(const QSharedPointer<ama::Transaction>& tx);
+    void requestRead(const QSharedPointer<ama::Transaction>& tx);
+    void responseHeadersRead(const QSharedPointer<ama::Transaction>& tx);
+    void responseRead(const QSharedPointer<ama::Transaction>& tx);
+    void transactionComplete(const QSharedPointer<ama::Transaction>& tx);
+    void transactionFailed(const QSharedPointer<ama::Transaction>& tx);
 
 private:
     //void addRowToListView(const std::shared_ptr<ama::Connection> &connection, const std::string &message);

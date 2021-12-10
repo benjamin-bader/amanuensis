@@ -49,7 +49,7 @@ int Proxy::port() const
 
 void Proxy::on_client_connected(const std::shared_ptr<Conn>& conn)
 {
-    auto tx = new Transaction(next_id_++, server_->connection_pool(), conn, this);
+    auto tx = QSharedPointer<ama::Transaction>::create(next_id_++, server_->connection_pool(), conn);
     emit transactionStarted(tx);
     tx->begin();
 }

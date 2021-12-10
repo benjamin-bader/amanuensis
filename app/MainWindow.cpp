@@ -78,18 +78,18 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::onNewTransaction(ama::Transaction* tx)
+void MainWindow::onNewTransaction(const QSharedPointer<ama::Transaction>& tx)
 {
     qDebug() << "Got a tx! " << tx->id();
-    connect(tx, &ama::Transaction::on_transaction_start, this, &MainWindow::transactionStarted, Qt::QueuedConnection);
-    connect(tx, &ama::Transaction::on_request_read, this, &MainWindow::requestRead, Qt::QueuedConnection);
-    connect(tx, &ama::Transaction::on_response_headers_read, this, &MainWindow::responseHeadersRead, Qt::QueuedConnection);
-    connect(tx, &ama::Transaction::on_response_read, this, &MainWindow::responseRead, Qt::QueuedConnection);
-    connect(tx, &ama::Transaction::on_transaction_complete, this, &MainWindow::transactionComplete, Qt::QueuedConnection);
-    connect(tx, &ama::Transaction::on_transaction_failed, this, &MainWindow::transactionFailed, Qt::QueuedConnection);
+    connect(tx.get(), &ama::Transaction::on_transaction_start, this, &MainWindow::transactionStarted, Qt::QueuedConnection);
+    connect(tx.get(), &ama::Transaction::on_request_read, this, &MainWindow::requestRead, Qt::QueuedConnection);
+    connect(tx.get(), &ama::Transaction::on_response_headers_read, this, &MainWindow::responseHeadersRead, Qt::QueuedConnection);
+    connect(tx.get(), &ama::Transaction::on_response_read, this, &MainWindow::responseRead, Qt::QueuedConnection);
+    connect(tx.get(), &ama::Transaction::on_transaction_complete, this, &MainWindow::transactionComplete, Qt::QueuedConnection);
+    connect(tx.get(), &ama::Transaction::on_transaction_failed, this, &MainWindow::transactionFailed, Qt::QueuedConnection);
 }
 
-void MainWindow::transactionStarted(ama::Transaction* tx)
+void MainWindow::transactionStarted(const QSharedPointer<ama::Transaction>& tx)
 {
     std::stringstream ss;
     ss << "TX(" << tx->id() << "): started";
@@ -97,7 +97,7 @@ void MainWindow::transactionStarted(ama::Transaction* tx)
     on_message_logged(QString{ss.str().c_str()});
 }
 
-void MainWindow::requestRead(ama::Transaction* tx)
+void MainWindow::requestRead(const QSharedPointer<ama::Transaction>& tx)
 {
     std::stringstream ss;
     ss << "TX(" << tx->id() << "): " << tx->request().method() << " " << tx->request().uri();
@@ -105,7 +105,7 @@ void MainWindow::requestRead(ama::Transaction* tx)
     on_message_logged(QString{ss.str().c_str()});
 }
 
-void MainWindow::responseHeadersRead(ama::Transaction* tx)
+void MainWindow::responseHeadersRead(const QSharedPointer<ama::Transaction>& tx)
 {
     std::stringstream ss;
     ss << "TX(" << tx->id() << "): " << tx->response().status_code() << " " << tx->response().status_message();
@@ -113,7 +113,7 @@ void MainWindow::responseHeadersRead(ama::Transaction* tx)
     on_message_logged(QString{ss.str().c_str()});
 }
 
-void MainWindow::responseRead(ama::Transaction* tx)
+void MainWindow::responseRead(const QSharedPointer<ama::Transaction>& tx)
 {
     std::stringstream ss;
     ss << "TX(" << tx->id() << "): " << tx->request().method() << " " << tx->request().uri();
@@ -121,15 +121,18 @@ void MainWindow::responseRead(ama::Transaction* tx)
     on_message_logged(QString{ss.str().c_str()});
 }
 
-void MainWindow::transactionComplete(ama::Transaction* tx)
+void MainWindow::transactionComplete(const QSharedPointer<ama::Transaction>& tx)
 {
     std::stringstream ss;
     ss << "TX(" << tx->id() << "): complete";
 
     on_message_logged(QString{ss.str().c_str()});
+
+    // Disconnect all connections between the tx and this.
+    disconnect(tx.get(), nullptr, this, nullptr);
 }
 
-void MainWindow::transactionFailed(ama::Transaction* tx)
+void MainWindow::transactionFailed(const QSharedPointer<ama::Transaction>& tx)
 {
     std::stringstream ss;
     ss << "TX(" << tx->id() << "): failed";

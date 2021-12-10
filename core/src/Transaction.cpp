@@ -151,7 +151,7 @@ Response& Transaction::response()
 
 void Transaction::begin()
 {
-    emit on_transaction_start(this);
+    emit on_transaction_start(sharedFromThis());
     raw_input_.clear();
 
     read_client_request();
@@ -161,14 +161,9 @@ void Transaction::read_client_request()
 {
     log::debug("read_client_request()", log::IntValue("id", id_));
 
-    QPointer<Transaction> self(this);
+    auto self = sharedFromThis();
     client_->async_read_some(read_buffer_, [self](asio::error_code ec, size_t num_read)
     {
-        if (self == nullptr)
-        {
-            return;
-        }
-
         log::debug(
             "read_client_request#async_read_some",
             log::IntValue("id", self->id_),
@@ -273,14 +268,9 @@ void Transaction::open_remote_connection()
         }
     }
 
-    QPointer<Transaction> self(this);
+    auto self = sharedFromThis();
     connection_pool_->try_open(host, port, [self](auto conn, auto ec)
     {
-        if (self == nullptr)
-        {
-            return;
-        }
-
         if (ec)
         {
             self->notify_failure(ec);
@@ -294,17 +284,12 @@ void Transaction::open_remote_connection()
 
 void Transaction::send_client_request_to_remote()
 {
-    QPointer<Transaction> self(this);
+    auto self = sharedFromThis();
     auto formatted_request = std::make_shared<std::string>(request_.format());
     remote_->async_write(asio::buffer(*formatted_request),
                          [self, formatted_request](auto ec, size_t num_bytes_written)
     {
         UNUSED(num_bytes_written);
-
-        if (self == nullptr)
-        {
-            return;
-        }
 
         if (ec)
         {
@@ -320,14 +305,9 @@ void Transaction::send_client_request_to_remote()
 
 void Transaction::read_remote_response()
 {
-    QPointer<Transaction> self(this);
+    auto self = sharedFromThis();
     remote_->async_read_some(read_buffer_, [self](auto ec, size_t num_bytes_read)
     {
-        if (self == nullptr)
-        {
-            return;
-        }
-
         if (ec == asio::error::eof)
         {
             // unexpected disconnect
@@ -384,15 +364,10 @@ void Transaction::read_remote_response()
 
 void Transaction::send_remote_response_to_client()
 {
-    QPointer<Transaction> self(this);
+    auto self = sharedFromThis();
     client_->async_write(asio::buffer(raw_input_), [self](auto ec, size_t num_bytes_written)
     {
         UNUSED(num_bytes_written);
-
-        if (self == nullptr)
-        {
-            return;
-        }
 
         if (ec == asio::error::eof)
         {
@@ -436,14 +411,9 @@ void Transaction::establish_tls_tunnel()
 
     asio::ip::tcp::resolver::query query(host, port);
 
-    QPointer<Transaction> self(this);
+    auto self = sharedFromThis();
     connection_pool_->try_open(host, port, [self](auto conn, auto ec)
     {
-        if (self == nullptr)
-        {
-            return;
-        }
-
         bool success = true;
         if (ec)
         {
@@ -468,11 +438,6 @@ void Transaction::establish_tls_tunnel()
                                    (auto ec2, auto num_bytes_written)
         {
             UNUSED(num_bytes_written);
-
-            if (self == nullptr)
-            {
-                return;
-            }
 
             bool localSuccess = success;
             if (ec2)
@@ -507,14 +472,9 @@ void Transaction::send_client_request_via_tunnel()
         return;
     }
 
-    QPointer<Transaction> self(this);
+    auto self = sharedFromThis();
     client_->async_read_some(read_buffer_, [self](auto ec, size_t num_bytes_read)
     {
-        if (self == nullptr)
-        {
-            return;
-        }
-
         if (ec == asio::error::eof || num_bytes_read == 0)
         {
             // finished normally?
@@ -532,11 +492,6 @@ void Transaction::send_client_request_via_tunnel()
         auto sendBuffer = asio::buffer(self->read_buffer_, num_bytes_read);
         self->remote_->async_write(sendBuffer, [self, num_bytes_read](auto ec, size_t num_bytes_written)
         {
-            if (self == nullptr)
-            {
-                return;
-            }
-
             if (ec)
             {
                 // Fail
@@ -563,14 +518,9 @@ void Transaction::send_server_response_via_tunnel()
         return;
     }
 
-    QPointer<Transaction> self(this);
+    auto self = sharedFromThis();
     remote_->async_read_some(*remote_buffer_, [self](auto ec, size_t num_bytes_read)
     {
-        if (self == nullptr)
-        {
-            return;
-        }
-
         if (ec == asio::error::eof || num_bytes_read == 0)
         {
             // finished normally?
@@ -588,11 +538,6 @@ void Transaction::send_server_response_via_tunnel()
         auto sendBuffer = asio::buffer(*self->remote_buffer_, num_bytes_read);
         self->client_->async_write(sendBuffer, [self, num_bytes_read](auto ec, size_t num_bytes_written)
         {
-            if (self == nullptr)
-            {
-                return;
-            }
-
             if (ec)
             {
                 // Fail
@@ -615,8 +560,7 @@ void Transaction::send_server_response_via_tunnel()
 void Transaction::complete_transaction()
 {
     release_connections();
-    emit on_transaction_complete(this);
-    deleteLater();
+    emit on_transaction_complete(sharedFromThis());
 }
 
 void Transaction::release_connections()
@@ -663,6 +607,7 @@ void Transaction::notify_phase_change(ParsePhase phase)
 
 void Transaction::do_notification(NotificationState ns)
 {
+    auto self = sharedFromThis();
     log::debug("Transaction::do_notification", log::IntValue("tx", id_), NotificationStateValue(ns));
     while (notification_state_ < ns)
     {
@@ -682,17 +627,17 @@ void Transaction::do_notification(NotificationState ns)
             // ditto
             break;
         case NotificationState::RequestComplete:
-            emit on_request_read(this);
+            emit on_request_read(self);
             break;
         case NotificationState::ResponseHeaders:
-            emit on_response_headers_read(this);
+            emit on_response_headers_read(self);
             break;
         case NotificationState::ResponseBody:
             // nothing
             break;
         case NotificationState::ResponseComplete:
-            emit on_response_read(this);
-            emit on_transaction_complete(this);
+            emit on_response_read(self);
+            emit on_transaction_complete(self);
             break;
         case NotificationState::TLSTunnel:
             // nothing
@@ -712,7 +657,7 @@ void Transaction::notify_failure(std::error_code ec)
     error_ = ec;
     notification_state_ = NotificationState::Error;
 
-    emit on_transaction_failed(this);
+    emit on_transaction_failed(sharedFromThis());
 
     complete_transaction();
 }

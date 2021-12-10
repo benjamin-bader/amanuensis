@@ -22,7 +22,9 @@
 #include "core/Request.h"
 #include "core/Response.h"
 
+#include <QEnableSharedFromThis>
 #include <QObject>
+#include <QSharedPointer>
 
 #include <array>
 #include <cstdint>
@@ -118,7 +120,7 @@ enum A_EXPORT TransactionState
     Error = 0xFFFF
 };
 
-class A_EXPORT Transaction : public QObject
+class A_EXPORT Transaction : public QObject, public QEnableSharedFromThis<Transaction>
 {
     Q_OBJECT
 
@@ -135,12 +137,12 @@ public slots:
     void begin();
 
 signals:
-    void on_transaction_start(ama::Transaction *tx);
-    void on_request_read(ama::Transaction *tx);
-    void on_response_headers_read(ama::Transaction *tx);
-    void on_response_read(ama::Transaction *tx);
-    void on_transaction_complete(ama::Transaction *tx);
-    void on_transaction_failed(ama::Transaction *tx);
+    void on_transaction_start(const QSharedPointer<ama::Transaction>& tx);
+    void on_request_read(const QSharedPointer<ama::Transaction>& tx);
+    void on_response_headers_read(const QSharedPointer<ama::Transaction>& tx);
+    void on_response_read(const QSharedPointer<ama::Transaction>& tx);
+    void on_transaction_complete(const QSharedPointer<ama::Transaction>& tx);
+    void on_transaction_failed(const QSharedPointer<ama::Transaction>& tx);
 
 private:
     void read_client_request();

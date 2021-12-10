@@ -21,6 +21,7 @@
 #include "core/global.h"
 
 #include <QObject>
+#include <QSharedPointer>
 
 #include <atomic>
 #include <memory>
@@ -61,7 +62,7 @@ signals:
      *
      * @param tx the new transaction.
      */
-    void transactionStarted(ama::Transaction* tx);
+    void transactionStarted(const QSharedPointer<ama::Transaction>& tx);
 
 private slots:
     void on_client_connected(const std::shared_ptr<Conn>& conn);

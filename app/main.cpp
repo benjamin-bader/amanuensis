@@ -29,6 +29,7 @@
 #include "core/Proxy.h"
 #include "core/ProxyFactory.h"
 #include "core/Server.h"
+#include "core/Transaction.h"
 
 #include "LogSetup.h"
 
@@ -36,6 +37,8 @@
 //Q_DECLARE_METATYPE(ama::HttpMessage)
 
 Q_DECLARE_SMART_POINTER_METATYPE(std::shared_ptr)
+
+Q_DECLARE_METATYPE(ama::Transaction)
 
 int main(int argc, char *argv[])
 {
@@ -50,6 +53,8 @@ int main(int argc, char *argv[])
     {
         //qRegisterMetaType<std::shared_ptr<ama::Connection>>();
         //qRegisterMetaType<ama::HttpMessage>();
+        qRegisterMetaType<ama::Transaction>();
+        qRegisterMetaType<QSharedPointer<ama::Transaction>>();
 
         QApplication a(argc, argv);
 
