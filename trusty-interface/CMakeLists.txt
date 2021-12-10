@@ -35,12 +35,6 @@ target_compile_definitions(
     -DSPDLOG_ENABLE_SYSLOG
 )
 
-set_target_properties(
-    trusty_interface
-    PROPERTIES
-    POSITION_INDEPENDENT_CODE ON
-)
-
 if(BUILD_TESTS)
     add_test_case(trusty_interface bytes src/BytesTest.cpp)
     add_test_case(trusty_interface message_processor src/MessageProcessorTest.cpp)

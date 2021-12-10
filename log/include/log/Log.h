@@ -70,8 +70,14 @@ public:
     virtual void visit(const LogValue<uint16_t>&) noexcept = 0;
     virtual void visit(const LogValue<uint32_t>&) noexcept = 0;
     virtual void visit(const LogValue<uint64_t>&) noexcept = 0;
-//    virtual void visit(const LogValue<size_t>&) noexcept = 0;
-//    virtual void visit(const LogValue<long>&) noexcept = 0;
+
+#ifdef __APPLE__
+    // GCC errors out if these are defined, because it seems to view overloads of LogValue<T>
+    // as equivalent if two exist with T having the same size (or maybe one T is a typedef
+    // of another?).
+    virtual void visit(const LogValue<size_t>&) noexcept = 0;
+    virtual void visit(const LogValue<long>&) noexcept = 0;
+#endif
 };
 
 class L_EXPORT ILogValue // todo: suppress vtable?

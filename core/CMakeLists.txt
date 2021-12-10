@@ -20,7 +20,7 @@ set(SOURCES
     src/Transaction.cpp
 )
 
-add_library(core SHARED
+add_library(core STATIC
     ${SOURCES}
     ${PLATFORM_SOURCES}
 )
@@ -46,13 +46,7 @@ target_include_directories(core
 
 target_compile_definitions(core PRIVATE -DCORE_LIBRARY=1)
 
-set_target_properties(
-    core
-
-    PROPERTIES
-
-    POSITION_INDEPENDENT_CODE ON
-)
+#set_target_properties(core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if(BUILD_TESTS)
     add_test_case(core dates src/DatesTests.cpp)
