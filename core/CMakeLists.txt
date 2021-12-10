@@ -46,6 +46,14 @@ target_include_directories(core
 
 target_compile_definitions(core PRIVATE -DCORE_LIBRARY=1)
 
+set_target_properties(
+    core
+
+    PROPERTIES
+
+    POSITION_INDEPENDENT_CODE ON
+)
+
 if(BUILD_TESTS)
     add_test_case(core dates src/DatesTests.cpp)
     add_test_case(core http_message_parser src/HttpMessageParserTests.cpp)

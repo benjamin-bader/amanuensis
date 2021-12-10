@@ -13,3 +13,5 @@ add_library(log STATIC
 target_include_directories(log PUBLIC include)
 
 target_compile_definitions(log PRIVATE -DLOG_LIBRARY=1)
+
+set_target_properties(log PROPERTIES POSITION_INDEPENDENT_CODE ON)

@@ -102,15 +102,15 @@ public:
         ss_ << " " << value.name() << "=" << value.value();
     }
 
-    void visit(const LogValue<size_t>& value) noexcept override
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
+//    void visit(const LogValue<size_t>& value) noexcept override
+//    {
+//        ss_ << " " << value.name() << "=" << value.value();
+//    }
 
-    void visit(const LogValue<long>& value) noexcept override
-    {
-        ss_ << " " << value.name() << "=" << value.value();
-    }
+//    void visit(const LogValue<long>& value) noexcept override
+//    {
+//        ss_ << " " << value.name() << "=" << value.value();
+//    }
 
     std::string str()
     {

@@ -22,7 +22,18 @@
 #include "mac/MacLogSetup.h"
 #include "win/WindowsLogSetup.h"
 
+#include "log/Log.h"
+
 namespace ama {
+
+class GenericLogSetup : public LogSetup
+{
+public:
+    void configure_logging() override
+    {
+        // Nothing doing.
+    }
+};
 
 std::unique_ptr<LogSetup> make_log_configurer()
 {
@@ -31,7 +42,7 @@ std::unique_ptr<LogSetup> make_log_configurer()
 #elif defined(Q_OS_DARWIN)
     return std::make_unique<MacLogSetup>();
 #else
-#warning no logz 4 u
+    return std::make_unique<GenericLogSetup>();
 #endif
 }
 
