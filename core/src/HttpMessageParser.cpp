@@ -21,11 +21,12 @@
 #include <cctype>
 #include <cerrno>
 #include <cstdlib>
-#include <cstring>
 #include <iostream>
 #include <sstream>
 
 #include <QDebug>
+#include <QString>
+#include <QStringView>
 
 #include "core/Headers.h"
 #include "core/HttpMessage.h"
@@ -39,67 +40,6 @@ namespace ama {
 #endif
 
 namespace {
-
-template <typename T>
-class MemoryBuffer
-{
-public:
-    static MemoryBuffer<T> allocate(size_t num_elements)
-    {
-        return MemoryBuffer<T>(num_elements);
-    }
-
-    MemoryBuffer(size_t size)
-        : pointer_{nullptr}
-        , size_{size}
-    {
-        pointer_ = (T*) ::malloc(sizeof(T) * size);
-        if (pointer_ == nullptr)
-        {
-            throw std::bad_alloc();
-        }
-    }
-
-    MemoryBuffer(MemoryBuffer<T>&& that)
-    {
-        this->pointer_ = that.pointer_;
-        that.pointer_ = nullptr;
-    }
-
-    MemoryBuffer& operator=(MemoryBuffer<T>&& that)
-    {
-        this->pointer_ = that.pointer_;
-        that.pointer_ = nullptr;
-        return *this;
-    }
-
-    ~MemoryBuffer()
-    {
-        if (pointer_ != nullptr)
-        {
-            ::free(pointer_);
-        }
-    }
-
-    size_t size() const
-    {
-        return size_;
-    }
-
-    operator T*()
-    {
-        return pointer_;
-    }
-
-    T operator*()
-    {
-        return *pointer_;
-    }
-
-private:
-    T* pointer_;
-    size_t size_;
-};
 
 bool parse_uint64_t(const std::string &str, uint64_t &result, int base = 10)
 {
@@ -618,28 +558,15 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
 
                 // Is this a simple chunk stream?  If not, do we have a comma-separated list
                 // of encodings, one of which might be 'chunked'?
-                if (value == "chunked")
-                {
-                    is_chunked = true;
-                }
-                else if (value.find(",") != std::string::npos)
-                {
-                    // strtok modifies its arguments, so we need to
-                    // make a copy here.
-                    MemoryBuffer<char> data = MemoryBuffer<char>::allocate(value.size() + 1);
-                    ::strncpy(data, value.c_str(), value.size());
+                QString data = QString::fromStdString(value);
+                QStringView dataView(data);
 
-                    const char delimiters[] = ", ";
-
-                    char *tokenPtr = std::strtok(data, delimiters);
-                    while (tokenPtr != nullptr)
+                for (const auto& token : dataView.split(','))
+                {
+                    if (token.trimmed() == QStringLiteral("chunked"))
                     {
-                        if (std::strcmp(tokenPtr, "chunked") == 0)
-                        {
-                            is_chunked = true;
-                            break;
-                        }
-                        tokenPtr = std::strtok(nullptr, delimiters);
+                        is_chunked = true;
+                        break;
                     }
                 }
 
