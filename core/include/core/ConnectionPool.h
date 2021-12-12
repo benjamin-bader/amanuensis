@@ -62,15 +62,15 @@ public:
     }
 
     template <typename BufferSequence, typename WriteHandler>
-    void async_write(const BufferSequence &bufferSequence, WriteHandler&& handler)
+    void async_write(const BufferSequence& bufferSequence, WriteHandler&& handler)
     {
         asio::async_write(socket_, bufferSequence, std::move(handler));
     }
 
     template <typename MutableBufferSequence, typename ReadHandler>
-    void async_read_some(MutableBufferSequence &buffers, ReadHandler &&handler)
+    void async_read_some(MutableBufferSequence& buffers, ReadHandler&& handler)
     {
-        socket_.async_read_some(asio::buffer(buffers), std::move(handler));
+        asio::async_read(socket_, asio::buffer(buffers), asio::transfer_at_least(1), std::move(handler));
     }
 
 private:

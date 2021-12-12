@@ -42,6 +42,7 @@ std::ostream& operator<<(std::ostream& os, NotificationState ns)
     switch (ns)
     {
     case NotificationState::None: return os << "NotificationState::None";
+    case NotificationState::RequestLine: return os << "NotificationState::RequestLine";
     case NotificationState::RequestHeaders: return os << "NotificationState::RequestHeaders";
     case NotificationState::RequestBody: return os << "NotificationState::RequestBody";
     case NotificationState::RequestComplete: return os << "NotificationState::RequestComplete";
@@ -117,7 +118,6 @@ Transaction::Transaction(int id, ConnectionPool* connectionPool, const std::shar
     , client_{clientConnection}
     , remote_{}
     , connection_pool_{connectionPool}
-    , state_{TransactionState::Start}
     , parser_{}
     , read_buffer_{}
     , remote_buffer_{nullptr}
@@ -134,9 +134,9 @@ int Transaction::id() const
     return id_;
 }
 
-TransactionState Transaction::state() const
+NotificationState Transaction::state() const
 {
-    return state_;
+    return notification_state_;
 }
 
 Request& Transaction::request()
@@ -147,6 +147,11 @@ Request& Transaction::request()
 Response& Transaction::response()
 {
     return response_;
+}
+
+std::error_code Transaction::error() const
+{
+    return error_;
 }
 
 void Transaction::begin()
@@ -325,7 +330,7 @@ void Transaction::read_remote_response()
         auto begin = std::begin(self->read_buffer_);
         auto end = begin + num_bytes_read;
 
-        std::copy(begin, end, std::back_inserter(self->raw_input_));
+        self->raw_input_.insert(self->raw_input_.end(), begin, end);
 
         auto current_phase = self->response_parse_phase_;
         auto state = self->parser_.parse(self->response(), begin, end, self->response_parse_phase_);
@@ -579,8 +584,12 @@ void Transaction::notify_phase_change(ParsePhase phase)
         assert(false);
         return;
     case ParsePhase::ReceivedMessageLine:
-        // nothing to notify on
-        return;
+        if (notification_state_ >= NotificationState::RequestComplete)
+        {
+            return;
+        }
+        ns = NotificationState::RequestLine;
+        break;
     case ParsePhase::ReceivedHeaders:
         ns = notification_state_ < NotificationState::RequestComplete
                 ? NotificationState::RequestHeaders
@@ -618,6 +627,9 @@ void Transaction::do_notification(NotificationState ns)
         switch (current_state)
         {
         case NotificationState::None:
+            // nothing, yet
+            break;
+        case NotificationState::RequestLine:
             // nothing, yet
             break;
         case NotificationState::RequestHeaders:
@@ -663,3 +675,10 @@ void Transaction::notify_failure(std::error_code ec)
 }
 
 } // namespace ama
+
+QTextStream& operator<<(QTextStream& out, ama::NotificationState ns)
+{
+    std::stringstream ss;
+    ama::operator<<(ss, ns);
+    return out << QString::fromStdString(ss.str());
+}

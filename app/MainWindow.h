@@ -24,6 +24,8 @@
 #include <QStringListModel>
 #include <QVector>
 
+#include "TransactionModel.h"
+
 #include "core/Transaction.h"
 
 namespace ama
@@ -43,29 +45,10 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-    //void addRowToListView(const std::string& message);
-
-public slots:
-    void on_message_logged(const QString& message);
-
-private slots:
-    void onNewTransaction(const QSharedPointer<ama::Transaction>& tx);
-    void transactionStarted(const QSharedPointer<ama::Transaction>& tx);
-    void requestRead(const QSharedPointer<ama::Transaction>& tx);
-    void responseHeadersRead(const QSharedPointer<ama::Transaction>& tx);
-    void responseRead(const QSharedPointer<ama::Transaction>& tx);
-    void transactionComplete(const QSharedPointer<ama::Transaction>& tx);
-    void transactionFailed(const QSharedPointer<ama::Transaction>& tx);
-
-private:
-    //void addRowToListView(const std::shared_ptr<ama::Connection> &connection, const std::string &message);
-
-
 private:
     Ui::MainWindow *ui;
     ama::Proxy* proxy;
-    QVector<QMetaObject::Connection> connections;
 
-    QStringListModel *model;
+    TransactionModel* txModel;
 
 };

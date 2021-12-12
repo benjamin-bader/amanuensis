@@ -25,6 +25,7 @@
 #include <QEnableSharedFromThis>
 #include <QObject>
 #include <QSharedPointer>
+#include <QTextStream>
 
 #include <array>
 #include <cstdint>
@@ -34,90 +35,20 @@
 
 namespace ama {
 
-enum class NotificationState : uint8_t
+enum class A_EXPORT NotificationState
 {
-    None = 0,
-    RequestHeaders = 1,
-    RequestBody = 2,
-    RequestComplete = 3,
-    ResponseHeaders = 4,
-    ResponseBody = 5,
-    ResponseComplete = 6,
-
-    TLSTunnel = 7,
-
-    Error = 8,
-};
-
-/**
- * @brief Models the Transaction class' state machine.
- *
- * @dot
- * digraph TransactionState {
- *   node [shape=record, fontname=Helvetica, fontsize=10];
- *   start [ label="<start>"];
- *   RequestLine;
- *   RequestHeaders;
- *   RequestBody;
- *   ResponseStatus;
- *   ResponseHeaders;
- *   ResponseBody;
- *   Complete;
- *   Error;
- *
- *   start -> RequestLine;
- *   RequestLine -> RequestHeaders;
- *   RequestHeaders -> RequestBody;
- *   RequestHeaders -> ResponseStatus;
- *   RequestBody -> ResponseStatus;
- *   ResponseStatus -> ResponseHeaders;
- *   ResponseHeaders -> ResponseBody;
- *   ResponseHeaders -> Complete;
- *   ResponseBody -> Complete;
- *
- *   RequestLine -> Error;
- *   RequestHeaders -> Error;
- *   RequestBody -> Error;
- *   ResponseStatus -> Error;
- *   ResponseHeaders -> Error;
- *   ResponseBody -> Error;
- * }
- * @enddot
- */
-enum A_EXPORT TransactionState
-{
-    // No data has been received yet.
-    Start = 0,
-
-    // Reading the first line of the client request.
+    None,
     RequestLine,
-
-    // Reading the client request headers, if any.
     RequestHeaders,
-
-    // Reading the client request body, if any.
     RequestBody,
-
-    // Reading the first line of the server response.
-    ResponseStatus,
-
-    // Reading the server response's headers, if any.
+    RequestComplete,
     ResponseHeaders,
-
-    // Reading the server response's body, if any.
     ResponseBody,
+    ResponseComplete,
 
-    // The transation has finished - the client request was
-    // received and relayed to the server, which responded
-    // comprehensibly.
-    //
-    // This does not mean that the HTTP request was successful -
-    // the server may have responded with an error code, for
-    // example - but that is outside of our purview here.
-    Complete,
+    TLSTunnel,
 
-    // The proxy transaction failed.
-    Error = 0xFFFF
+    Error,
 };
 
 class A_EXPORT Transaction : public QObject, public QEnableSharedFromThis<Transaction>
@@ -129,9 +60,10 @@ public:
     virtual ~Transaction() = default;
 
     int id() const;
-    TransactionState state() const;
+    NotificationState state() const;
     Request& request();
     Response& response();
+    std::error_code error() const;
 
 public slots:
     void begin();
@@ -173,8 +105,6 @@ private:
 
     ConnectionPool* connection_pool_;
 
-    TransactionState state_;
-
     HttpMessageParser parser_;
 
     std::array<uint8_t, 8192> read_buffer_;
@@ -193,4 +123,6 @@ private:
     NotificationState notification_state_;
 };
 
-}
+} // namespace ama
+
+QTextStream& operator<<(QTextStream& out, ama::NotificationState state);

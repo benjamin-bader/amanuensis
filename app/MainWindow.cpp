@@ -35,11 +35,9 @@
 
 using namespace ama;
 
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    connections(),
-    model(new QStringListModel)
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
@@ -59,9 +57,9 @@ MainWindow::MainWindow(QWidget *parent) :
     proxy = ProxyFactory().create(port);
 #endif
 
-    connect(proxy, &Proxy::transactionStarted, this, &MainWindow::onNewTransaction);
+    txModel = new TransactionModel(proxy, this);
 
-    ui->listView->setModel(model);
+    ui->listView->setModel(txModel);
     ui->listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     proxy->init();
@@ -71,80 +69,7 @@ MainWindow::~MainWindow()
 {
     proxy->deinit();
 
-    for (QMetaObject::Connection &connection : connections)
-    {
-        QObject::disconnect(connection);
-    }
     delete ui;
 }
 
-void MainWindow::onNewTransaction(const QSharedPointer<ama::Transaction>& tx)
-{
-    qDebug() << "Got a tx! " << tx->id();
-    connect(tx.get(), &ama::Transaction::on_transaction_start, this, &MainWindow::transactionStarted, Qt::QueuedConnection);
-    connect(tx.get(), &ama::Transaction::on_request_read, this, &MainWindow::requestRead, Qt::QueuedConnection);
-    connect(tx.get(), &ama::Transaction::on_response_headers_read, this, &MainWindow::responseHeadersRead, Qt::QueuedConnection);
-    connect(tx.get(), &ama::Transaction::on_response_read, this, &MainWindow::responseRead, Qt::QueuedConnection);
-    connect(tx.get(), &ama::Transaction::on_transaction_complete, this, &MainWindow::transactionComplete, Qt::QueuedConnection);
-    connect(tx.get(), &ama::Transaction::on_transaction_failed, this, &MainWindow::transactionFailed, Qt::QueuedConnection);
-}
-
-void MainWindow::transactionStarted(const QSharedPointer<ama::Transaction>& tx)
-{
-    std::stringstream ss;
-    ss << "TX(" << tx->id() << "): started";
-
-    on_message_logged(QString{ss.str().c_str()});
-}
-
-void MainWindow::requestRead(const QSharedPointer<ama::Transaction>& tx)
-{
-    std::stringstream ss;
-    ss << "TX(" << tx->id() << "): " << tx->request().method() << " " << tx->request().uri();
-
-    on_message_logged(QString{ss.str().c_str()});
-}
-
-void MainWindow::responseHeadersRead(const QSharedPointer<ama::Transaction>& tx)
-{
-    std::stringstream ss;
-    ss << "TX(" << tx->id() << "): " << tx->response().status_code() << " " << tx->response().status_message();
-
-    on_message_logged(QString{ss.str().c_str()});
-}
-
-void MainWindow::responseRead(const QSharedPointer<ama::Transaction>& tx)
-{
-    std::stringstream ss;
-    ss << "TX(" << tx->id() << "): " << tx->request().method() << " " << tx->request().uri();
-
-    on_message_logged(QString{ss.str().c_str()});
-}
-
-void MainWindow::transactionComplete(const QSharedPointer<ama::Transaction>& tx)
-{
-    std::stringstream ss;
-    ss << "TX(" << tx->id() << "): complete";
-
-    on_message_logged(QString{ss.str().c_str()});
-
-    // Disconnect all connections between the tx and this.
-    disconnect(tx.get(), nullptr, this, nullptr);
-}
-
-void MainWindow::transactionFailed(const QSharedPointer<ama::Transaction>& tx)
-{
-    std::stringstream ss;
-    ss << "TX(" << tx->id() << "): failed";
-
-    on_message_logged(QString{ss.str().c_str()});
-}
-
-void MainWindow::on_message_logged(const QString& message)
-{
-    int rowCount = model->rowCount();
-    model->insertRow(rowCount);
-    QModelIndex ix = model->index(rowCount);
-    model->setData(ix, message);
-}
 

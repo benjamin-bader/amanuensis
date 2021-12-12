@@ -35,6 +35,7 @@ add_executable(amanuensis
     MainWindow.cpp
     MainWindow.h
     MainWindow.ui
+    TransactionModel.cpp
     ${PLATFORM_SOURCES}
 )
 
