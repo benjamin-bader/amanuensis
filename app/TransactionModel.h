@@ -21,6 +21,7 @@
 #include "core/Transaction.h"
 
 #include <QAbstractListModel>
+#include <QAbstractTableModel>
 #include <QByteArray>
 #include <QHash>
 #include <QList>
@@ -28,7 +29,7 @@
 #include <QSharedPointer>
 #include <QVariant>
 
-class TransactionModel : public QAbstractListModel
+class TransactionModel : public QAbstractTableModel
 {
     Q_OBJECT
 
@@ -42,15 +43,19 @@ public:
 
     explicit TransactionModel(ama::Proxy* proxy, QObject *parent = nullptr);
 
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+
     QHash<int, QByteArray> roleNames() const override;
 
     // Header:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-    // Basic functionality:
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
+
+    QSharedPointer<ama::Transaction> transaction(const QModelIndex& index);
 
 private slots:
     void transactionStarted(const QSharedPointer<ama::Transaction>& tx);

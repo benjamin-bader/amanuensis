@@ -23,16 +23,32 @@
 #include <sstream>
 
 TransactionModel::TransactionModel(ama::Proxy* proxy, QObject *parent)
-    : QAbstractListModel(parent)
+    : QAbstractTableModel(parent)
     , proxy_(proxy)
     , transactions_()
 {
     connect(proxy, &ama::Proxy::transactionStarted, this, &TransactionModel::transactionStarted);
 }
 
+int TransactionModel::rowCount(const QModelIndex &parent) const
+{
+    if (parent.isValid())
+        return 0;
+
+    return transactions_.count();
+}
+
+int TransactionModel::columnCount(const QModelIndex &parent) const
+{
+    if (parent.isValid())
+        return 0;
+
+    return 3;
+}
+
 QHash<int, QByteArray> TransactionModel::roleNames() const
 {
-    auto result = QAbstractListModel::roleNames();
+    auto result = QAbstractTableModel::roleNames();
     result[TransactionModel::Url] = "url";
     result[TransactionModel::State] = "state";
     result[TransactionModel::StatusCode] = "statusCode";
@@ -41,18 +57,32 @@ QHash<int, QByteArray> TransactionModel::roleNames() const
 
 QVariant TransactionModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    roleNames();
+    if (orientation == Qt::Vertical)
+    {
+        if (role == Qt::DisplayRole)
+        {
+            // Sections are zero-based but we want row numbers to be one-based.
+            return section + 1;
+        }
+        return QVariant();
+    }
+
+    if (role == Qt::DisplayRole)
+    {
+        switch (section)
+        {
+        case 0:
+            return QStringLiteral("Method");
+        case 1:
+            return QStringLiteral("Status");
+        case 2:
+            return QStringLiteral("Url");
+        default:
+            return QVariant();
+        }
+    }
+
     return QVariant();
-}
-
-int TransactionModel::rowCount(const QModelIndex &parent) const
-{
-    // For list models only the root node (an invalid parent) should return the list's size. For all
-    // other (valid) parents, rowCount() should return 0 so that it does not become a tree model.
-    if (parent.isValid())
-        return 0;
-
-    return transactions_.size();
 }
 
 QVariant TransactionModel::data(const QModelIndex &index, int role) const
@@ -60,74 +90,39 @@ QVariant TransactionModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
+    if (role != Qt::DisplayRole)
+        return QVariant();
+
     auto tx = transactions_[index.row()];
 
-    if (role == Qt::DisplayRole)
+    switch (index.column())
     {
-        QString result;
-        QTextStream ts(&result);
-
-        ts << tx->id();
-
-        auto state = tx->state();
-        if (state == ama::NotificationState::TLSTunnel || tlsTransactionIds_.contains(tx->id()))
-        {
-            return QStringLiteral("%1 - [TLS Tunnel]").arg(tx->id());
-        }
-
-        if (state >= ama::NotificationState::RequestLine)
-        {
-            ts << " - " << QString::fromStdString(tx->request().method()) << " " << QString::fromStdString(tx->request().uri());
-        }
-
-        if (state == ama::NotificationState::ResponseComplete)
-        {
-            ts << " " << tx->response().status_code() << " " << QString::fromStdString(tx->response().status_message());
-        }
-        else if (state == ama::NotificationState::Error)
-        {
-            ts << " FAILED: " << QString::fromStdString(tx->error().message());
-        }
-        else
-        {
-            ts << " [pending]";
-        }
-
-        return result;
-    }
-
-    if (role == TransactionModel::Url)
-    {
-        if (tx->state() < ama::NotificationState::RequestLine)
-        {
-            return QVariant();
-        }
-
+    case 0:
+        return QString::fromStdString(tx->request().method());
+    case 1:
+        return QStringLiteral("%1 %2")
+                .arg(tx->response().status_code())
+                .arg(QString::fromStdString(tx->response().status_message()));
+    case 2:
         return QString::fromStdString(tx->request().uri());
+    default:
+        return QVariant();
     }
+}
 
-    if (role == TransactionModel::State)
-    {
-        QString result;
-        QTextStream ts(&result);
-        ts << tx->state();
-        ts.flush();
+Qt::ItemFlags TransactionModel::flags(const QModelIndex &index) const
+{
+    Q_UNUSED(index);
 
-        return result;
-    }
+    return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+}
 
-    if (role == TransactionModel::StatusCode)
-    {
-        if (tx->state() < ama::NotificationState::ResponseHeaders)
-        {
-            return QVariant();
-        }
+QSharedPointer<ama::Transaction> TransactionModel::transaction(const QModelIndex &index)
+{
+    if (!index.isValid())
+        return nullptr;
 
-        return tx->response().status_code();
-    }
-
-    // FIXME: Implement me!
-    return QVariant();
+    return transactions_[index.row()];
 }
 
 void TransactionModel::transactionStarted(const QSharedPointer<ama::Transaction>& tx)
@@ -171,6 +166,7 @@ void TransactionModel::transactionUpdated(const QSharedPointer<ama::Transaction>
 
     QModelIndex modelIndex = createIndex((int) index, 0);
     emit dataChanged(modelIndex, modelIndex);
+    emit layoutChanged({modelIndex});
 
     if (tx->state() == ama::NotificationState::Error || tx->state() == ama::NotificationState::ResponseComplete)
     {

@@ -59,8 +59,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     txModel = new TransactionModel(proxy, this);
 
-    ui->listView->setModel(txModel);
-    ui->listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->tableView->setModel(txModel);
+    ui->tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->tableView->horizontalHeader()->setStretchLastSection(true);
+    ui->tableView->horizontalHeader()->setVisible(true);
+
+    connect(txModel, &TransactionModel::layoutChanged, ui->tableView, &QTableView::resizeColumnsToContents);
 
     proxy->init();
 }
