@@ -109,7 +109,7 @@ if(APPLE)
 
     set(CPACK_PACKAGE_FILE_NAME "Amanuensis")
     set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/mac/installer/CMakeDMGScript.scpt")
-    set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_CURRENT_SOURCE_DIR}/mac/installer/CMakeDMGBackground.tif")
+    set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_CURRENT_SOURCE_DIR}/mac/installer/CMakeDMGBackground.tiff")
     set(CPACK_GENERATOR "DragNDrop")
     install(TARGETS amanuensis BUNDLE DESTINATION . COMPONENT RUNTIME)
     include(CPack)
