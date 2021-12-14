@@ -102,8 +102,15 @@ if(APPLE)
         COMMAND "${DSYMUTIL}" ARGS "$<TARGET_FILE:amanuensis>" -o "${SYMBOL_FILE}"
         COMMAND cp ARGS -a "${SYMBOL_FILE}" "$<TARGET_BUNDLE_CONTENT_DIR:amanuensis>/MacOS/"
 
-        COMMAND "${MACDEPLOYQT}" ARGS "$<TARGET_BUNDLE_DIR:amanuensis>" -always-overwrite "-codesign=${MACOSX_SIGNING_CERT_SHA1}"
+        COMMAND "${MACDEPLOYQT}" ARGS "$<TARGET_BUNDLE_DIR:amanuensis>" -always-overwrite -verbose=3 "-codesign=${MACOSX_SIGNING_CERT_SHA1}"
 
         COMMAND "${CODESIGN}" ARGS --verbose --force --sign "${MACOSX_SIGNING_CERT_SHA1}" -r='designated => identifier \"${MACOSX_APP_IDENTIFIER}\" and certificate leaf[subject.OU] = \"bendb.com\"' --timestamp=none "$<TARGET_BUNDLE_DIR:amanuensis>"
     )
+
+    set(CPACK_PACKAGE_FILE_NAME "Amanuensis")
+    set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/mac/installer/CMakeDMGScript.scpt")
+    set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_CURRENT_SOURCE_DIR}/mac/installer/CMakeDMGBackground.tif")
+    set(CPACK_GENERATOR "DragNDrop")
+    install(TARGETS amanuensis BUNDLE DESTINATION . COMPONENT RUNTIME)
+    include(CPack)
 endif()

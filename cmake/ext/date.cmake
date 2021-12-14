@@ -6,4 +6,8 @@ FetchContent_Declare(
     URL_MD5 78902f47f7931a3ae8a320e0dea1f20a
 )
 
-FetchContent_MakeAvailable(date_ext)
+FetchContent_GetProperties(date_ext)
+if(NOT date_ext_POPULATED)
+    FetchContent_Populate(date_ext)
+    add_subdirectory("${date_ext_SOURCE_DIR}" "${date_ext_BINARY_DIR}" EXCLUDE_FROM_ALL)
+endif()
