@@ -30,7 +30,6 @@ endif()
 
 set(QT_COMPONENTS
     Core
-    Core5Compat
     Gui
     LinguistTools
     Network
