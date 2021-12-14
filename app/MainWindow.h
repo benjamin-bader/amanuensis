@@ -46,6 +46,9 @@ public:
     ~MainWindow();
 
 private:
+    void createMenu();
+
+private:
     Ui::MainWindow *ui;
     ama::Proxy* proxy;
 

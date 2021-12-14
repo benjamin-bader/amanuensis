@@ -21,6 +21,7 @@
 #include <iostream>
 #include <sstream>
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QLabel>
 #include <QSettings>
@@ -40,6 +41,8 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    createMenu();
 
     QSettings settings(QSettings::IniFormat,
                        QSettings::UserScope,
@@ -74,6 +77,26 @@ MainWindow::~MainWindow()
     proxy->deinit();
 
     delete ui;
+}
+
+void MainWindow::createMenu()
+{
+    QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
+    //QMenu* editMenu = menuBar()->addMenu(tr("&Edit"));
+    QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
+
+    QAction* quitAction = fileMenu->addAction(tr("&Quit"));
+    quitAction->setShortcut(QKeySequence::Quit);
+    quitAction->setMenuRole(QAction::QuitRole);
+    connect(quitAction, &QAction::triggered, QCoreApplication::instance(), &QCoreApplication::quit);
+
+    fileMenu->addAction(quitAction);
+
+    QAction* aboutAction = helpMenu->addAction(tr("&About"));
+    aboutAction->setMenuRole(QAction::AboutRole);
+    connect(aboutAction, &QAction::triggered, QCoreApplication::instance(), &QCoreApplication::quit);
+
+    helpMenu->addAction(aboutAction);
 }
 
 

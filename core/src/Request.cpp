@@ -17,7 +17,6 @@
 
 #include "core/Request.h"
 
-#include <QDataStream>
 #include <QTextStream>
 
 #include <sstream>

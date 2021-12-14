@@ -4,6 +4,9 @@ option(BUILD_TESTS "Enable unit tests" ON)
 option(STATIC_LINKAGE "Build a static corelib instead of a shared corelib" OFF)
 mark_as_advanced(STATIC_LINKAGE)
 
+option(MACOSX_SIGN_BUNDLE "Compile a shippable, codesigned, bundle containing all necessary Qt libraries" OFF)
+mark_as_advanced(MACOSX_SIGN_BUNDLE)
+
 project(amanuensis
         VERSION 0.1.0
         DESCRIPTION "A trusty scrib"
