@@ -33,12 +33,12 @@ void RequestTest::format_simple_get()
     request.headers().insert("Host", "www.google.com");
     request.headers().insert("User-Agent", "Qt Unit Test");
 
-    std::string expected = "GET http://www.google.com/?q=foo HTTP/1.1\r\n"
+    QByteArray expected = "GET http://www.google.com/?q=foo HTTP/1.1\r\n"
             "Host: www.google.com\r\n"
             "User-Agent: Qt Unit Test\r\n"
             "\r\n";
 
-    std::string actual = request.format();
+    QByteArray actual = request.format();
 
     QCOMPARE(actual, expected);
 }
@@ -54,9 +54,9 @@ void RequestTest::format_simple_post()
     request.headers().insert("User-Agent", "Qt Unit Test");
     request.headers().insert("Content-Type", "application/json");
     request.headers().insert("Content-Length", "14");
-    request.set_body(R"({"foo": "bar"})");
+    request.set_body(QByteArray{R"({"foo": "bar"})"});
 
-    std::string expected = "POST http://www.google.com/upload_to_me_plz HTTP/1.1\r\n"
+    QByteArray expected = "POST http://www.google.com/upload_to_me_plz HTTP/1.1\r\n"
             "Host: www.google.com\r\n"
             "User-Agent: Qt Unit Test\r\n"
             "Content-Type: application/json\r\n"
@@ -64,7 +64,7 @@ void RequestTest::format_simple_post()
             "\r\n"
             "{\"foo\": \"bar\"}";
 
-    std::string actual = request.format();
+    QByteArray actual = request.format();
 
     QCOMPARE(actual, expected);
 }

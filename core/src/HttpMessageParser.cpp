@@ -530,7 +530,13 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
         if (input == '\r')
         {
             TRANSIT(newline_2);
-            message.headers_.insert(std::move(buffer_), std::move(value_buffer_));
+            QString name = QString::fromLatin1(buffer_);
+            QString value = QString::fromLatin1(value_buffer_);
+            message.headers_.insert(name, value);
+
+            buffer_.clear();
+            value_buffer_.clear();
+
             return Incomplete;
         }
         else if (! is_ctl(input))
@@ -558,8 +564,7 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
 
                 // Is this a simple chunk stream?  If not, do we have a comma-separated list
                 // of encodings, one of which might be 'chunked'?
-                QString data = QString::fromStdString(value);
-                QStringView dataView(data);
+                QStringView dataView(value);
 
                 for (const auto& token : dataView.split(','))
                 {
@@ -581,8 +586,9 @@ HttpMessageParser::State HttpMessageParser::consume(HttpMessage &message, char i
             headerValues = message.headers_.find_by_name("Content-Length");
             for (auto &value : headerValues)
             {
-                uint64_t length = 0;
-                if (! parse_uint64_t(value, length))
+                bool ok = false;
+                auto length = value.toULongLong(&ok);
+                if (! ok)
                 {
                     return Invalid;
                 }

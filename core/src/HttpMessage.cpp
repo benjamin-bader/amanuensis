@@ -34,12 +34,12 @@ HttpMessage::HttpMessage() :
 
 }
 
-const std::string& HttpMessage::method() const
+const QString HttpMessage::method() const
 {
     return method_;
 }
 
-const std::string& HttpMessage::uri() const
+const QString HttpMessage::uri() const
 {
     return uri_;
 }
@@ -49,7 +49,7 @@ int HttpMessage::status_code() const
     return status_code_;
 }
 
-const std::string& HttpMessage::status_message() const
+const QString HttpMessage::status_message() const
 {
     return status_message_;
 }
@@ -74,22 +74,22 @@ const Headers& HttpMessage::headers() const
     return headers_;
 }
 
-const std::vector<uint8_t>& HttpMessage::body() const
+const QByteArray HttpMessage::body() const
 {
     return body_;
 }
 
-std::vector<uint8_t>& HttpMessage::body()
+QByteArray HttpMessage::body()
 {
     return body_;
 }
 
-void HttpMessage::set_method(const std::string &method)
+void HttpMessage::set_method(const QString& method)
 {
     method_ = method;
 }
 
-void HttpMessage::set_uri(const std::string &uri)
+void HttpMessage::set_uri(const QString& uri)
 {
     uri_ = uri;
 }
@@ -104,12 +104,12 @@ void HttpMessage::set_minor_version(int minor_version)
     minor_version_ = minor_version;
 }
 
-void HttpMessage::set_body(const std::vector<uint8_t> &body)
+void HttpMessage::set_body(const QByteArray& body)
 {
     body_ = body;
 }
 
-void HttpMessage::set_body(std::vector<uint8_t>&& body)
+void HttpMessage::set_body(QByteArray&& body)
 {
     body_ = std::move(body);
 }
@@ -119,17 +119,17 @@ void HttpMessage::set_status_code(int status_code)
     status_code_ = status_code;
 }
 
-void HttpMessage::set_status_message(const std::string &message)
+void HttpMessage::set_status_message(const QString& message)
 {
     status_message_ = message;
 }
 
-void HttpMessage::add_header(const std::string &name, const std::string &value)
+void HttpMessage::add_header(const QString& name, const QString& value)
 {
     headers_.insert(name, value);;
 }
 
-const std::string HttpMessage::body_as_string() const
+const QString HttpMessage::body_as_string() const
 {
-    return std::string(body_.begin(), body_.end());
+    return QString::fromLocal8Bit(body_);
 }

@@ -252,16 +252,16 @@ void Transaction::open_remote_connection()
         return;
     }
 
-    std::string host = headerValues[0];
-    std::string port = "80";
+    QString host = headerValues[0];
+    QString port = "80";
 
-    size_t separator = host.find(':');
-    if (separator != std::string::npos)
+    size_t separator = host.indexOf(':');
+    if (separator != -1)
     {
         try
         {
-            port = host.substr(separator + 1);
-            host = host.substr(0, separator);
+            port = host.sliced(separator + 1);
+            host = host.sliced(0, separator);
         }
         catch (std::out_of_range)
         {
@@ -274,7 +274,7 @@ void Transaction::open_remote_connection()
     }
 
     auto self = sharedFromThis();
-    connection_pool_->try_open(host, port, [self](auto conn, auto ec)
+    connection_pool_->try_open(host.toStdString(), port.toStdString(), [self](auto conn, auto ec)
     {
         if (ec)
         {
@@ -290,8 +290,8 @@ void Transaction::open_remote_connection()
 void Transaction::send_client_request_to_remote()
 {
     auto self = sharedFromThis();
-    auto formatted_request = std::make_shared<std::string>(request_.format());
-    remote_->async_write(asio::buffer(*formatted_request),
+    auto formatted_request = std::make_shared<QByteArray>(request_.format());
+    remote_->async_write(asio::buffer(formatted_request->data(), formatted_request->size()),
                          [self, formatted_request](auto ec, size_t num_bytes_written)
     {
         UNUSED(num_bytes_written);
@@ -393,16 +393,16 @@ void Transaction::send_remote_response_to_client()
 
 void Transaction::establish_tls_tunnel()
 {
-    std::string host = request().uri();
-    std::string port = "443";
+    QString host = request().uri();
+    QString port = "443";
 
-    size_t separator = host.find(':');
-    if (separator != std::string::npos)
+    auto separator = host.indexOf(':');
+    if (separator != -1)
     {
         try
         {
-            port = host.substr(separator + 1);
-            host = host.substr(0, separator);
+            port = host.sliced(separator + 1);
+            host = host.sliced(0, separator);
         }
         catch (std::out_of_range)
         {
@@ -414,10 +414,10 @@ void Transaction::establish_tls_tunnel()
         }
     }
 
-    asio::ip::tcp::resolver::query query(host, port);
+    //asio::ip::tcp::resolver::query query(host.toStdString(), port.toStdString());
 
     auto self = sharedFromThis();
-    connection_pool_->try_open(host, port, [self](auto conn, auto ec)
+    connection_pool_->try_open(host.toStdString(), port.toStdString(), [self](auto conn, auto ec)
     {
         bool success = true;
         if (ec)

@@ -92,8 +92,8 @@ void HttpMessageParserTests::fixedLengthSimplePost()
 
     QCOMPARE(state, HttpMessageParser::State::Valid);
 
-    std::string expected("abcdefghijkl");
-    std::string actual = request.body_as_string();
+    QString expected("abcdefghijkl");
+    QString actual = request.body_as_string();
     QCOMPARE(actual, expected);
 }
 
@@ -128,8 +128,8 @@ void HttpMessageParserTests::chunkedSimplePost()
 
     QCOMPARE(state, HttpMessageParser::State::Valid);
 
-    std::string expected("abcdefghijklmnopqrstuvwxyz0123456789");
-    std::string actual = request.body_as_string();
+    QString expected("abcdefghijklmnopqrstuvwxyz0123456789");
+    QString actual = request.body_as_string();
     QCOMPARE(actual, expected);
 
     QCOMPARE(request.method(), "POST");
@@ -210,16 +210,17 @@ void HttpMessageParserTests::simpleForbiddenResponse()
     QCOMPARE(message.status_code(), 403);
     QCOMPARE(message.status_message(), "Forbidden");
 
-    std::stringstream expected;
-    expected << "<html>\r\n";
-    expected << "<head><title>403 Forbidden</title></head>\r\n";
-    expected << "<body bgcolor=\"white\">\r\n";
-    expected << "<center><h1>403 Forbidden</h1></center>\r\n";
-    expected << "<hr><center>nginx</center>\r\n";
-    expected << "</body>\r\n";
-    expected << "</html>\r\n";
+    QString expected;
+    QTextStream ts(&expected);
+    ts << "<html>\r\n";
+    ts << "<head><title>403 Forbidden</title></head>\r\n";
+    ts << "<body bgcolor=\"white\">\r\n";
+    ts << "<center><h1>403 Forbidden</h1></center>\r\n";
+    ts << "<hr><center>nginx</center>\r\n";
+    ts << "</body>\r\n";
+    ts << "</html>\r\n";
 
-    QCOMPARE(message.body_as_string(), expected.str());
+    QCOMPARE(message.body_as_string(), expected);
 }
 
 void HttpMessageParserTests::connectFromEdge()
@@ -279,23 +280,23 @@ void HttpMessageParserTests::pauses_on_phase_transitions()
 
     QCOMPARE(HttpMessageParser::State::Incomplete, state);
     QCOMPARE(ParsePhase::ReceivedMessageLine, phase);
-    QCOMPARE(std::string{"POST"}, request.method());
-    QCOMPARE(std::string{"/foo/bar"}, request.uri());
+    QCOMPARE(QStringLiteral("POST"), request.method());
+    QCOMPARE(QStringLiteral("/foo/bar"), request.uri());
     QCOMPARE(size_t(0), request.headers().size());
-    QCOMPARE(std::string{""}, request.body_as_string());
+    QCOMPARE("", request.body_as_string());
 
     state = parser.parse(request, begin, end, phase);
 
     QCOMPARE(HttpMessageParser::State::Incomplete, state);
     QCOMPARE(ParsePhase::ReceivedHeaders, phase);
     QCOMPARE(size_t(3), request.headers().size());
-    QCOMPARE(std::string{""}, request.body_as_string());
+    QCOMPARE("", request.body_as_string());
 
     state = parser.parse(request, begin, end, phase);
 
     QCOMPARE(HttpMessageParser::State::Valid, state);
     QCOMPARE(ParsePhase::ReceivedFullMessage, phase);
-    QCOMPARE(std::string{"abcdefghijklmnopqrstuvwxyz0123456789"}, request.body_as_string());
+    QCOMPARE(QByteArrayLiteral("abcdefghijklmnopqrstuvwxyz0123456789"), request.body_as_string());
 }
 
 void HttpMessageParserTests::zero_prefixed_chunk_lengths()

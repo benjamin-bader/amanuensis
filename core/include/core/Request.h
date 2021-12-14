@@ -17,15 +17,14 @@
 
 #pragma once
 
-#include <algorithm>
-#include <iterator>
-#include <utility>
-
 #include "core/common.h"
 #include "core/global.h"
 
 #include "core/Headers.h"
 #include "core/HttpMessage.h"
+
+#include <QString>
+#include <QByteArray>
 
 namespace ama
 {
@@ -36,11 +35,12 @@ class A_EXPORT Request
 {
 public:
     Request() = default;
-    Request(const HttpMessage& message);
-    Request(HttpMessage&& message);
-
     Request(const Request&) = default;
     Request(Request&&) = default;
+    virtual ~Request() = default;
+
+    Request(const HttpMessage& message);
+    Request(HttpMessage&& message);
 
     Request& operator=(const Request&) = default;
     Request& operator=(Request&&) = default;
@@ -48,29 +48,26 @@ public:
     void set_major_version(int version) { message_.set_major_version(version); }
     void set_minor_version(int version) { message_.set_minor_version(version); }
 
-    const std::string& method() const { return message_.method(); }
-    void set_method(const std::string& method) { message_.set_method(method); }
+    const QString method() const { return message_.method(); }
+    void set_method(const QString& method) { message_.set_method(method); }
 
-    const std::string& uri() const { return message_.uri(); }
-    void set_uri(const std::string& uri) { message_.set_uri(uri); }
+    const QString uri() const { return message_.uri(); }
+    void set_uri(const QString& uri) { message_.set_uri(uri); }
 
     Headers& headers() { return message_.headers(); }
     const Headers& headers() const { return message_.headers(); }
 
-    std::vector<uint8_t>& body() { return message_.body(); }
-    const std::vector<uint8_t>& body() const { return message_.body(); }
+    QByteArray body() { return message_.body(); }
+    const QByteArray body() const { return message_.body(); }
 
-    void set_body(const std::vector<uint8_t>& body) { message_.set_body(body); }
-    void set_body(std::vector<uint8_t>&& body) { message_.set_body(std::move(body)); }
-    void set_body(const std::string& body)
+    void set_body(const QByteArray& body) { message_.set_body(body); }
+    void set_body(QByteArray&& body) { message_.set_body(std::move(body)); }
+    void set_body(const QString& body)
     {
-        std::vector<uint8_t> bytes;
-        bytes.reserve(body.size());
-        std::copy(body.begin(), body.end(), std::back_inserter(bytes));
-        message_.set_body(std::move(bytes));
+        message_.set_body(body.toLocal8Bit());
     }
 
-    const std::string format() const noexcept;
+    const QByteArray format() const noexcept;
 
     friend class HttpMessageParser;
 

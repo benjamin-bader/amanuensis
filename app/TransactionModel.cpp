@@ -98,13 +98,13 @@ QVariant TransactionModel::data(const QModelIndex &index, int role) const
     switch (index.column())
     {
     case 0:
-        return QString::fromStdString(tx->request().method());
+        return tx->request().method();
     case 1:
         return QStringLiteral("%1 %2")
                 .arg(tx->response().status_code())
-                .arg(QString::fromStdString(tx->response().status_message()));
+                .arg(tx->response().status_message());
     case 2:
-        return QString::fromStdString(tx->request().uri());
+        return tx->request().uri();
     default:
         return QVariant();
     }

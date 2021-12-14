@@ -23,6 +23,8 @@
 #include "core/Headers.h"
 #include "core/HttpMessage.h"
 
+#include <QString>
+
 namespace ama
 {
 
@@ -32,12 +34,18 @@ class A_EXPORT Response
 {
 public:
     Response();
+    Response(const Response&) = default;
+    Response(Response&&) = default;
+    virtual ~Response() = default;
+
+    Response& operator=(const Response&) = default;
+    Response& operator=(Response&&) = default;
 
     Headers& headers() { return message_.headers(); }
     const Headers& headers() const { return message_.headers(); }
 
     int status_code() const { return message_.status_code(); }
-    const std::string& status_message() const { return message_.status_message(); }
+    const QString status_message() const { return message_.status_message(); }
 
     friend class HttpMessageParser;
 

@@ -18,7 +18,9 @@
 #pragma once
 
 #include "core/global.h"
+#include "core/ConnectionPool.h"
 
+#include <QList>
 #include <QObject>
 
 #include <memory>

@@ -17,6 +17,9 @@
 
 #include "core/Request.h"
 
+#include <QDataStream>
+#include <QTextStream>
+
 #include <sstream>
 #include <utility>
 
@@ -32,29 +35,39 @@ Request::Request(HttpMessage &&message)
 {
 }
 
-const std::string Request::format() const noexcept
+const QByteArray Request::format() const noexcept
 {
-    std::stringstream ss;
-    ss << method() << " " << this->uri() << " HTTP/" << this->message_.major_version() << "." << message_.minor_version() << "\r\n";
+    QString result;
+    QTextStream ds(&result);
+
+    ds << method() << " " << uri() << " HTTP/" << message_.major_version() << "." << message_.minor_version() << "\r\n";
 
     auto hds = headers();
-    for (auto i = 0; i < hds.size(); ++i)
+    for (const auto& name : hds.names())
     {
-        const auto& name = hds.names()[i];
-        const auto& value = hds.values()[i];
+        bool first = true;
+        ds << name << ": ";
 
-        ss << name << ": " << value << "\r\n";
+        for (const auto& value : hds.find_by_name(name))
+        {
+            if (!first)
+            {
+                ds << ", ";
+            }
+            ds << value;
+            first = false;
+        }
+
+        ds << "\r\n";
     }
-    ss << "\r\n";
+    ds << "\r\n";
 
     if (body().size() > 0)
     {
-        std::for_each(body().begin(), body().end(), [&](auto byte) {
-            ss << static_cast<char>(byte);
-        });
+        ds << body();
     }
 
-    return ss.str();
+    return result.toLatin1();
 }
 
 }

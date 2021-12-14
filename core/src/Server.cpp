@@ -17,11 +17,7 @@
 
 #include "core/Server.h"
 
-#include <algorithm>
-
 #include <QDebug>
-
-#include "core/ConnectionPool.h"
 
 namespace ama {
 
@@ -76,8 +72,8 @@ Server::Server(const int port, QObject* parent)
 
     for (int i = 0; i < numSupportedThreads; ++i)
     {
-        auto thread = std::thread([&] { io_context_.run(); });
-        workers_.push_back(std::move(thread));
+        //auto thread = std::thread([&] { io_context_.run(); });
+        workers_.emplace_back([&] { io_context_.run(); });
     }
 }
 
@@ -87,12 +83,13 @@ Server::~Server()
     acceptor_.close();
     io_context_.stop();
 
-    std::for_each(workers_.begin(), workers_.end(), [](std::thread &t) {
+    for (auto& t : workers_)
+    {
         if (t.joinable())
         {
             t.join();
         }
-    });
+    }
 
     workers_.clear();
 }

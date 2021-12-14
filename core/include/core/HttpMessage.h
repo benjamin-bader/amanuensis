@@ -17,13 +17,11 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <vector>
-
+#include "core/global.h"
 #include "core/Headers.h"
 
-#include "core/global.h"
+#include <QByteArray>
+#include <QString>
 
 namespace ama
 {
@@ -34,12 +32,17 @@ public:
     friend class HttpMessageParser;
 
     HttpMessage();
+    HttpMessage(const HttpMessage&) = default;
+    HttpMessage(HttpMessage&&) = default;
 
-    const std::string& method() const;
-    const std::string& uri() const;
+    HttpMessage& operator=(const HttpMessage&) = default;
+    HttpMessage& operator=(HttpMessage&&) = default;
+
+    const QString method() const;
+    const QString uri() const;
 
     int status_code() const;
-    const std::string& status_message() const;
+    const QString status_message() const;
 
     int major_version() const;
     int minor_version() const;
@@ -47,39 +50,39 @@ public:
     Headers& headers();
     const Headers& headers() const;
 
-    void set_method(const std::string &method);
-    void set_uri(const std::string &uri);
+    void set_method(const QString& method);
+    void set_uri(const QString& uri);
     void set_major_version(int major_version);
     void set_minor_version(int minor_version);
-    void set_body(const std::vector<uint8_t> &body);
-    void set_body(std::vector<uint8_t>&& body);
+    void set_body(const QByteArray& body);
+    void set_body(QByteArray&& body);
 
     void set_status_code(int status_code);
-    void set_status_message(const std::string &message);
+    void set_status_message(const QString& message);
 
-    void add_header(const std::string &name, const std::string &value);
+    void add_header(const QString& name, const QString& value);
 
     // Return the body as a string, using any specified Content-Encoding
     // if present.
-    const std::string body_as_string() const;
+    const QString body_as_string() const;
 
-    std::vector<uint8_t>& body();
-    const std::vector<uint8_t>& body() const;
+    QByteArray body();
+    const QByteArray body() const;
 private:
     // Request-specific data
-    std::string method_;
-    std::string uri_;
+    QString method_;
+    QString uri_;
 
     // Response-specific data
     int status_code_;
-    std::string status_message_;
+    QString status_message_;
 
     int major_version_;
     int minor_version_;
 
     Headers headers_;
 
-    std::vector<uint8_t> body_;
+    QByteArray body_;
 };
 
 } // namespace ama

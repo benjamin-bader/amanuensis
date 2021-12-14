@@ -19,19 +19,18 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <iostream>
-#include <system_error>
-#include <tuple>
-#include <vector>
-
 #include "core/common.h"
 #include "core/global.h"
 
 #include "core/Headers.h"
 #include "core/Request.h"
 #include "core/Response.h"
+
+#include <cstdint>
+#include <iostream>
+
+#include <QString>
+#include <QByteArray>
 
 class QDebug;
 
@@ -201,11 +200,11 @@ private:
     uint64_t remaining_;
 
     // A general-purpose string buffer, used for header names.
-    std::string buffer_;
+    QByteArray buffer_;
 
     // A special string buffer used for header values, so that
     // we keep the current header name at the same time.
-    std::string value_buffer_;
+    QByteArray value_buffer_;
 };
 
 template <typename InputIterator>

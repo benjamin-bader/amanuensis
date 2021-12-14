@@ -18,9 +18,22 @@ if(APPLE)
         "${APP_PLIST_FILE}"
     )
 
+    set(LOGO_ICONSET "${CMAKE_CURRENT_SOURCE_DIR}/mac/logo.iconset")
+    set(ICNS_FILE "${CMAKE_CURRENT_BINARY_DIR}/logo.icns")
+
+    add_custom_command(
+        OUTPUT "${ICNS_FILE}"
+        MAIN_DEPENDENCY "${LOGO_ICONSET}"
+        COMMAND iconutil ARGS -c icns --output "${ICNS_FILE}" "${LOGO_ICONSET}"
+        VERBATIM
+    )
+
+    set_source_files_properties("${ICNS_FILE}" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+
     list(APPEND PLATFORM_PROPS
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_INFO_PLIST "${APP_PLIST_FILE}"
+        MACOSX_BUNDLE_ICON_FILE "${ICNS_FILE}"
     )
 elseif(WIN32)
     list(APPEND PLATFORM_SOURCES

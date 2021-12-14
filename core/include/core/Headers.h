@@ -17,35 +17,38 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "core/global.h"
+
+#include <QList>
+#include <QMultiHash>
+#include <QString>
 
 namespace ama
 {
 
 class A_EXPORT Headers
 {
-private:
-    std::vector<std::string> names_;
-    std::vector<std::string> values_;
-
 public:
     Headers();
-    Headers(const Headers &headers);
+    Headers(const Headers &headers) = default;
+    Headers(Headers&&) = default;
+    virtual ~Headers() = default;
 
-    std::vector<std::string> find_by_name(const std::string &name) const;
+    Headers& operator=(const Headers&) = default;
+    Headers& operator=(Headers&&) = default;
 
-    Headers normalize() const;
+    QList<QString> find_by_name(const QString& name) const;
 
     bool empty() const;
     size_t size() const;
 
-    const std::vector<std::string>& names() const { return names_; }
-    const std::vector<std::string>& values() const { return values_; }
+    QList<QString> names() const;
 
-    void insert(const std::string &name, const std::string &value);
+    void insert(const QString& name, const QString& value);
+
+private:
+    QMultiHash<QString, QString> values_;
+    QList<QString> insertion_order_;
 };
 
 } // namespace ama

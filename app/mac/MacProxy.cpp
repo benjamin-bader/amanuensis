@@ -38,6 +38,7 @@
 
 #include "log/Log.h"
 
+#include "trusty/CFRef.h"
 #include "trusty/TrustyCommon.h"
 #include "trusty/Service.h"
 
@@ -82,7 +83,7 @@ void init_auth()
         status = AuthorizationRightGet(pair.first.c_str(), nullptr);
         if (status == errAuthorizationDenied)
         {
-            CFStringRef rule = CFSTR(kAuthorizationRuleClassAllow);
+            trusty::CFRef<CFStringRef> rule{CFSTR(kAuthorizationRuleClassAllow)};
 
             status = AuthorizationRightSet(
                         g_auth,
@@ -92,7 +93,6 @@ void init_auth()
                         nullptr,
                         nullptr); // TODO: string tables for rights descriptions
 
-            CFRelease(rule);
             assert_success(status);
         }
         else
@@ -318,14 +318,14 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
 
     if (status == errAuthorizationSuccess)
     {
-        CFStringRef helperLabel = make_cfstring(ama::kHelperLabel);
+        trusty::CFRef<CFStringRef> helperLabel = make_cfstring(ama::kHelperLabel);
 
         CFErrorRef error;
         if (! SMJobBless(kSMDomainSystemLaunchd, helperLabel, g_auth, &error))
         {
             log::error("SMJobBless failed!", log::LongValue("code", CFErrorGetCode(error)));
 
-            CFStringRef desc = CFErrorCopyDescription(error);
+            trusty::CFRef<CFStringRef> desc = CFErrorCopyDescription(error);
 
             char buffer[256];
             buffer[255] = '\0';
@@ -335,15 +335,12 @@ void MacProxy::bless_helper_program(std::error_code &ec) const
             }
 
             ec.assign(CFErrorGetCode(error), std::system_category());
-            CFRelease(desc);
         }
 
         if (error)
         {
             CFRelease(error);
         }
-
-        CFRelease(helperLabel);
     }
     else
     {
