@@ -11,3 +11,5 @@ if(NOT date_ext_POPULATED)
     FetchContent_Populate(date_ext)
     add_subdirectory("${date_ext_SOURCE_DIR}" "${date_ext_BINARY_DIR}" EXCLUDE_FROM_ALL)
 endif()
+
+set_target_properties(date PROPERTIES AUTOMOC OFF AUTORCC OFF AUTOUIC OFF)

@@ -45,6 +45,7 @@ endif()
 
 add_executable(amanuensis
     main.cpp
+    resources.qrc
     LogSetup.cpp
     LogSetup.h
     MainWindow.cpp
