@@ -20,6 +20,7 @@
 #include <type_traits>
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <xpc/xpc.h>
 
 namespace ama { namespace trusty {
 
@@ -153,5 +154,30 @@ private:
  */
 template <typename T>
 using CFRef = RefHolder<T, CFRefTraits<T>>;
+
+template <typename T>
+struct XpcTraits
+{
+    static void release(T ref) noexcept
+    {
+        if (ref != nullptr)
+        {
+            xpc_release(ref);
+        }
+    }
+
+    static T empty() noexcept
+    {
+        return nullptr;
+    }
+
+    static bool is_empty(T ref) noexcept
+    {
+        return ref != empty();
+    }
+};
+
+template <typename T>
+using XRef = RefHolder<T, XpcTraits<T>>;
 
 }} // ama::trusty

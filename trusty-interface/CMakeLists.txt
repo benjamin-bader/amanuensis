@@ -5,11 +5,10 @@ find_library(SERVICE_MANAGEMENT ServiceManagement REQUIRED)
 find_library(SYSTEM System REQUIRED)
 
 add_library(trusty_interface STATIC
-    src/MessageProcessor.cpp
+    src/CFLog.cpp
+    src/Message.cpp
     src/ProxyState.cpp
-    src/Service.cpp
     src/TrustyCommon.cpp
-    src/UnixSocket.cpp
 )
 
 target_include_directories(trusty_interface
@@ -35,8 +34,13 @@ target_compile_definitions(
     -DSPDLOG_ENABLE_SYSLOG
 )
 
+set_target_properties(trusty_interface
+    PROPERTIES
+    AUTOMOC OFF
+    AUTORCC OFF
+    AUTOUIC OFF
+)
+
 if(BUILD_TESTS)
-    add_test_case(trusty_interface bytes src/BytesTest.cpp)
-    add_test_case(trusty_interface message_processor src/MessageProcessorTest.cpp)
     add_test_case(trusty_interface proxy_state src/ProxyStateTest.cpp)
 endif()

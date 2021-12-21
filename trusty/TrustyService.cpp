@@ -23,8 +23,7 @@
 
 #include <SystemConfiguration/SystemConfiguration.h>
 
-#include "log/Log.h"
-
+#include "trusty/CFLog.h"
 #include "trusty/CFRef.h"
 #include "trusty/TrustyCommon.h"
 
@@ -204,37 +203,6 @@ CFStringRef get_primary_service_id()
     return primaryServiceId;
 }
 
-struct CFStringValue : public log::ILogValue
-{
-public:
-    CFStringValue(const char* name, CFStringRef value)
-        : name_(name)
-        , value_(value)
-    {}
-
-    void accept(log::LogValueVisitor& visitor) const override
-    {
-        const char* maybeCStr = CFStringGetCStringPtr(value_, CFStringGetSystemEncoding());
-        if (maybeCStr != nullptr)
-        {
-            visitor.visit(log::CStrValue(name_, maybeCStr));
-        }
-        else
-        {
-            visitor.visit(log::StringValue(name_, cfstring_as_std_string(value_)));
-        }
-    }
-
-    const char* name() const override
-    {
-        return name_;
-    }
-
-private:
-    const char* name_;
-    CFStringRef value_;
-};
-
 } // anonymous namespace
 
 ProxyState TrustyService::get_http_proxy_state()
@@ -258,13 +226,13 @@ ProxyState TrustyService::get_http_proxy_state()
         CFRef<SCNetworkProtocolRef> proxies = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies);
         if (proxies == nullptr)
         {
-            log::warn("Proxy protocol does not exist for primary network service", CFStringValue("id", serviceId));
+            log::warn("Proxy protocol does not exist for primary network service", log::CFStringValue("id", serviceId));
             continue;
         }
 
         if (! SCNetworkProtocolGetEnabled(proxies))
         {
-            log::warn("Proxy protocol disabled for primary network service", CFStringValue("id", serviceId));
+            log::warn("Proxy protocol disabled for primary network service", log::CFStringValue("id", serviceId));
             continue;
         }
 
@@ -289,8 +257,8 @@ ProxyState TrustyService::get_http_proxy_state()
 
     log::error(
         "No proxy-aware network service defined for the current NetworkSet",
-        CFStringValue("set_name", SCNetworkSetGetName(netset)),
-        CFStringValue("set_id", SCNetworkSetGetSetID(netset))
+        log::CFStringValue("set_name", SCNetworkSetGetName(netset)),
+        log::CFStringValue("set_id", SCNetworkSetGetSetID(netset))
     );
 
     return { false, "", 0 };
@@ -329,13 +297,13 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
         CFRef<SCNetworkProtocolRef> proxies = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies);
         if (proxies == nullptr)
         {
-            log::warn("Proxy protocol does not exist for primary network service", CFStringValue("id", serviceId));
+            log::warn("Proxy protocol does not exist for primary network service", log::CFStringValue("id", serviceId));
             continue;
         }
 
         if (! SCNetworkProtocolGetEnabled(proxies))
         {
-            log::warn("Proxy protocol disabled for primary network service", CFStringValue("id", serviceId));
+            log::warn("Proxy protocol disabled for primary network service", log::CFStringValue("id", serviceId));
             continue;
         }
 
@@ -376,7 +344,7 @@ void TrustyService::set_http_proxy_state(const ProxyState &state)
         {
             log::error(
                 "Error saving proxy protocol configuration",
-                CFStringValue("service_id", serviceId),
+                log::CFStringValue("service_id", serviceId),
                 log::CStrValue("error", SCErrorString(SCError()))
             );
         }

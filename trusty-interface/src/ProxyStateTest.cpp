@@ -23,6 +23,7 @@
 #include <QString>
 #include <QtTest>
 
+#include "trusty/CFRef.h"
 #include "trusty/ProxyState.h"
 
 using namespace ama::trusty;
@@ -31,17 +32,23 @@ ProxyStateTest::ProxyStateTest()
 {
 }
 
-void ProxyStateTest::serialize()
+void ProxyStateTest::to_xpc()
 {
     ProxyState state(true, "google.com", 0x0000FFFF);
-    std::vector<uint8_t> expected{1, 0x00, 0x00, 0xFF, 0xFF, 'g', 'o', 'o', 'g', 'l', 'e', '.', 'c', 'o', 'm' };
-    std::vector<uint8_t> actual = state.serialize();
-    QCOMPARE(expected, actual);
+    XRef<xpc_object_t> actual = state.to_xpc();
+
+    QCOMPARE(true, xpc_dictionary_get_bool(actual, "enabled"));
+    QCOMPARE("google.com", xpc_dictionary_get_string(actual, "host"));
+    QCOMPARE(0x0000FFFF, xpc_dictionary_get_int64(actual, "port"));
 }
 
-void ProxyStateTest::deserialize_empty_host()
+void ProxyStateTest::from_xpc()
 {
-    std::vector<uint8_t> serialized{0, 0, 0, 0, 0}; // disabled, port=0, host=""
+    XRef<xpc_object_t> serialized = xpc_dictionary_create_empty();
+    xpc_dictionary_set_bool(serialized, "enabled", false);
+    xpc_dictionary_set_int64(serialized, "port", 0);
+    xpc_dictionary_set_string(serialized, "host", "");
+
     ProxyState state{serialized};
     QCOMPARE(std::string{""}, state.get_host());
     QCOMPARE(false, state.is_enabled());

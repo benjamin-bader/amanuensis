@@ -28,9 +28,9 @@ public:
     ProxyStateTest();
 
 private Q_SLOTS:
-    void serialize();
+    void to_xpc();
 
-    void deserialize_empty_host();
+    void from_xpc();
 };
 
 #endif // PROXYSTATETEST_H

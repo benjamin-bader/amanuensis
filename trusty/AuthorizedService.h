@@ -17,34 +17,35 @@
 
 #pragma once
 
+#include "trusty/IService.h"
+
+#include <Security/Security.h>
+
 #include <cstdint>
-#include <cstdlib>
+#include <memory>
+#include <vector>
 
 namespace ama::trusty {
 
-class ISocket
+class AuthorizedService : public IService
 {
 public:
-    virtual ~ISocket() = default;
+    AuthorizedService(const std::shared_ptr<IService>& delegate, const std::vector<uint8_t>& authExternalForm);
+    virtual ~AuthorizedService();
 
-    /**
-     * Fully writes the given data, throwing if all the data cannot be written.
-     *
-     * @param data a pointer to the data to be written
-     * @param len the number of bytes to be written
-     * @throws std::system_error on failure.
-     */
-    virtual void checked_write(const uint8_t* data, size_t len) = 0;
+    ProxyState get_http_proxy_state() override;
+    virtual void set_http_proxy_state(const ProxyState& endpoint) override;
 
-    /**
-     * Fully reads the given amount of data, throwing if the expected amount
-     * of data cannot be read.
-     *
-     * @param data a pointer to the data buffer.
-     * @param len the number of bytes to read.
-     * @throws std::system_error on failure.
-     */
-    virtual void checked_read(uint8_t* data, size_t len) = 0;
+    void reset_proxy_settings() override;
+
+    uint32_t get_current_version() override;
+
+private:
+    void assert_right(const char *right);
+
+private:
+    std::shared_ptr<IService> delegate_;
+    AuthorizationRef auth_;
 };
 
 }

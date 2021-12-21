@@ -7,6 +7,8 @@ if(APPLE)
         mac/MacLogSetup.h
         mac/MacProxy.cpp
         mac/MacProxy.h
+        mac/XpcServiceClient.cpp
+        mac/XpcServiceClient.h
     )
 
     list(APPEND PLATFORM_LIBS trusty_interface)
@@ -105,7 +107,7 @@ if(APPLE)
 
         COMMAND "${MACDEPLOYQT}" ARGS "$<TARGET_BUNDLE_DIR:amanuensis>" -always-overwrite -verbose=3 "-codesign=${MACOSX_SIGNING_CERT_SHA1}"
 
-        COMMAND "${CODESIGN}" ARGS --verbose --force --sign "${MACOSX_SIGNING_CERT_SHA1}" -r='designated => identifier \"${MACOSX_APP_IDENTIFIER}\" and certificate leaf[subject.OU] = \"bendb.com\"' --timestamp=none "$<TARGET_BUNDLE_DIR:amanuensis>"
+        COMMAND "${CODESIGN}" ARGS --verbose --force --sign "${MACOSX_SIGNING_CERT_SHA1}" -r='designated => identifier \"${MACOSX_APP_IDENTIFIER}\" and certificate leaf = H\"${MACOSX_SIGNING_CERT_SHA1}\"' --timestamp=none "$<TARGET_BUNDLE_DIR:amanuensis>"
     )
 
     set(CPACK_PACKAGE_FILE_NAME "Amanuensis")

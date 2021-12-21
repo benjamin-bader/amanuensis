@@ -22,7 +22,7 @@
 
 #include "trusty/ProxyState.h"
 
-namespace ama { namespace trusty {
+namespace ama::trusty {
 
 /**
  * Defines the RPC interface between Amanuensis and Trusty.
@@ -34,7 +34,7 @@ namespace ama { namespace trusty {
 class IService
 {
 public:
-    virtual ~IService() {}
+    virtual ~IService() noexcept = default;
 
     /**
      * Gets the HTTP proxy settings for the currently-active
@@ -84,14 +84,4 @@ public:
     virtual uint32_t get_current_version() = 0;
 };
 
-/**
- * Creates an IService implementation, and connects it to
- * the server listening on the given UNIX socket @p path.
- *
- * @param path an absolute path to a UNIX socket.
- * @return a unique pointer to the connected IService.
- * @throws throws an exception if creating or connecting fails.
- */
-std::unique_ptr<IService> create_client(const std::string &path, const std::vector<uint8_t> &auth);
-
-}} // namespace ama::trusty
+} // namespace ama::trusty
