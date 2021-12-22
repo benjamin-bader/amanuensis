@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <string>
 
-#include "trusty/Service.h"
+#include "trusty/IService.h"
 
 namespace ama { namespace trusty {
 

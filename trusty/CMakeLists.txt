@@ -1,14 +1,25 @@
+find_library(CORE_SERVICES CoreServices REQUIRED)
 find_library(SYSTEM_CONFIG SystemConfiguration REQUIRED)
+
+set(CODE_SIGNING_REQUIREMENT "identifier \\\"${MACOSX_APP_IDENTIFIER}\\\" and certificate leaf = H\\\"${MACOSX_SIGNING_CERT_SHA1}\\\"")
+set(MACH_SERVICE_NAME "${MACOSX_HELPER_IDENTIFIER}")
+set(CONSTANTS_FILE "${CMAKE_CURRENT_BINARY_DIR}/constants.h")
+
+configure_file(constants.h.in "${CONSTANTS_FILE}" @ONLY)
 
 add_library(trusty-lib
     STATIC
-    ClientConnection.cpp
-    ClientConnection.h
-    Server.cpp
-    Server.h
+    AuthorizedService.cpp
+    AuthorizedService.h
     TrustyService.cpp
     TrustyService.h
+    XpcServer.cpp
+    XpcServer.h
 )
+
+set_target_properties(trusty-lib PROPERTIES AUTOMOC OFF)
+
+target_include_directories(trusty-lib PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_link_libraries(
     trusty-lib
@@ -17,11 +28,14 @@ target_link_libraries(
     trusty_interface
     log
     ${SYSTEM_CONFIG}
+    ${CORE_SERVICES}
 )
 
 add_executable(trusty
     main.cpp
 )
+
+set_target_properties(trusty PROPERTIES AUTOMOC OFF)
 
 target_link_libraries(
     trusty
@@ -50,7 +64,7 @@ add_custom_command(
 add_custom_command(
     TARGET trusty
     PRE_LINK
-    COMMAND "${PLIST_BUDDY}" -c "Set :SMAuthorizedClients:0 'identifier \\\"${MACOSX_APP_IDENTIFIER}\\\" and certificate leaf = H\\\"${MACOSX_SIGNING_CERT_SHA1}\\\"'" "${CMAKE_CURRENT_BINARY_DIR}/trusty-info.plist"
+    COMMAND "${PLIST_BUDDY}" -c "Set :SMAuthorizedClients:0 '${CODE_SIGNING_REQUIREMENT}'" "${CMAKE_CURRENT_BINARY_DIR}/trusty-info.plist"
 )
 
 target_link_options(

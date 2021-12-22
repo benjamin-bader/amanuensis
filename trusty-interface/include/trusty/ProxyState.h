@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <xpc/xpc.h>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -36,15 +38,7 @@ class ProxyState
 public:
     ProxyState(bool enabled, const std::string &host, int port) noexcept;
 
-    /**
-     * Initializes ProxyState with the serialized data in the given
-     * payload, which is expected to have been produced from
-     * ProxyState::serialize().
-     *
-     * @param payload a serialized binary representation of ProxyState data.
-     * @throws if the given payload is not comprehensible as a ProxyState.
-     */
-    ProxyState(const std::vector<uint8_t>& payload);
+    ProxyState(xpc_object_t dict);
 
     ProxyState(const ProxyState&) = default;
     ProxyState(ProxyState&&) = default;
@@ -56,12 +50,10 @@ public:
     int32_t get_port() const noexcept { return port_; }
 
     /**
-     * Returns a representation of this instance as a vector of bytes,
-     * suitable for transmitting over the wire.
-     *
-     * @return a vector of bytes representing the data in this instance.
+     * @brief to_xpc
+     * @return a *retained* XPC dictionary representation of this ProxyState.
      */
-    std::vector<uint8_t> serialize() const;
+    xpc_object_t to_xpc() const;
 
 private:
     bool enabled_;

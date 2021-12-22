@@ -17,13 +17,15 @@
 
 #include "trusty/ProxyState.h"
 
-#include "trusty/Bytes.h"
-
 namespace ama { namespace trusty {
 
 namespace {
 
 constexpr size_t kHeaderSize = 5;
+
+constexpr const char kFieldEnabled[] = "enabled";
+constexpr const char kFieldHost[] = "host";
+constexpr const char kFieldPort[] = "port";
 
 } // namepace
 
@@ -33,40 +35,34 @@ ProxyState::ProxyState(bool enabled, const std::string &host, int port) noexcept
     , port_(port)
 {}
 
-ProxyState::ProxyState(const std::vector<uint8_t> &payload)
+ProxyState::ProxyState(xpc_object_t dict)
 {
-    // Serialization format is:
-    // 0: enabled (0 == disabled, !0 == enabled)
-    // 1-4: port, as int32_t
-    // 5-: host, as character data, not null-terminated.
+    xpc_object_t maybeEnabled = xpc_dictionary_get_value(dict, kFieldEnabled);
+    xpc_object_t maybeHost = xpc_dictionary_get_value(dict, kFieldHost);
+    xpc_object_t maybePort = xpc_dictionary_get_value(dict, kFieldPort);
 
-    if (payload.size() < kHeaderSize)
+    if (maybeEnabled == nullptr || maybeHost == nullptr || maybePort == nullptr)
     {
-        throw std::invalid_argument{"payload too small to be a ProxyState"};
+        throw std::invalid_argument{"missing one of enabled, host, and/or port"};
     }
 
-    enabled_ = payload[0] != 0;
-    port_ = Bytes::from_network_order<int32_t>(payload.data() + 1);
-
-    if (payload.size() > kHeaderSize)
+    if (xpc_get_type(maybeEnabled) != XPC_TYPE_BOOL || xpc_get_type(maybeHost) != XPC_TYPE_STRING || xpc_get_type(maybePort) != XPC_TYPE_INT64)
     {
-        // This would be safe if payload.size() == kHeaderSize, but just to be paranoid,
-        // let's avoid doing anything with a pointer to invalid memory.
-        host_.assign(reinterpret_cast<const char *>(payload.data() + kHeaderSize), payload.size() - kHeaderSize);
+        throw std::invalid_argument{"unexpected type for one of enabled, host, or port"};
     }
+
+    enabled_ = xpc_bool_get_value(maybeEnabled);
+    host_ = xpc_string_get_string_ptr(maybeHost);
+    port_ = static_cast<int>(xpc_int64_get_value(maybePort));
 }
 
-std::vector<uint8_t> ProxyState::serialize() const
+xpc_object_t ProxyState::to_xpc() const
 {
-    std::vector<uint8_t> payload(kHeaderSize);
-
-    payload[0] = enabled_ ? 1 : 0;
-
-    Bytes::to_network_order(port_, payload.data() + 1);
-
-    std::copy(host_.begin(), host_.end(), std::back_inserter(payload));
-
-    return payload;
+    auto result = xpc_dictionary_create_empty();
+    xpc_dictionary_set_bool(result, kFieldEnabled, enabled_);
+    xpc_dictionary_set_string(result, kFieldHost, host_.c_str());
+    xpc_dictionary_set_int64(result, kFieldPort, static_cast<int64_t>(port_));
+    return result;
 }
 
 }} // namespace ama::trusty

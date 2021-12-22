@@ -20,64 +20,17 @@
  * which handles
  */
 
-// Apple stuff
-#include <launch.h>
-
-// UNIX stuff
-#include <syslog.h>
-
-// cpp stuff
-#include <iostream>
-#include <memory>
-#include <string>
+#include "constants.h"
+#include "TrustyService.h"
+#include "XpcServer.h"
 
 #include "log/Log.h"
 #include "log/OsLogWriter.h"
 
-#include "trusty/TrustyCommon.h"
-
-// our stuff
-#include "Server.h"
-#include "TrustyService.h"
-
-// I wish ASIO would have worked out, but it just couldn't
-// seem to handle UNIX sockets on macOS.  Pity, because
-// writing socket code the old way works, but is endlessly
-// tedious.
+#include <memory>
 
 using namespace ama;
 using namespace ama::trusty;
-
-std::error_code lookup_socket_endpoint(int *fd)
-{
-    std::error_code ec;
-
-    if (fd == nullptr)
-    {
-        return std::make_error_code(std::errc::invalid_argument);
-    }
-
-    *fd = -1;
-
-    int *fds = nullptr;
-    size_t num_sockets;
-    int err = launch_activate_socket(ama::kPlistLaunchdSocketName, &fds, &num_sockets);
-    if (err == 0 && num_sockets > 0)
-    {
-        *fd = fds[0];
-    }
-    else
-    {
-        ec.assign(err, std::system_category());
-    }
-
-    if (fds != nullptr)
-    {
-        free(fds);
-    }
-
-    return ec;
-}
 
 int main(int argc, char *argv[])
 {
@@ -86,25 +39,11 @@ int main(int argc, char *argv[])
 
     log::register_log_writer(std::make_shared<log::OsLogWriter>());
 
-    int fd;
-    std::error_code ec = lookup_socket_endpoint(&fd);
-    if (ec)
-    {
+    std::shared_ptr<IService> service = std::make_shared<TrustyService>();
 
-        log::error("Failed to open launchd socket", log::IntValue("ec", ec.value()));
-        return -1;
-    }
+    auto xpcServer = std::make_shared<XpcServer>(service, MACH_SERVICE_NAME);
 
-    TrustyService service;
-    Server server(&service, fd);
-    try
-    {
-        server.serve();
-    }
-    catch (std::exception &ex)
-    {
-        log::error("Failed, somehow", log::CStrValue("what", ex.what()));
-    }
+    xpcServer->serve();
 
     log::info("Hanging up now!");
 

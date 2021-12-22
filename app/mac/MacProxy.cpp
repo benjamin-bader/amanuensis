@@ -15,7 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "MacProxy.h"
+#include "mac/MacProxy.h"
+
+#include "mac/XpcServiceClient.h"
 
 #include <cstdint>
 #include <iostream>
@@ -23,11 +25,6 @@
 #include <mutex> // for once_flag
 #include <string>
 #include <vector>
-
-#include <errno.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <CoreFoundation/CFDictionary.h>
 #include <CoreFoundation/CFError.h>
@@ -40,7 +37,7 @@
 
 #include "trusty/CFRef.h"
 #include "trusty/TrustyCommon.h"
-#include "trusty/Service.h"
+#include "trusty/IService.h"
 
 namespace ama {
 
@@ -141,61 +138,7 @@ void acquire_rights(std::vector<const char *> &vector)
     assert_success(status);
 }
 
-bool should_install_helper_tool()
-{
-    struct stat stat_data;
-    int stat_result = ::stat(ama::kHelperSocketPath.c_str(), &stat_data);
-
-    if (stat_result < 0)
-    {
-        int error_code = errno;
-        if (error_code == ENOENT || error_code == ENOTDIR)
-        {
-            log::info("Helper socket file not found");
-            return true;
-        }
-
-        throw std::system_error(error_code, std::system_category());
-    }
-
-    //
-    if (! S_ISSOCK(stat_data.st_mode))
-    {
-        log::info("Helper socket file exists but isn't a socket?");
-        return true;
-    }
-
-    std::vector<const char *> rights { ama::kGetToolVersionRightName };
-    acquire_rights(rights);
-
-    AuthorizationExternalForm authExt;
-    AuthorizationMakeExternalForm(g_auth, &authExt);
-
-    uint8_t *authExtPtr = (uint8_t *) &authExt;
-
-    std::vector<uint8_t> authBytes(authExtPtr, authExtPtr + sizeof(authExt));
-
-    try
-    {
-        auto client = ama::trusty::create_client(ama::kHelperSocketPath, authBytes);
-        auto version = client->get_current_version();
-
-        log::error("Tool version detected", log::U32Value("installed_version", version), log::U32Value("current_version", ama::kToolVersion));
-
-        return version != ama::kToolVersion;
-    }
-    catch (const std::exception &ex)
-    {
-        // Let's assume, for now, that an exception here means that
-        // we can't understand the protocol of the existing tool, and
-        // treat connection failures as such - reinstalling won't hurt,
-        // and we can do this better, later.
-        log::error("Error connecting to helper", log::CStrValue("what", ex.what()));
-        return true;
-    }
-}
-
-std::unique_ptr<ama::trusty::IService> create_client_with_rights()
+std::shared_ptr<ama::trusty::IService> create_client_with_rights()
 {
     std::vector<const char *> rights = {
         ama::kGetProxyStateRightName,
@@ -213,7 +156,24 @@ std::unique_ptr<ama::trusty::IService> create_client_with_rights()
 
     std::vector<uint8_t> authBytes(authExtPtr, authExtPtr + sizeof(authExt));
 
-    return ama::trusty::create_client(ama::kHelperSocketPath, authBytes);
+    return std::make_shared<XpcServiceClient>(ama::kHelperLabel, authBytes);
+}
+
+bool should_install_helper_tool()
+{
+    try
+    {
+        auto client = create_client_with_rights();
+        auto version = client->get_current_version();
+
+        log::info("should_install_helper_tool(): Fetched versions", log::U32Value("installed", version), log::U32Value("current", ama::kToolVersion));
+        return version < ama::kToolVersion;
+    }
+    catch (const std::exception& ex)
+    {
+        log::error("should_install_helper_tool(): Well *that* didn't work", log::CStrValue("what", ex.what()));
+        return true;
+    }
 }
 
 } // anonymous namespace
@@ -229,6 +189,7 @@ MacProxy::~MacProxy()
 {
     try
     {
+        log::info("MacProxy shutting down - disabling proxy");
         disable();
     }
     catch (const std::exception& ex)

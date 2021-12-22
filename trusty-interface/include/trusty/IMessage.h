@@ -1,6 +1,6 @@
 // Amanuensis - Web Traffic Inspector
 //
-// Copyright (C) 2017 Benjamin Bader
+// Copyright (C) 2021 Benjamin Bader
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,30 +17,27 @@
 
 #pragma once
 
-#include "trusty/ISocket.h"
+#include <xpc/xpc.h>
 
-#include <cstdint>
 #include <memory>
-#include <string>
-#include <vector>
 
-namespace ama { namespace trusty {
+namespace ama::trusty {
 
-enum class MessageType : uint8_t
+enum class MessageType : int64_t
 {
     /**
      * A reply, indicating that the last message was processed successfully.
      *
      * The payload is always empty.
      */
-    Ack = 0,
+    Ack = 1,
 
     /**
      * A reply, indicating that the last message could not be processed.
      *
      * The payload is a length-prefixed string indicating the error.
      */
-    Error = 1,
+    Error = 2,
 
     /**
      * The first message sent by a connected client; establishes client
@@ -49,7 +46,7 @@ enum class MessageType : uint8_t
      * The payload is 32 bytes long, consisting of an AuthorizationExternalForm
      * struct.
      */
-    Hello = 2,
+    Hello = 3,
 
     /**
      * Tells the recipient to set the system's proxy host to the
@@ -57,7 +54,7 @@ enum class MessageType : uint8_t
      *
      * The payload is a serialized ama::trusty::ProxyState object.
      */
-    GetProxyState = 3,
+    GetProxyState = 4,
 
     /**
      * Tells the recipient to set the system's proxy port to the number
@@ -65,12 +62,12 @@ enum class MessageType : uint8_t
      *
      * The payload is a serialized ama::trusty::ProxyState object.
      */
-    SetProxyState = 4,
+    SetProxyState = 5,
 
     /**
      * Clears all custom proxy settings, restoring system defaults.
      */
-    ClearProxySettings = 5,
+    ClearProxySettings = 6,
 
     /**
      * Asks the receipient for its current version.
@@ -79,7 +76,7 @@ enum class MessageType : uint8_t
      * be an 'Ack' message with a four-byte platform-endian
      * uint32_t version code.
      */
-    GetToolVersion = 6,
+    GetToolVersion = 7,
 
     /**
      * Signals that the sender will terminate the connection, and the
@@ -90,82 +87,29 @@ enum class MessageType : uint8_t
     Disconnect = UINT8_MAX,
 };
 
-std::ostream& operator<<(std::ostream &out, const MessageType &type);
-
-struct Message
-{
-    MessageType type;
-    std::vector<uint8_t> payload;
-
-    Message() {}
-    Message(MessageType type, const std::vector<uint8_t> &payload)
-        : type(type)
-        , payload(payload)
-    {
-        // no-op
-    }
-
-    Message(Message &&other)
-        : type()
-        , payload()
-    {
-        *this = std::move(other);
-    }
-
-    Message& operator=(Message&& other)
-    {
-        if (this != &other)
-        {
-            type = other.type;
-            payload = std::move(other.payload);
-        }
-        return *this;
-    }
-
-    void assign_u8_payload(uint8_t n);
-    void assign_u32_payload(uint32_t n);
-    void assign_i32_payload(int32_t n);
-    void assign_string_payload(const std::string &str);
-
-    int get_i32_payload() const;
-    uint32_t get_u32_payload() const;
-    std::string get_string_payload() const;
-};
-
-class MessageProcessor
+class IMessage
 {
 public:
-    MessageProcessor(const std::string &path);
-    MessageProcessor(int fd);
-    MessageProcessor(std::unique_ptr<ISocket>&& socket);
-    ~MessageProcessor();
+    virtual ~IMessage() noexcept = default;
 
-    void send(const Message &message);
-    Message recv();
-
-private:
-    MessageProcessor() = delete;
-    MessageProcessor(const MessageProcessor&) = delete;
-    MessageProcessor(MessageProcessor&&) = delete;
-
-private:
-    /**
-     * The size, in bytes, of a MessageProcessor's [read_buffer].
-     *
-     * We can assume that nearly all payloads will be will be tiny;
-     * 64 bytes should be more than enough.
-     */
-    static constexpr size_t kBufLen = 64;
-
-    /**
-     * A buffer used when reading data from [fd].
-     */
-    uint8_t read_buffer[kBufLen];
-
-    /**
-     * A file-descriptor of a connected socket.
-     */
-    std::unique_ptr<ISocket> socket_;
+    virtual MessageType type() const noexcept = 0;
+    virtual xpc_object_t payload() const = 0;
 };
 
-}} // ama::trusty
+namespace Protocol {
+
+/**
+ * @brief create_message creates a new IMessage.
+ * @param type the type of the message.
+ * @param payload the XPC payload of the message.  NOTE: This function takes ownership of the payload!  It will release it.
+ * @return
+ */
+std::unique_ptr<IMessage> create_message(MessageType type, xpc_object_t payload);
+
+std::unique_ptr<IMessage> unwrap(xpc_object_t wrapper);
+
+void wrap(xpc_object_t wrapper, const std::unique_ptr<IMessage>& message);
+
+}
+
+}

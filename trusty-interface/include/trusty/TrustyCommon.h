@@ -18,7 +18,6 @@
 #pragma once
 
 #include <cstdint>
-#include <exception>
 #include <string>
 
 namespace ama
@@ -39,16 +38,4 @@ namespace ama
     extern const char * kGetToolVersionRightName;
 
     extern const char * kPlistLaunchdSocketName;
-
-    class timeout_exception : public std::runtime_error
-    {
-    public:
-        timeout_exception()
-            : std::runtime_error("An operation timed out")
-        {}
-
-        timeout_exception(const timeout_exception &other)
-            : std::runtime_error(other.what())
-        {}
-    };
 }

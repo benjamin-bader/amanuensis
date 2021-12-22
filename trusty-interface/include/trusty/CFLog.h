@@ -1,6 +1,6 @@
 // Amanuensis - Web Traffic Inspector
 //
-// Copyright (C) 2017 Benjamin Bader
+// Copyright (C) 2021 Benjamin Bader
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,20 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef BYTESTEST_H
-#define BYTESTEST_H
+#pragma once
 
-#include <QObject>
+#include "log/Log.h"
 
-class BytesTest : public QObject
+#include <CoreFoundation/CoreFoundation.h>
+
+namespace ama::log {
+
+class CFStringValue : public ILogValue
 {
-    Q_OBJECT
 public:
-    explicit BytesTest();
+    CFStringValue(const char* name, CFStringRef value);
 
-private Q_SLOTS:
-    void to_network_order();
-    void from_network_order();
+    virtual ~CFStringValue() = default;
+
+    const char* name() const override;
+
+    void accept(LogValueVisitor& visitor) const override;
+
+private:
+    const char* m_name;
+    CFStringRef m_value;
 };
 
-#endif // BYTESTEST_H
+}

@@ -9,7 +9,7 @@ mark_as_advanced(MACOSX_SIGN_BUNDLE)
 
 project(amanuensis
         VERSION 0.1.0
-        DESCRIPTION "A trusty scrib"
+        DESCRIPTION "A trusty scribe"
         LANGUAGES CXX
 )
 
