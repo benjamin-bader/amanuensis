@@ -47,7 +47,6 @@ find_package(Qt6 COMPONENTS ${QT_COMPONENTS} REQUIRED)
 find_package(Threads)
 
 include(ext/asio)
-include(ext/date)
 
 add_subdirectory(log)
 

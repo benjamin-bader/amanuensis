@@ -35,7 +35,6 @@ target_link_libraries(
     OpenSSL::SSL
     OpenSSL::Crypto
     asio::asio
-    date::date
 )
 
 target_include_directories(core
