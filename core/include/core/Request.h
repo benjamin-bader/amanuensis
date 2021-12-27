@@ -48,6 +48,9 @@ public:
     void set_major_version(int version) { message_.set_major_version(version); }
     void set_minor_version(int version) { message_.set_minor_version(version); }
 
+    int major_version() const noexcept { return message_.major_version(); }
+    int minor_version() const noexcept { return message_.minor_version(); }
+
     const QString method() const { return message_.method(); }
     void set_method(const QString& method) { message_.set_method(method); }
 

@@ -54,12 +54,12 @@ const QString HttpMessage::status_message() const
     return status_message_;
 }
 
-int HttpMessage::major_version() const
+int HttpMessage::major_version() const noexcept
 {
     return major_version_;
 }
 
-int HttpMessage::minor_version() const
+int HttpMessage::minor_version() const noexcept
 {
     return minor_version_;
 }

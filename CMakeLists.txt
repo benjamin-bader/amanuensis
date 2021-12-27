@@ -36,6 +36,7 @@ set(QT_COMPONENTS
     Gui
     LinguistTools
     Network
+    Sql
     Test
     Widgets
 )

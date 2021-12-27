@@ -53,6 +53,9 @@ add_executable(amanuensis
     MainWindow.cpp
     MainWindow.h
     MainWindow.ui
+    QtLogWriter.cpp
+    QtLogWriter.h
+    TransactionFile.cpp
     TransactionModel.cpp
     ${PLATFORM_SOURCES}
 )
@@ -61,6 +64,7 @@ target_link_libraries(amanuensis
     core
     log
     Qt6::Gui
+    Qt6::Sql
     Qt6::Widgets
     ${PLATFORM_LIBS}
 )

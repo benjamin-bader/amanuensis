@@ -18,13 +18,18 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 
+#include "TransactionFile.h"
+
 #include <iostream>
 #include <sstream>
 
 #include <QCoreApplication>
 #include <QDebug>
+#include <QFile>
+#include <QFileDialog>
 #include <QLabel>
 #include <QSettings>
+#include <QStandardPaths>
 
 #include "core/Proxy.h"
 #include "core/ProxyFactory.h"
@@ -41,8 +46,6 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
-    createMenu();
 
     QSettings settings(QSettings::IniFormat,
                        QSettings::UserScope,
@@ -61,6 +64,8 @@ MainWindow::MainWindow(QWidget *parent)
 #endif
 
     txModel = new TransactionModel(proxy, this);
+
+    createMenu();
 
     ui->tableView->setModel(txModel);
     ui->tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -85,6 +90,12 @@ void MainWindow::createMenu()
     //QMenu* editMenu = menuBar()->addMenu(tr("&Edit"));
     QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
 
+    QAction* saveAction = fileMenu->addAction(tr("&Save"));
+    saveAction->setShortcut(QKeySequence::Save);
+    saveAction->setEnabled(false);
+    connect(saveAction, &QAction::triggered, this, &MainWindow::saveTransactionFile);
+    connect(proxy, &Proxy::transactionStarted, saveAction, &QAction::resetEnabled);
+
     QAction* quitAction = fileMenu->addAction(tr("&Quit"));
     quitAction->setShortcut(QKeySequence::Quit);
     quitAction->setMenuRole(QAction::QuitRole);
@@ -100,3 +111,32 @@ void MainWindow::createMenu()
 }
 
 
+void MainWindow::saveTransactionFile()
+{
+    QString documentsDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    if (documentsDir.isEmpty())
+    {
+        // wtf
+        return;
+    }
+
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), documentsDir, tr("TXS files (*.txs)"));
+    if (fileName.isEmpty())
+    {
+        return;
+    }
+
+    if (QFile::exists(fileName))
+    {
+        QFile::remove(fileName);
+    }
+
+    TransactionFile file(fileName, this);
+
+    auto rc = txModel->rowCount();
+    for (auto ix = 0; ix < rc; ++ix)
+    {
+        auto tx = txModel->transaction(txModel->index(ix, 0));
+        file.addTransaction(tx);
+    }
+}

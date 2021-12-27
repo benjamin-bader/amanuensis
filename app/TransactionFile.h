@@ -1,6 +1,6 @@
 // Amanuensis - Web Traffic Inspector
 //
-// Copyright (C) 2017 Benjamin Bader
+// Copyright (C) 2021 Benjamin Bader
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,18 +17,25 @@
 
 #pragma once
 
-#include <memory>
+#include "core/Transaction.h"
 
-namespace ama {
+#include <QObject>
+#include <QSharedPointer>
+#include <QSqlDatabase>
+#include <QString>
 
-class LogSetup
+class TransactionFile : public QObject
 {
+    Q_OBJECT
 public:
-    virtual ~LogSetup() noexcept {}
+    explicit TransactionFile(const QString& fileName, QObject *parent = nullptr);
+    virtual ~TransactionFile();
 
-    virtual void configure_logging() = 0;
+    void addTransaction(const QSharedPointer<ama::Transaction>& tx);
+
+private:
+    QString fileName_;
+    QSqlDatabase db_;
+
 };
 
-std::unique_ptr<LogSetup> make_log_configurer();
-
-} // namespace ama

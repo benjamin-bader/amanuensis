@@ -19,6 +19,8 @@
 
 #include <QtGlobal>
 
+#include "QtLogWriter.h"
+
 #include "mac/MacLogSetup.h"
 #include "win/WindowsLogSetup.h"
 
@@ -31,7 +33,7 @@ class GenericLogSetup : public LogSetup
 public:
     void configure_logging() override
     {
-        // Nothing doing.
+        log::register_log_writer(std::make_shared<QtLogWriter>());
     }
 };
 

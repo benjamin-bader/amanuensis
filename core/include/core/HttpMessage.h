@@ -44,8 +44,8 @@ public:
     int status_code() const;
     const QString status_message() const;
 
-    int major_version() const;
-    int minor_version() const;
+    int major_version() const noexcept;
+    int minor_version() const noexcept;
 
     Headers& headers();
     const Headers& headers() const;

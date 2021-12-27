@@ -41,11 +41,16 @@ public:
     Response& operator=(const Response&) = default;
     Response& operator=(Response&&) = default;
 
+    int major_version() const noexcept { return message_.major_version(); }
+    int minor_version() const noexcept { return message_.major_version(); }
+
     Headers& headers() { return message_.headers(); }
     const Headers& headers() const { return message_.headers(); }
 
     int status_code() const { return message_.status_code(); }
     const QString status_message() const { return message_.status_message(); }
+
+    QByteArray body() { return message_.body(); }
 
     friend class HttpMessageParser;
 
