@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include "core/common.h"
 #include "core/global.h"
 
 #include <QObject>
@@ -65,7 +64,7 @@ signals:
     void transactionStarted(const QSharedPointer<ama::Transaction>& tx);
 
 private slots:
-    void on_client_connected(const std::shared_ptr<Conn>& conn);
+    void on_client_connected(const std::shared_ptr<IConnection>& conn);
 
 private:
     int port_;

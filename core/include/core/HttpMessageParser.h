@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include "core/common.h"
 #include "core/global.h"
 
 #include "core/Headers.h"

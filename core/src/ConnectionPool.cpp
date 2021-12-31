@@ -17,26 +17,11 @@
 
 #include "core/ConnectionPool.h"
 
+#include "AsioConnection.h"
+
 using namespace ama;
 
 using tcp = asio::ip::tcp;
-
-Conn::Conn(asio::io_context& ctx)
-        : socket_(ctx)
-        , expires_at_(time_point::max())
-        , should_close_(false)
-    {}
-
-Conn::Conn(tcp::socket&& socket)
-    : socket_(std::move(socket))
-    , expires_at_(time_point::max())
-    , should_close_(false)
-{}
-
-Conn::~Conn()
-{
-    socket_.close();
-}
 
 ConnectionPool::ConnectionPool(asio::io_context& context, QObject* parent)
     : QObject{parent}
@@ -49,27 +34,27 @@ ConnectionPool::~ConnectionPool()
 
 }
 
-std::shared_ptr<Conn> ConnectionPool::make_connection(asio::ip::tcp::socket &&socket)
+std::shared_ptr<IConnection> ConnectionPool::make_connection(asio::ip::tcp::socket &&socket)
 {
-    auto connection = std::make_shared<Conn>(std::move(socket));
+    auto connection = std::make_shared<AsioConnection>(std::move(socket));
     emit client_connected(connection);
     return connection;
 }
 
-std::shared_ptr<Conn> ConnectionPool::find_open_connection(const std::string &host, int port)
+std::shared_ptr<IConnection> ConnectionPool::find_open_connection(const std::string &host, int port)
 {
-    UNUSED(host);
-    UNUSED(port);
-    return std::shared_ptr<Conn>(nullptr);
+    (void) host;
+    (void) port;
+    return std::shared_ptr<IConnection>(nullptr);
 }
 
-void ConnectionPool::try_open(const std::string &host, const std::string &port, std::function<void (std::shared_ptr<Conn>, std::error_code)> &&callback)
+void ConnectionPool::try_open(const std::string &host, const std::string &port, OpenCallback&& callback)
 {
-    auto conn = std::make_shared<Conn>(context_);
+    auto conn = std::make_shared<AsioConnection>(asio::ip::tcp::socket(context_));
 
     tcp::resolver::query query(host, port);
 
-    resolver_.async_resolve(query, [conn, callback]
+    resolver_.async_resolve(query, [conn, callback = std::move(callback)]
                             (asio::error_code ec, tcp::resolver::iterator result)
     {
         if (ec)
@@ -79,7 +64,7 @@ void ConnectionPool::try_open(const std::string &host, const std::string &port, 
         }
 
         asio::async_connect(conn->socket_, result,
-                            [conn, callback]
+                            [conn, callback = std::move(callback)]
                             (asio::error_code ec, tcp::resolver::iterator /* i */)
         {
             if (ec)

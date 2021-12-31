@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "core/global.h"
 #include "core/ConnectionPool.h"
 #include "core/HttpMessageParser.h"
 #include "core/Request.h"
@@ -56,7 +57,7 @@ class A_EXPORT Transaction : public QObject, public QEnableSharedFromThis<Transa
     Q_OBJECT
 
 public:
-    Transaction(int id, ConnectionPool* connectionPool, const std::shared_ptr<Conn>& clientConnection, QObject* parent = nullptr);
+    Transaction(int id, ConnectionPool* connectionPool, const std::shared_ptr<IConnection>& clientConnection, QObject* parent = nullptr);
     virtual ~Transaction() = default;
 
     int id() const;
@@ -100,8 +101,8 @@ private:
     int id_;
     std::error_code error_;
 
-    std::shared_ptr<Conn> client_;
-    std::shared_ptr<Conn> remote_;
+    std::shared_ptr<IConnection> client_;
+    std::shared_ptr<IConnection> remote_;
 
     ConnectionPool* connection_pool_;
 

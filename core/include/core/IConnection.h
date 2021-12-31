@@ -1,6 +1,6 @@
 // Amanuensis - Web Traffic Inspector
 //
-// Copyright (C) 2017 Benjamin Bader
+// Copyright (C) 2021 Benjamin Bader
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,35 +17,26 @@
 
 #pragma once
 
-// Useful forward-declarations for keeping ASIO out of headers.
+#include "core/global.h"
 
-namespace asio {
+#include <functional>
+#include <system_error>
 
-class io_context;
-class io_service;
+#include <QByteArray>
+#include <QByteArrayView>
 
-template <typename Protocol>
-class stream_socket_service;
+namespace ama {
 
-template <typename Protocol, typename StreamSocketService>
-class basic_stream_socket;
+class A_EXPORT IConnection
+{
+public:
+    using Callback = std::function<void(std::error_code, std::size_t)>;
 
-template <typename InternetProtocol>
-class basic_endpoint;
+    virtual ~IConnection() noexcept = default;
 
-namespace ip {
+    virtual void async_write(const QByteArrayView data, Callback&& callback) = 0;
+    virtual void async_read(QByteArrayView buffer, Callback&&) = 0;
+    virtual void close(std::error_code& ec) = 0;
+};
 
-template <typename Protocol>
-class basic_socket;
-
-template <typename InternetProtocol>
-class resolver_service;
-
-template <typename Protocol, typename ResolverService>
-class basic_resolver;
-
-class tcp;
-
-} // namespace ip
-
-} // namespace asio
+} // ama

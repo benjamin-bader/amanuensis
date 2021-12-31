@@ -30,7 +30,6 @@
 
 #include "log/Log.h"
 
-#include "core/common.h"
 #include "core/Errors.h"
 
 namespace ama {
@@ -111,7 +110,7 @@ private:
 
 } // namespace
 
-Transaction::Transaction(int id, ConnectionPool* connectionPool, const std::shared_ptr<Conn>& clientConnection, QObject* parent)
+Transaction::Transaction(int id, ConnectionPool* connectionPool, const std::shared_ptr<IConnection>& clientConnection, QObject* parent)
     : QObject{parent}
     , id_{id}
     , error_{}
@@ -167,7 +166,7 @@ void Transaction::read_client_request()
     log::debug("read_client_request()", log::IntValue("id", id_));
 
     auto self = sharedFromThis();
-    client_->async_read_some(read_buffer_, [self](asio::error_code ec, size_t num_read)
+    client_->async_read(read_buffer_, [self](asio::error_code ec, size_t num_read)
     {
         log::debug(
             "read_client_request#async_read_some",
@@ -291,10 +290,10 @@ void Transaction::send_client_request_to_remote()
 {
     auto self = sharedFromThis();
     auto formatted_request = std::make_shared<QByteArray>(request_.format());
-    remote_->async_write(asio::buffer(formatted_request->data(), formatted_request->size()),
+    remote_->async_write(QByteArrayView(*formatted_request),
                          [self, formatted_request](auto ec, size_t num_bytes_written)
     {
-        UNUSED(num_bytes_written);
+        (void) num_bytes_written;
 
         if (ec)
         {
@@ -311,7 +310,7 @@ void Transaction::send_client_request_to_remote()
 void Transaction::read_remote_response()
 {
     auto self = sharedFromThis();
-    remote_->async_read_some(read_buffer_, [self](auto ec, size_t num_bytes_read)
+    remote_->async_read(read_buffer_, [self](auto ec, size_t num_bytes_read)
     {
         if (ec == asio::error::eof)
         {
@@ -370,9 +369,9 @@ void Transaction::read_remote_response()
 void Transaction::send_remote_response_to_client()
 {
     auto self = sharedFromThis();
-    client_->async_write(asio::buffer(raw_input_), [self](auto ec, size_t num_bytes_written)
+    client_->async_write(raw_input_, [self](auto ec, size_t num_bytes_written)
     {
-        UNUSED(num_bytes_written);
+        (void) num_bytes_written;
 
         if (ec == asio::error::eof)
         {
@@ -438,11 +437,11 @@ void Transaction::establish_tls_tunnel()
         }
 
         auto responseBuffer = std::make_shared<std::string>(responseText);
-        self->client_->async_write(asio::buffer(*responseBuffer),
+        self->client_->async_write(*responseBuffer,
                                    [self, ec, success, responseBuffer]
                                    (auto ec2, auto num_bytes_written)
         {
-            UNUSED(num_bytes_written);
+            (void) num_bytes_written;
 
             bool localSuccess = success;
             if (ec2)
@@ -478,7 +477,7 @@ void Transaction::send_client_request_via_tunnel()
     }
 
     auto self = sharedFromThis();
-    client_->async_read_some(read_buffer_, [self](auto ec, size_t num_bytes_read)
+    client_->async_read(read_buffer_, [self](auto ec, size_t num_bytes_read)
     {
         if (ec == asio::error::eof || num_bytes_read == 0)
         {
@@ -494,7 +493,7 @@ void Transaction::send_client_request_via_tunnel()
             return;
         }
 
-        auto sendBuffer = asio::buffer(self->read_buffer_, num_bytes_read);
+        QByteArrayView sendBuffer(self->read_buffer_.data(), num_bytes_read);
         self->remote_->async_write(sendBuffer, [self, num_bytes_read](auto ec, size_t num_bytes_written)
         {
             if (ec)
@@ -524,7 +523,7 @@ void Transaction::send_server_response_via_tunnel()
     }
 
     auto self = sharedFromThis();
-    remote_->async_read_some(*remote_buffer_, [self](auto ec, size_t num_bytes_read)
+    remote_->async_read(*remote_buffer_, [self](auto ec, size_t num_bytes_read)
     {
         if (ec == asio::error::eof || num_bytes_read == 0)
         {
@@ -540,7 +539,7 @@ void Transaction::send_server_response_via_tunnel()
             return;
         }
 
-        auto sendBuffer = asio::buffer(*self->remote_buffer_, num_bytes_read);
+        QByteArrayView sendBuffer(self->remote_buffer_->data(), num_bytes_read);
         self->client_->async_write(sendBuffer, [self, num_bytes_read](auto ec, size_t num_bytes_written)
         {
             if (ec)
@@ -570,6 +569,18 @@ void Transaction::complete_transaction()
 
 void Transaction::release_connections()
 {
+    if (client_ != nullptr)
+    {
+        std::error_code ec;
+        client_->close(ec);
+    }
+
+    if (remote_ != nullptr)
+    {
+        std::error_code ec;
+        remote_->close(ec);
+    }
+
     client_.reset();
     remote_.reset();
 }

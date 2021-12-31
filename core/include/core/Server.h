@@ -46,7 +46,7 @@ public:
     ConnectionPool* connection_pool() const;
 
 signals:
-    void connection_established(const std::shared_ptr<Conn>& conn);
+    void connection_established(const std::shared_ptr<IConnection>& conn);
 
 private:
     void do_accept();
