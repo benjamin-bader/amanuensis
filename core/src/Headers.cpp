@@ -37,53 +37,49 @@ size_t Headers::size() const
 
 void Headers::insert(const QString& name, const QString& value)
 {
-    auto lowerName = name.toLower();
-    if (!values_.contains(lowerName))
+    auto canon = canonicalize(name);
+    if (!values_.contains(canon))
     {
-        insertion_order_.append(lowerName);
+        insertion_order_.append(canon);
     }
-    values_.insert(lowerName, value);
+    values_.insert(canon, value);
 }
 
 QList<QString> Headers::find_by_name(const QString& name) const
 {
-    return values_.values(name.toLower());
+    return values_.values(canonicalize(name));
 }
 
 QList<QString> Headers::names() const
 {
-    QList<QString> result;
-    result.reserve(insertion_order_.size());
+    return insertion_order_;
+}
 
-    for (auto it = insertion_order_.begin(); it != insertion_order_.end(); ++it)
+QString Headers::canonicalize(const QString &name) const
+{
+    QString canon{name};
+
+    bool first = true;
+    for (qsizetype i = 0; i < name.size(); ++i)
     {
-        QString name(*it);
-
-        // normalize it
-        bool first = true;
-        for (qsizetype i = 0; i < name.size(); ++i)
+        QChar c = name.at(i);
+        if (c.isLetter())
         {
-            QChar c = name.at(i);
-            if (c.isLetter())
+            if (first)
             {
-                if (first)
-                {
-                    name[i] = c.toUpper();
-                    first = false;
-                }
-                else
-                {
-                    name[i] = c.toLower();
-                }
+                canon[i] = c.toUpper();
+                first = false;
             }
-            else if (c == '-')
+            else
             {
-                first = true;
+                canon[i] = c.toLower();
             }
         }
-
-        result.append(name);
+        else if (c == '-')
+        {
+            first = true;
+        }
     }
 
-    return result;
+    return canon;
 }

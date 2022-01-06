@@ -69,4 +69,26 @@ const QByteArray Request::format() const noexcept
     return result.toLatin1();
 }
 
+bool Request::can_persist() const
+{
+    if (message_.major_version() == 1 && message_.minor_version() == 0)
+    {
+        // RFC 7230 § 6.3: Persistence
+        // A proxy server MUST NOT maintain a persistent connection with an
+        // HTTP/1.0 client (see Section 19.7.1 of [RFC2068] for information and
+        // discussion of the problems with the Keep-Alive header field
+        // implemented by many HTTP/1.0 clients).
+        return false;
+    }
+
+    auto connectionOpts = headers().find_by_name(QStringLiteral("Connection"));
+    if (connectionOpts.contains(QStringLiteral("close")))
+    {
+        return false;
+    }
+
+    // We're HTTP 1.1 or greater and haven't been told to close the connection.
+    return true;
+}
+
 }

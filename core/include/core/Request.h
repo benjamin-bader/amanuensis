@@ -71,6 +71,8 @@ public:
 
     const QByteArray format() const noexcept;
 
+    bool can_persist() const;
+
     friend class HttpMessageParser;
 
 private:

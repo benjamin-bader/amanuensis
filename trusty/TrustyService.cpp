@@ -17,9 +17,12 @@
 
 #include "TrustyService.h"
 
+#include <algorithm>
+#include <cctype>
 #include <memory>
-#include <string>
 #include <sstream>
+#include <string>
+#include <string_view>
 
 #include <SystemConfiguration/SystemConfiguration.h>
 
@@ -204,6 +207,41 @@ CFStringRef get_primary_service_id()
 }
 
 } // anonymous namespace
+
+bool is_valid_hostname_or_empty(std::string_view s)
+{
+    if (s.empty())
+    {
+        return true;
+    }
+
+    if (s.size() >= 254)
+    {
+        // https://devblogs.microsoft.com/oldnewthing/20120412-00/?p=7873
+        return false;
+    }
+
+    if (!std::isalpha(s.at(0)) && !std::isdigit(s.at(0)))
+    {
+        // Hostnames must start with a letter or a number, and may not start with
+        // a hyphen.
+        return false;
+    }
+
+    if (s.size() >= 4 && s.substr(4) == "xn--")
+    {
+        // We deliberately aren't supporting punycode.  We never use it so if this hits,
+        // someone has breached our attempts at authn and authz.
+        return false;
+    }
+
+    // This predicate doesn't support Unicode hostnames, but that's OK.
+    return std::all_of(
+            s.begin(),
+            s.end(),
+            [](char c) { return std::isalpha(c) || std::isdigit(c) || c == '.' || c == '-'; }
+    );
+}
 
 ProxyState TrustyService::get_http_proxy_state()
 {

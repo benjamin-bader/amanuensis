@@ -82,3 +82,7 @@ add_custom_command(
     COMMAND "${CODESIGN}"
     ARGS --force --sign "${MACOSX_SIGNING_CERT_SHA1}" -r='designated => identifier \"${MACOSX_HELPER_IDENTIFIER}\" and certificate leaf = H\"${MACOSX_SIGNING_CERT_SHA1}\"' --timestamp=none "$<TARGET_FILE:trusty>"
 )
+
+if(BUILD_TESTS)
+    add_test_case(trusty-lib trusty_service TrustyServiceTests.cpp)
+endif()

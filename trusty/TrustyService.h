@@ -19,10 +19,15 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 #include "trusty/IService.h"
 
 namespace ama { namespace trusty {
+
+// True if s is empty, or if s is a valid hostname.
+// Exposed in a header solely for testing.
+bool is_valid_hostname_or_empty(std::string_view s);
 
 /*! The trusted IService implementation.
  *

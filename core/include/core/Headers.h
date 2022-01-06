@@ -47,6 +47,9 @@ public:
     void insert(const QString& name, const QString& value);
 
 private:
+    QString canonicalize(const QString& name) const;
+
+private:
     QMultiHash<QString, QString> values_;
     QList<QString> insertion_order_;
 };
