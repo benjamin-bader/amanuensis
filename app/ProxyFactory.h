@@ -17,21 +17,12 @@
 
 #pragma once
 
-#include "core/global.h"
+#include "core/Proxy.h"
 
 #include <QObject>
 
-namespace ama
-{
+namespace ProxyFactory {
 
-class Proxy;
+ama::Proxy* Create(int port, QObject* parent = nullptr);
 
-class A_EXPORT ProxyFactory
-{   
-public:
-    ProxyFactory();
-
-    Proxy* create(const int port, QObject* parent = nullptr);
-};
-
-} // ama
+}

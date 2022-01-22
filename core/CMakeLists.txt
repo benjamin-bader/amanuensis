@@ -2,7 +2,7 @@ set(PLATFORM_SOURCES )
 if(APPLE)
     list(APPEND PLATFORM_SOURCES )
 elseif(WIN32)
-    list(APPEND PLATFORM_SOURCES src/win/RegistryKey.cpp src/win/WindowsProxy.cpp)
+    list(APPEND PLATFORM_SOURCES src/win/RegistryKey.cpp)
 endif()
 
 set(SOURCES
@@ -13,7 +13,6 @@ set(SOURCES
     src/HttpMessage.cpp
     src/HttpMessageParser.cpp
     src/Proxy.cpp
-    src/ProxyFactory.cpp
     src/Request.cpp
     src/Response.cpp
     src/Server.cpp

@@ -20,7 +20,7 @@
 
 #include "win/WindowsProxy.h"
 
-using namespace ama::win;
+using namespace ama;
 
 WindowsProxy::WindowsProxy(int port, QObject* parent) :
     Proxy(port, parent)

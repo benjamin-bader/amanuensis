@@ -18,6 +18,7 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 
+#include "ProxyFactory.h"
 #include "TransactionFile.h"
 
 #include <iostream>
@@ -32,12 +33,7 @@
 #include <QStandardPaths>
 
 #include "core/Proxy.h"
-#include "core/ProxyFactory.h"
 #include "core/Transaction.h"
-
-#ifdef Q_OS_MAC
-#include "mac/MacProxy.h"
-#endif
 
 using namespace ama;
 
@@ -54,14 +50,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     int port = settings.value("Proxy/port", 9999).toInt();
 
-#ifdef Q_OS_MAC
-    proxy = new ama::MacProxy(port, this);
-
-    static_cast<ama::MacProxy*>(proxy)->enable();
-    //static_cast<ama::MacProxy*>(proxy.get())->say_hi();
-#else
-    proxy = ProxyFactory().create(port);
-#endif
+    proxy = ProxyFactory::Create(port, this);
+    proxy->enable();
 
     txModel = new TransactionModel(proxy, this);
 

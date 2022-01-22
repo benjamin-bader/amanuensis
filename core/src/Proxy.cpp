@@ -32,6 +32,16 @@ Proxy::Proxy(const int port, QObject* parent)
 {
 }
 
+void Proxy::enable()
+{
+
+}
+
+void Proxy::disable()
+{
+
+}
+
 void Proxy::init()
 {
     connect(server_, &Server::connection_established, this, &Proxy::on_client_connected);
