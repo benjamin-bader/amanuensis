@@ -21,10 +21,8 @@
 
 #include <QObject>
 
-class ProxyFactory
-{   
-public:
-    ProxyFactory();
+namespace ProxyFactory {
 
-    ama::Proxy* create(const int port, QObject* parent = nullptr);
-};
+ama::Proxy* Create(int port, QObject* parent = nullptr);
+
+}

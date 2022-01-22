@@ -50,8 +50,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     int port = settings.value("Proxy/port", 9999).toInt();
 
-    ProxyFactory factory;
-    proxy = factory.create(port, this);
+    proxy = ProxyFactory::Create(port, this);
     proxy->enable();
 
     txModel = new TransactionModel(proxy, this);

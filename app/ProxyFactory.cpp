@@ -29,12 +29,9 @@
 
 using namespace ama;
 
-ProxyFactory::ProxyFactory()
-{
+namespace ProxyFactory {
 
-}
-
-Proxy* ProxyFactory::create(const int port, QObject* parent)
+Proxy* Create(int port, QObject* parent)
 {
 #if defined(Q_OS_WIN)
     return new WindowsProxy(port, parent);
@@ -44,4 +41,6 @@ Proxy* ProxyFactory::create(const int port, QObject* parent)
 #warning No platform support implemented for this OS, returning generic proxy.
     return new Proxy(port, parent);
 #endif
+}
+
 }
