@@ -42,6 +42,7 @@ if(APPLE)
 elseif(WIN32)
     list(APPEND PLATFORM_SOURCES
         win/WindowsLogSetup.cpp
+        win/WindowsProxy.cpp
     )
 endif()
 
@@ -53,6 +54,8 @@ add_executable(amanuensis
     MainWindow.cpp
     MainWindow.h
     MainWindow.ui
+    ProxyFactory.cpp
+    ProxyFactory.h
     QtLogWriter.cpp
     QtLogWriter.h
     TransactionFile.cpp

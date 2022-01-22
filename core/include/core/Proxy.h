@@ -44,6 +44,9 @@ public:
 
     int port() const;
 
+    virtual void enable();
+    virtual void disable();
+
     void init();
     void deinit();
 

@@ -15,23 +15,33 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
+#include "ProxyFactory.h"
 
-#include "core/global.h"
+#include <QtGlobal>
 
-#include <QObject>
+#if defined(Q_OS_WIN)
+#include "win/WindowsProxy.h"
+#elif defined(Q_OS_MAC)
+#include "mac/MacProxy.h"
+#else
+#include "core/Proxy.h"
+#endif
 
-namespace ama
+using namespace ama;
+
+ProxyFactory::ProxyFactory()
 {
 
-class Proxy;
+}
 
-class A_EXPORT ProxyFactory
-{   
-public:
-    ProxyFactory();
-
-    Proxy* create(const int port, QObject* parent = nullptr);
-};
-
-} // ama
+Proxy* ProxyFactory::create(const int port, QObject* parent)
+{
+#if defined(Q_OS_WIN)
+    return new WindowsProxy(port, parent);
+#elif defined(Q_OS_MAC)
+    return new MacProxy(port, parent);
+#else
+#warning No platform support implemented for this OS, returning generic proxy.
+    return new Proxy(port, parent);
+#endif
+}

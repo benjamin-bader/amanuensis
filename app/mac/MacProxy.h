@@ -37,10 +37,10 @@ public:
     bool is_enabled() const;
 
     // Attempts to apply system-wide proxy settings.
-    void enable();
+    void enable() override;
 
     // Attempts to disable system-wide proxy settings.
-    void disable();
+    void disable() override;
 
     void say_hi();
 

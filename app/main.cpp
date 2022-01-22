@@ -15,7 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "LogSetup.h"
 #include "MainWindow.h"
+
+#include "core/Proxy.h"
+
 #include <QApplication>
 #include <QDebug>
 #include <QSettings>
@@ -24,17 +28,6 @@
 #include <cerrno>
 #include <exception>
 #include <memory>
-
-#include "core/HttpMessage.h"
-#include "core/Proxy.h"
-#include "core/ProxyFactory.h"
-#include "core/Server.h"
-#include "core/Transaction.h"
-
-#include "LogSetup.h"
-
-//Q_DECLARE_METATYPE(std::shared_ptr<ama::Connection>)
-//Q_DECLARE_METATYPE(ama::HttpMessage)
 
 Q_DECLARE_SMART_POINTER_METATYPE(std::shared_ptr)
 
@@ -51,8 +44,6 @@ int main(int argc, char *argv[])
 
     try
     {
-        //qRegisterMetaType<std::shared_ptr<ama::Connection>>();
-        //qRegisterMetaType<ama::HttpMessage>();
         qRegisterMetaType<ama::Transaction>();
         qRegisterMetaType<QSharedPointer<ama::Transaction>>();
 

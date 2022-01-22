@@ -17,15 +17,14 @@
 
 #pragma once
 
-#include "core/global.h"
 #include "core/Proxy.h"
 
 #include <windows.h>
 #include <wininet.h>
 
-namespace ama { namespace win {
+namespace ama {
 
-class A_EXPORT WindowsProxy : public Proxy
+class WindowsProxy : public Proxy
 {
 public:
     WindowsProxy(const int port = 9999, QObject* parent = nullptr);
@@ -36,5 +35,4 @@ private:
     INTERNET_PER_CONN_OPTION originalOptions[5];
 };
 
-} // namespace ama::win
-} // namespace ama
+}
