@@ -10,29 +10,41 @@ This will, if I find the time to persevere, become a cross-platform HTTP proxy a
 ### Build requirements
 
 - QT 6.0+
+- cmake
+- OpenSSL developer libs ("Full" installation on Windows"
 
 On Windows:
 
-- Visual Studio 2017
+- Visual Studio 2019
 
 On Linux:
 
-- TBD
+- Any compliant C++ compiler (gcc does fine)
 
 On Mac:
 
 - Xcode and command-line tools
 
+### Building
+
+```
+# Assuming Qt and OpensSSL are installed/on your PATH and you want to use Ninja to build
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+```
+
+Note for Windows:
+
+You will likely need to install OpenSSL yourself.  Chocolatey can give you a full developer install via `Choco-Install -PackageName openssl`, or you might choose one of the "Shining Light Productions" installers.
+Once you have it installed, you'll need to tell CMake where to find it.  For example, `-DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL-Win64"`.  Note the foreward slashes - they're necessary.
+
 ### Testing
 
-Qt Creator is adequate for running the unit tests.  If you decide that you'd like to run them on the command-line, good luck - qmake documentation _may_ or _may not_ work on your platform.  On Windows 10, at least, the following has worked:
-
-0. Open a command prompt
-0. Source vcvarsall.bat
-0. Put qmake on your PATH
-0. cd path/to/source
-0. `qmake -r "M=2"`
-0. `nmake check`
+```
+# Assuming you built as described above
+cd build
+ctest -V
+```
 
 ### Code Signing
 
@@ -47,6 +59,8 @@ Be sure to enter a non-empty passcode, otherwise Keychain Access will not be abl
 
 This script installs a signing identity named "Amanuensis Developers"; you can use this identity to sign arbitrary things, and as of 22 September 2017, launchd will accept privileged helpers signed with it.
 
+**OUT OF DATE**: The steps below are no longer necessary; the CMake build does all of this for you.  I think.
+
 Note that you may need to do a dance with SMJobBlessUtil.py, in the form of:
 0. build
 0. SMJobBlessUtil.py setreq path/to/packaged/app path/to/app/info.plist path/to/helper/info.plist
@@ -58,6 +72,8 @@ SMJobBlessUtil.py is available as a download from Apple; we haven't yet implemen
 It is our intention that this process will fulfill our obligations under GPLv3 § 6.
 
 ### Design
+
+**OUT OF DATE:** This is kinda-sorta correct except that app works and the object model described has changed a bit.  TODO.
 
 The project is divided into `app` and `core` modules.  The former contains the QT application logic and UI, while `core` is a more-or-less headless implementation of a cross-platform HTTP proxy.  As `app` is currently a non-entity, it will not be described here.
 
@@ -78,4 +94,4 @@ When a `Proxy` is initialized, it opens a listening socket and sets up a pool of
 When all response data is completely relayed to the client, the transaction is finished, and the `Transaction` cleans itself up.  This involves deciding whether either `Connection` objects should remain open, and returning them to the pool (or destroying them) as appropriate, and queuing itself for deletion.
 
 ----------------------
-Copyright (C) 2017-2021 Benjamin Bader
+Copyright (C) 2017-2022 Benjamin Bader
