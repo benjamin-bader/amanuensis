@@ -59,7 +59,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       shell: pwsh
       run: |
-        $cl = (Get-Command cl).Path
+        $cl = (Get-Command cl).Path -replace '\\', '/'
         $openssl = "C:/Program Files/OpenSSL-Win64"
         cmake -S . -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -G Ninja -DCMAKE_CXX_COMPILER="$cl" -DOPENSSL_ROOT_DIR="$openssl"
 
