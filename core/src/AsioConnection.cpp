@@ -23,66 +23,66 @@ using socket = asio::ip::tcp::socket;
 using tls_socket = asio::ssl::stream<socket>;
 
 AsioConnection::AsioConnection(socket&& socket)
-    : ssl_{false}
+    : open_{true}
     , socket_{std::move(socket)}
-{
-}
-
-AsioConnection::AsioConnection(tls_socket&& socket)
-    : ssl_{true}
-    , sslStream_(std::move(socket))
 {
 }
 
 AsioConnection::~AsioConnection()
 {
-    if (ssl_)
-    {
-        sslStream_.~stream();
-    }
-    else
-    {
-        socket_.~basic_stream_socket();
-    }
 }
 
 void AsioConnection::async_read(QByteArrayView buffer, Callback&& callback)
 {
     asio::mutable_buffer mb{const_cast<char*>(buffer.data()), static_cast<std::size_t>(buffer.size())};
-    if (ssl_)
-    {
-        asio::async_read(sslStream_, std::move(mb), asio::transfer_at_least(1), std::move(callback));
-    }
-    else
-    {
-        asio::async_read(socket_, std::move(mb), asio::transfer_at_least(1), std::move(callback));
-    }
+    asio::async_read(socket_, std::move(mb), asio::transfer_at_least(1), std::move(callback));
 }
 
 void AsioConnection::async_write(const QByteArrayView data, Callback&& callback)
 {
     auto buf = asio::buffer(data.data(), data.size());
-    if (ssl_)
-    {
-        asio::async_write(sslStream_, buf, std::move(callback));
-    }
-    else
-    {
-        asio::async_write(socket_, buf, std::move(callback));
-    }
+    asio::async_write(socket_, buf, std::move(callback));
 }
 
 void AsioConnection::close(std::error_code& ec)
 {
     ec = {};
 
-    if (ssl_)
-    {
-        sslStream_.shutdown(ec);
-    }
-    else
+    if (open_.exchange(false))
     {
         socket_.close(ec);
+    }
+}
+
+TlsAsioConnection::TlsAsioConnection(tls_socket&& socket)
+    : open_{true}
+    , sslStream_(std::move(socket))
+{
+}
+
+TlsAsioConnection::~TlsAsioConnection()
+{
+}
+
+void TlsAsioConnection::async_read(QByteArrayView buffer, Callback&& callback)
+{
+    asio::mutable_buffer mb{const_cast<char*>(buffer.data()), static_cast<std::size_t>(buffer.size())};
+    asio::async_read(sslStream_, std::move(mb), asio::transfer_at_least(1), std::move(callback));
+}
+
+void TlsAsioConnection::async_write(const QByteArrayView data, Callback&& callback)
+{
+    auto buf = asio::buffer(data.data(), data.size());
+    asio::async_write(sslStream_, buf, std::move(callback));
+}
+
+void TlsAsioConnection::close(std::error_code& ec)
+{
+    ec = {};
+
+    if (open_.exchange(false))
+    {
+        sslStream_.shutdown(ec);
     }
 }
 

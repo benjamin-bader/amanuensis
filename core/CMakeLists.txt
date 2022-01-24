@@ -26,7 +26,7 @@ add_library(core STATIC
 
 # Ensure MOC runs on public headers
 file(GLOB PUBLIC_HEADERS include/**/*.h)
-target_sources(core PUBLIC ${PUBLIC_HEADERS})
+target_sources(core PRIVATE ${PUBLIC_HEADERS})
 
 target_link_libraries(
     core
@@ -42,7 +42,7 @@ target_include_directories(core
     PRIVATE src
 )
 
-target_compile_definitions(core PRIVATE -DCORE_LIBRARY=1)
+target_compile_definitions(core PRIVATE -DCORE_LIBRARY)
 
 #set_target_properties(core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

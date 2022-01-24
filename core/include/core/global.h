@@ -19,10 +19,4 @@
 
 #include <QtCore/qglobal.h>
 
-#if defined(CORE_LIBRARY)
-#  define A_EXPORT Q_DECL_EXPORT
-#  define A_EXPORT_ONLY Q_DECL_EXPORT
-#else
-#  define A_EXPORT Q_DECL_IMPORT
-#  define A_EXPORT_ONLY
-#endif
+#define A_EXPORT

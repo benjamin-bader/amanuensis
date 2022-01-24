@@ -25,7 +25,7 @@
 
 namespace ama::log {
 
-class L_EXPORT StringStreamLogValueVisitor : public LogValueVisitor
+class StringStreamLogValueVisitor : public LogValueVisitor
 {
 public:
     StringStreamLogValueVisitor()

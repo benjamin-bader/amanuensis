@@ -17,23 +17,15 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <system_error>
 
 #ifdef _WIN32
-#
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
-#
-#  ifdef LOG_LIBRARY
-#    define L_EXPORT __declspec(dllexport)
-#  else
-#    define L_EXPORT __declspec(dllimport)
-#  endif // LOG_LIBRARY
-#else
-#  define L_EXPORT __attribute__((visibility("default")))
 #endif // _WIN32
 
 
@@ -52,7 +44,7 @@ enum class Severity : uint8_t
 template <typename T>
 class LogValue;
 
-class L_EXPORT LogValueVisitor
+class LogValueVisitor
 {
 public:
     virtual ~LogValueVisitor() = default;
@@ -75,7 +67,7 @@ public:
     virtual void visit(const LogValue<unsigned long long>& value) noexcept = 0;
 };
 
-class L_EXPORT ILogValue // todo: suppress vtable?
+class ILogValue // todo: suppress vtable?
 {
 public:
     virtual ~ILogValue() = default;
@@ -146,7 +138,7 @@ using StringValue = LogValue<std::string>;
 
 #ifdef _WIN32
 
-class L_EXPORT LastErrorValue : public ILogValue
+class LastErrorValue : public ILogValue
 {
 public:
     LastErrorValue()
@@ -178,7 +170,7 @@ private:
 
 #endif
 
-class L_EXPORT LogValueCollection : public ILogValue
+class LogValueCollection : public ILogValue
 {
 public:
     LogValueCollection(const ILogValue** begin, const ILogValue**end)
@@ -199,20 +191,20 @@ private:
     const ILogValue** end_;
 };
 
-class L_EXPORT ILogWriter {
+class ILogWriter {
 public:
     virtual ~ILogWriter() noexcept {}
     virtual void write(Severity severity, const char *message, const ILogValue& value) = 0;
 };
 
-L_EXPORT void register_log_writer(std::shared_ptr<ILogWriter>&& writer);
+void register_log_writer(std::shared_ptr<ILogWriter>&& writer);
 
 /**
  * @brief is_trace_enabled
  * @param severity
  * @return
  */
-L_EXPORT bool is_enabled_for_severity(Severity severity);
+bool is_enabled_for_severity(Severity severity);
 
 /**
  * Logs a structured event with the given ILogValue.
@@ -221,7 +213,7 @@ L_EXPORT bool is_enabled_for_severity(Severity severity);
  * @param message
  * @param structuredData
  */
-L_EXPORT void do_log_event(Severity severity, const char *message, const ILogValue& structuredData);
+void do_log_event(Severity severity, const char *message, const ILogValue& structuredData);
 
 /**
  * Logs a structured event with zero or more values.
@@ -238,8 +230,8 @@ void log_event(Severity severity, const char* message, LogValues&&... values)
         return;
     }
 
-    const ILogValue* valuesArray[sizeof...(LogValues)] = { std::addressof(values)... };
-    const ILogValue** begin = &valuesArray[0];
+    const std::array<ILogValue*, sizeof...(LogValues)> valuesArray { std::addressof(values)... };
+    const ILogValue** begin = (const ILogValue**) &valuesArray[0];
     const ILogValue** end = begin + sizeof...(LogValues);
 
     LogValueCollection collection(begin, end);

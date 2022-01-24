@@ -22,15 +22,25 @@
 #include <asio.hpp>
 #include <asio/ssl.hpp>
 
+#include <atomic>
 #include <memory>
 
 namespace ama {
 
-class AsioConnection : public IConnection, public std::enable_shared_from_this<AsioConnection>
+class IAsioConnection : public IConnection, public std::enable_shared_from_this<IAsioConnection>
+{
+public:
+    virtual ~IAsioConnection() noexcept = default;
+
+    virtual void async_write(const QByteArrayView data, Callback&& callback) override = 0;
+    virtual void async_read(QByteArrayView buffer, Callback&&) override = 0;
+    virtual void close(std::error_code& ec) override = 0;
+};
+
+class AsioConnection : public IAsioConnection
 {
 public:
     explicit AsioConnection(asio::ip::tcp::socket&& socket);
-    explicit AsioConnection(asio::ssl::stream<asio::ip::tcp::socket>&& socket);
     virtual ~AsioConnection();
 
     void async_write(const QByteArrayView data, Callback&& callback) override;
@@ -38,11 +48,25 @@ public:
     void close(std::error_code& ec) override;
 
 private:
-    bool ssl_;
-    union {
-        asio::ssl::stream<asio::ip::tcp::socket> sslStream_;
-        asio::ip::tcp::socket socket_;
-    };
+    std::atomic_bool open_;
+    asio::ip::tcp::socket socket_;
+
+    friend class ConnectionPool;
+};
+
+class TlsAsioConnection : public IAsioConnection
+{
+public:
+    explicit TlsAsioConnection(asio::ssl::stream<asio::ip::tcp::socket>&& socket);
+    virtual ~TlsAsioConnection();
+
+    void async_write(const QByteArrayView data, Callback&& callback) override;
+    void async_read(QByteArrayView buffer, Callback&&) override;
+    void close(std::error_code& ec) override;
+
+private:
+    std::atomic_bool open_;
+    asio::ssl::stream<asio::ip::tcp::socket> sslStream_;
 
     friend class ConnectionPool;
 };
