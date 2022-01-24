@@ -22,6 +22,8 @@
 #include <windows.h>
 #include <wininet.h>
 
+#include <array>
+
 namespace ama {
 
 class WindowsProxy : public Proxy
@@ -32,7 +34,7 @@ public:
 
 private:
     INTERNET_PER_CONN_OPTION_LIST originalOptionList;
-    INTERNET_PER_CONN_OPTION originalOptions[5];
+    std::array<INTERNET_PER_CONN_OPTION, 5> originalOptions;
 };
 
 }

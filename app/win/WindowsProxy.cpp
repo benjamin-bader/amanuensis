@@ -17,12 +17,22 @@
 
 #pragma comment(lib, "wininet")
 
-#include <string>
-#include <sstream>
-
 #include "win/WindowsProxy.h"
 
-using namespace ama;
+#include "log/Log.h"
+
+namespace ama {
+
+namespace {
+
+constexpr const bool is_string_value(DWORD optionValue)
+{
+    return optionValue == INTERNET_PER_CONN_AUTOCONFIG_URL
+            || optionValue == INTERNET_PER_CONN_PROXY_BYPASS
+            || optionValue == INTERNET_PER_CONN_PROXY_SERVER;
+}
+
+} // namespace
 
 WindowsProxy::WindowsProxy(int port, QObject* parent) :
     Proxy(port, parent)
@@ -36,15 +46,15 @@ WindowsProxy::WindowsProxy(int port, QObject* parent) :
     originalOptions[3].dwOption = INTERNET_PER_CONN_PROXY_BYPASS;
     originalOptions[4].dwOption = INTERNET_PER_CONN_PROXY_SERVER;
 
-    originalOptionList.dwOptionCount = 5;
+    originalOptionList.dwOptionCount = static_cast<DWORD>(originalOptions.size());
     originalOptionList.dwOptionError = 0;
     originalOptionList.pszConnection = NULL;
     originalOptionList.dwSize = optionListSize;
-    originalOptionList.pOptions = originalOptions;
+    originalOptionList.pOptions = &originalOptions[0];
 
     if (! InternetQueryOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION, &originalOptionList, &optionListSize))
     {
-        DWORD lastError = GetLastError();
+        log::error("Could not query current proxy settings", log::LastErrorValue{});
         throw std::domain_error("Could not query current proxy settings");
     }
 
@@ -74,20 +84,8 @@ WindowsProxy::WindowsProxy(int port, QObject* parent) :
 
     if (! InternetSetOption(NULL, INTERNET_OPTION_PER_CONNECTION_OPTION, &optionList, sizeof(INTERNET_PER_CONN_OPTION_LIST)))
     {
-        DWORD lastError = GetLastError();
-        char buffer[256];
-        buffer[255] = 0;
-        FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM,
-                       NULL,
-                       lastError,
-                       MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                       buffer,
-                       255,
-                       NULL);
-        std::stringstream err_ss("Could not set proxy options: ");
-        std::string msg(buffer);
-        err_ss << msg;
-        throw std::domain_error(err_ss.str());
+        log::error("Could not set proxy options", log::LastErrorValue{});
+        throw std::domain_error("Could not set proxy options");
     }
 
     InternetSetOption(NULL, INTERNET_OPTION_PROXY_SETTINGS_CHANGED, NULL, 0);
@@ -104,4 +102,14 @@ WindowsProxy::~WindowsProxy()
 
     InternetSetOption(NULL, INTERNET_OPTION_PROXY_SETTINGS_CHANGED, NULL, 0);
     InternetSetOption(NULL, INTERNET_OPTION_REFRESH, NULL, 0);
+
+    for (const auto& option : originalOptions)
+    {
+        if (is_string_value(option.dwOption) && option.Value.pszValue != NULL)
+        {
+            GlobalFree(option.Value.pszValue);
+        }
+    }
 }
+
+} // ama
