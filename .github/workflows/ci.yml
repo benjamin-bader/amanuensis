@@ -48,6 +48,9 @@ jobs:
     - name: get-cmake
       uses: lukka/get-cmake@v3.21.2
 
+    - uses: ilammy/msvc-dev-cmd@v1
+      if: matrix.os == 'windows-latest'
+
     - name: Configure CMake (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
       run: cmake -S . -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -G Ninja
