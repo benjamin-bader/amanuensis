@@ -24,5 +24,10 @@ if(NOT asio_ext_POPULATED AND NOT TARGET asio)
 
     target_compile_features(asio PUBLIC cxx_std_11)
     target_compile_definitions(asio PUBLIC -DASIO_STANDALONE -DASIO_SEPARATE_COMPILATION)
+
+    if(WIN32)
+        target_compile_definitions(asio PRIVATE -D_WIN32_WINNT=${MIN_WINNT_VER})
+    endif(WIN32)
+
     set_target_properties(asio PROPERTIES POSITION_INDEPENDENT_CODE ON AUTOMOC OFF AUTORCC OFF AUTOUIC OFF)
 endif()

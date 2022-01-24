@@ -1,6 +1,7 @@
 set(PLATFORM_SOURCES )
 set(PLATFORM_LIBS )
 set(PLATFORM_PROPS )
+set(PLATFORM_COMPILE_DEFS )
 if(APPLE)
     list(APPEND PLATFORM_SOURCES
         mac/MacLogSetup.cpp
@@ -44,6 +45,8 @@ elseif(WIN32)
         win/WindowsLogSetup.cpp
         win/WindowsProxy.cpp
     )
+
+    list(APPEND PLATFORM_COMPILE_DEFS -D_WIN32_WINNT=${MIN_WINNT_VER})
 endif()
 
 add_executable(amanuensis
@@ -73,6 +76,8 @@ target_link_libraries(amanuensis
 )
 
 target_include_directories(amanuensis PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_compile_definitions(amanuensis PRIVATE ${PLATFORM_COMPILE_DEFS})
 
 set_target_properties(amanuensis
     PROPERTIES

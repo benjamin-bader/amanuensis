@@ -1,8 +1,10 @@
 set(PLATFORM_SOURCES )
+set(PLATFORM_COMPILE_DEFS )
 if(APPLE)
     list(APPEND PLATFORM_SOURCES )
 elseif(WIN32)
     list(APPEND PLATFORM_SOURCES src/win/RegistryKey.cpp)
+    list(APPEND PLATFORM_COMPILE_DEFS -D_WIN32_WINNT=${MIN_WINNT_VER})
 endif()
 
 set(SOURCES
@@ -42,7 +44,11 @@ target_include_directories(core
     PRIVATE src
 )
 
-target_compile_definitions(core PRIVATE -DCORE_LIBRARY)
+target_compile_definitions(core
+    PRIVATE
+    -DCORE_LIBRARY
+    ${PLATFORM_COMPILE_DEFS}
+)
 
 #set_target_properties(core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

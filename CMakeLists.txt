@@ -26,6 +26,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(MIN_WINNT_VER 0x0A00) # Windows 10 is the oldest version we'll support
+
 if(BUILD_TESTS)
     enable_testing()
     include(AddTest)

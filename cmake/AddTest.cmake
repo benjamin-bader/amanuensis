@@ -7,5 +7,9 @@ macro(add_test_case SUBJECT TESTNAME)
         FOLDER tests
     )
 
+    if(WIN32)
+        target_compile_definitions(${_TEST_EXE} PRIVATE -D_WIN32_WINNT=${MIN_WINNT_VER})
+    endif(WIN32)
+
     add_test(NAME ${TESTNAME} COMMAND ${_TEST_EXE})
 endmacro()
