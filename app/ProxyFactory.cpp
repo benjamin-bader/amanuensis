@@ -21,7 +21,7 @@
 
 #if defined(Q_OS_WIN)
 #include "win/WindowsProxy.h"
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_MACOS)
 #include "mac/MacProxy.h"
 #else
 #include "core/Proxy.h"
@@ -35,7 +35,7 @@ Proxy* Create(int port, QObject* parent)
 {
 #if defined(Q_OS_WIN)
     return new WindowsProxy(port, parent);
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_MACOS)
     return new MacProxy(port, parent);
 #else
 #warning No platform support implemented for this OS, returning generic proxy.
