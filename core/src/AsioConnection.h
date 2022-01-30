@@ -28,8 +28,6 @@
 
 namespace ama {
 
-class ConnectionPool;
-
 namespace details {
 
 using tcp_socket = asio::ip::tcp::socket;
@@ -65,6 +63,11 @@ public:
 
     virtual ~BaseConnection() noexcept = default;
 
+    Socket& socket()
+    {
+        return socket_;
+    }
+
     void async_write(const QByteArrayView data, Callback&& callback) override
     {
         auto buf = asio::buffer(data.data(), data.size());
@@ -90,8 +93,6 @@ public:
 private:
     std::atomic_bool open_;
     Socket socket_;
-
-    friend class ::ama::ConnectionPool;
 };
 
 } // details

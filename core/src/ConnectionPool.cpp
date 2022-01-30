@@ -63,7 +63,7 @@ void ConnectionPool::try_open(const std::string &host, const std::string &port, 
             return;
         }
 
-        asio::async_connect(conn->socket_, result,
+        asio::async_connect(conn->socket(), result,
                             [conn, callback = std::move(callback)]
                             (asio::error_code ec, tcp::resolver::iterator /* i */)
         {
