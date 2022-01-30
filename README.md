@@ -11,7 +11,7 @@ This will, if I find the time to persevere, become a cross-platform HTTP proxy a
 
 - QT 6.0+
 - cmake
-- OpenSSL developer libs ("Full" installation on Windows"
+- OpenSSL developer libs ("Full" installation on Windows")
 
 On Windows:
 

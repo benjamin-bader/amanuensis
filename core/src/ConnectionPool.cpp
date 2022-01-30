@@ -36,7 +36,7 @@ ConnectionPool::~ConnectionPool()
 
 std::shared_ptr<IConnection> ConnectionPool::make_connection(asio::ip::tcp::socket &&socket)
 {
-    auto connection = std::make_shared<AsioConnection>(std::move(socket));
+    auto connection = std::make_shared<TcpConnection>(std::move(socket));
     emit client_connected(connection);
     return connection;
 }
@@ -50,7 +50,7 @@ std::shared_ptr<IConnection> ConnectionPool::find_open_connection(const std::str
 
 void ConnectionPool::try_open(const std::string &host, const std::string &port, OpenCallback&& callback)
 {
-    auto conn = std::make_shared<AsioConnection>(asio::ip::tcp::socket(context_));
+    auto conn = std::make_shared<TcpConnection>(asio::ip::tcp::socket(context_));
 
     tcp::resolver::query query(host, port);
 

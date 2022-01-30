@@ -8,7 +8,6 @@ elseif(WIN32)
 endif()
 
 set(SOURCES
-    src/AsioConnection.cpp
     src/ConnectionPool.cpp
     src/Errors.cpp
     src/Headers.cpp
