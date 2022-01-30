@@ -28,6 +28,8 @@
 
 namespace ama {
 
+class ConnectionPool;
+
 namespace details {
 
 using tcp_socket = asio::ip::tcp::socket;
@@ -89,7 +91,7 @@ private:
     std::atomic_bool open_;
     Socket socket_;
 
-    friend class ConnectionPool;
+    friend class ::ama::ConnectionPool;
 };
 
 } // details
