@@ -29,6 +29,7 @@
 #include <QTextStream>
 
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <system_error>
@@ -122,6 +123,15 @@ private:
     Response response_;
 
     NotificationState notification_state_;
+
+    // Used to guard against double-releasing connections, which is
+    // possible in TLS tunneling.  There's a race condition when one end
+    // closes the connection - two threads might both try to shut delete
+    // connections, which (at least on MSVC in debug builds) can cause
+    // a segfault.
+    //
+    // See https://github.com/benjamin-bader/amanuensis/issues/45 for deets.
+    std::atomic_bool is_open_;
 };
 
 } // namespace ama
