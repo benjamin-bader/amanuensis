@@ -126,6 +126,7 @@ Transaction::Transaction(int id, ConnectionPool* connectionPool, const std::shar
     , response_parse_phase_{ParsePhase::Start}
     , response_{}
     , notification_state_{NotificationState::None}
+    , is_open_{true}
 {}
 
 int Transaction::id() const
@@ -569,6 +570,13 @@ void Transaction::complete_transaction()
 
 void Transaction::release_connections()
 {
+    if (! is_open_.exchange(false))
+    {
+        // We probably lost a race shutting down a TLS tunnel.
+        // See https://github.com/benjamin-bader/amanuensis/issues/45
+        return;
+    }
+
     if (client_ != nullptr)
     {
         std::error_code ec;
