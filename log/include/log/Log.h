@@ -170,25 +170,29 @@ private:
 
 #endif
 
+template <typename TIterator>
 class LogValueCollection : public ILogValue
 {
+    //static_assert(std::is_assignable_v<ILogValue*, typename TIterator::value_type>, "can only be used with iterators of ILogValue");
+
 public:
-    LogValueCollection(const ILogValue** begin, const ILogValue**end)
+    LogValueCollection(const TIterator begin, const TIterator end)
         : begin_(begin)
         , end_(end)
     {}
 
     void accept(LogValueVisitor& visitor) const override
     {
-        for (const ILogValue** logValue = begin_; logValue != end_; ++logValue)
+        for (auto it = begin_; it != end_; ++it)
         {
-            (*logValue)->accept(visitor);
+            ILogValue* logValue = *it;
+            logValue->accept(visitor);
         }
     }
 
 private:
-    const ILogValue** begin_;
-    const ILogValue** end_;
+    const TIterator begin_;
+    const TIterator end_;
 };
 
 class ILogWriter {
@@ -231,10 +235,8 @@ void log_event(Severity severity, const char* message, LogValues&&... values)
     }
 
     const std::array<ILogValue*, sizeof...(LogValues)> valuesArray { std::addressof(values)... };
-    const ILogValue** begin = (const ILogValue**) &valuesArray[0];
-    const ILogValue** end = begin + sizeof...(LogValues);
 
-    LogValueCollection collection(begin, end);
+    LogValueCollection collection(std::begin(valuesArray), std::end(valuesArray));
     do_log_event(severity, message, collection);
 }
 
