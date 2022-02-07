@@ -126,12 +126,12 @@ private:
 
     // Used to guard against double-releasing connections, which is
     // possible in TLS tunneling.  There's a race condition when one end
-    // closes the connection - two threads might both try to shut delete
+    // closes the connection - two threads might both try to delete
     // connections, which (at least on MSVC in debug builds) can cause
     // a segfault.
     //
     // See https://github.com/benjamin-bader/amanuensis/issues/45 for deets.
-    std::atomic_bool is_open_;
+    std::mutex mutex_;
 };
 
 } // namespace ama
