@@ -29,7 +29,61 @@
 
 #include <windows.h>
 
+#include <functional>
+#include <mutex>
+#include <string>
+
+#include <agents.h>
+#include <concurrent_queue.h>
+#include <ppl.h>
+
 namespace ama::log {
+
+namespace {
+
+class LogPrintWorker : public concurrency::agent
+{
+    concurrency::unbounded_buffer<std::string> buffer_;
+
+public:
+    explicit LogPrintWorker()
+        : buffer_()
+    {}
+
+    void print(std::string&& message)
+    {
+        concurrency::asend(buffer_, message);
+    }
+
+protected:
+    void run() override
+    {
+        std::string message;
+        while ((message = concurrency::receive(buffer_)) != "")
+        {
+            OutputDebugStringA(message.c_str());
+        }
+    }
+};
+
+std::once_flag g_QueueInit;
+LogPrintWorker* g_WorkQueue;
+
+void InitQueue()
+{
+    std::call_once(g_QueueInit, []()
+    {
+        g_WorkQueue = new LogPrintWorker;
+        g_WorkQueue->start();
+    });
+}
+
+}
+
+OutputDebugStringWriter::OutputDebugStringWriter()
+{
+    InitQueue();
+}
 
 void OutputDebugStringWriter::write(Severity severity, const char *message, const ILogValue &value)
 {
@@ -39,7 +93,7 @@ void OutputDebugStringWriter::write(Severity severity, const char *message, cons
     std::string messageStr = message;
     messageStr += " " + visitor.str();
 
-    OutputDebugStringA(messageStr.c_str());
+    g_WorkQueue->print(std::move(messageStr));
 }
 
 } // ama::log

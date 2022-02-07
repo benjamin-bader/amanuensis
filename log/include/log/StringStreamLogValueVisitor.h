@@ -121,7 +121,7 @@ public:
     {
         if (!finished_)
         {
-            ss_ << " ]";
+            ss_ << " ]" << std::endl;
             finished_ = true;
         }
         return ss_.str();

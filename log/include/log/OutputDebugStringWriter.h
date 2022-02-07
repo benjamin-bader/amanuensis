@@ -24,6 +24,8 @@ namespace ama::log {
 class OutputDebugStringWriter : public ILogWriter
 {
 public:
+    OutputDebugStringWriter();
+
     void write(Severity severity, const char* message, const ILogValue& value) override;
 };
 
