@@ -126,7 +126,7 @@ Transaction::Transaction(int id, ConnectionPool* connectionPool, const std::shar
     , response_parse_phase_{ParsePhase::Start}
     , response_{}
     , notification_state_{NotificationState::None}
-    , is_open_{true}
+    , mutex_{}
 {}
 
 int Transaction::id() const
@@ -164,13 +164,21 @@ void Transaction::begin()
 
 void Transaction::read_client_request()
 {
-    log::debug("read_client_request()", log::IntValue("id", id_));
+    log::debug("Transaction::read_client_request()", log::IntValue("id", id_));
+
+    std::lock_guard<std::mutex> lock{mutex_};
+    if (client_ == nullptr)
+    {
+        log::error("Transaction::read_client_request(): local connection dropped before we could start?!", log::IntValue("id", id_));
+        notify_failure(ProxyError::ClientDisconnected);
+        return;
+    }
 
     auto self = sharedFromThis();
     client_->async_read(read_buffer_, [self](asio::error_code ec, size_t num_read)
     {
         log::debug(
-            "read_client_request#async_read_some",
+            "Transaction::read_client_request#async_read_some",
             log::IntValue("id", self->id_),
             log::StringValue("ec", ec.message()),
             log::SizeValue("num_read", num_read)
@@ -197,7 +205,7 @@ void Transaction::read_client_request()
         while (state == HttpMessageParser::State::Incomplete && current_phase != self->request_parse_phase_)
         {
             log::debug(
-                "read_client_request() (phase change)",
+                "Transaction::read_client_request() (phase change)",
                 ParsePhaseValue("old", current_phase),
                 ParsePhaseValue("new", self->request_parse_phase_)
             );
@@ -210,26 +218,26 @@ void Transaction::read_client_request()
 
         if (state == HttpMessageParser::State::Incomplete)
         {
-            log::debug("read_client_request() (parse: Incomplete)", log::IntValue("id", self->id_));
+            log::debug("Transaction::read_client_request() (parse: Incomplete)", log::IntValue("id", self->id_));
             self->read_client_request();
             return;
         }
         else if (state == HttpMessageParser::State::Invalid)
         {
-            log::debug("read_client_request() (parse: Invalid)", log::IntValue("id", self->id_));
+            log::debug("Transaction::read_client_request() (parse: Invalid)", log::IntValue("id", self->id_));
             self->notify_failure(ProxyError::MalformedRequest);
         }
         else if (state == HttpMessageParser::State::Valid)
         {
-            log::debug("read_client_request() (parse: Valid)", log::IntValue("id", self->id_));
+            log::debug("Transaction::read_client_request() (parse: Valid)", log::IntValue("id", self->id_));
             if (self->request().method() == "CONNECT")
             {
-                log::debug("read_client_request() (do TLS tunnel)", log::IntValue("id", self->id_));
+                log::debug("Transaction::read_client_request() (do TLS tunnel)", log::IntValue("id", self->id_));
                 self->establish_tls_tunnel();
             }
             else
             {
-                log::debug("read_client_request() (do notify and relay request)", log::IntValue("id", self->id_));
+                log::debug("Transaction::read_client_request() (do notify and relay request)", log::IntValue("id", self->id_));
                 self->do_notification(NotificationState::RequestComplete);
                 self->open_remote_connection();
             }
@@ -289,6 +297,14 @@ void Transaction::open_remote_connection()
 
 void Transaction::send_client_request_to_remote()
 {
+    std::lock_guard<std::mutex> lock{mutex_};
+    if (client_ == nullptr || remote_ == nullptr)
+    {
+        log::error("Transaction::sent_client_request_to_remote(): client connection closed", log::IntValue("id", id_));
+        notify_failure(ProxyError::ClientDisconnected);
+        return;
+    }
+
     auto self = sharedFromThis();
     auto formatted_request = std::make_shared<QByteArray>(request_.format());
     remote_->async_write(QByteArrayView(*formatted_request),
@@ -310,6 +326,14 @@ void Transaction::send_client_request_to_remote()
 
 void Transaction::read_remote_response()
 {
+    std::lock_guard<std::mutex> lock{mutex_};
+    if (client_ == nullptr || remote_ == nullptr)
+    {
+        log::error("Transaction::read_remote_response(): client connection closed", log::IntValue("id", id_));
+        notify_failure(ProxyError::ClientDisconnected);
+        return;
+    }
+
     auto self = sharedFromThis();
     remote_->async_read(read_buffer_, [self](auto ec, size_t num_bytes_read)
     {
@@ -369,6 +393,14 @@ void Transaction::read_remote_response()
 
 void Transaction::send_remote_response_to_client()
 {
+    std::lock_guard<std::mutex> lock{mutex_};
+    if (client_ == nullptr)
+    {
+        log::error("Transaction::send_remote_response_to_client(): client connection closed", log::IntValue("id", id_));
+        notify_failure(ProxyError::ClientDisconnected);
+        return;
+    }
+
     auto self = sharedFromThis();
     client_->async_write(raw_input_, [self](auto ec, size_t num_bytes_written)
     {
@@ -437,6 +469,14 @@ void Transaction::establish_tls_tunnel()
                            "\r\n";
         }
 
+        std::lock_guard<std::mutex> lock{self->mutex_};
+        if (self->client_ == nullptr)
+        {
+            log::error("Transaction::establish_tls_tunnel()<try_open>: client connection closed", log::IntValue("id", self->id_));
+            self->notify_failure(ProxyError::ClientDisconnected);
+            return;
+        }
+
         auto responseBuffer = std::make_shared<std::string>(responseText);
         self->client_->async_write(*responseBuffer,
                                    [self, ec, success, responseBuffer]
@@ -472,8 +512,10 @@ void Transaction::establish_tls_tunnel()
 
 void Transaction::send_client_request_via_tunnel()
 {
+    std::lock_guard<std::mutex> lock{mutex_};
     if (client_ == nullptr || remote_ == nullptr)
     {
+        log::error("Transaction::send_client_request_via_tunnel(): One end of the tunnel has closed", log::IntValue("id", id_));
         return;
     }
 
@@ -491,6 +533,13 @@ void Transaction::send_client_request_via_tunnel()
         {
             // finish abnormally.
             self->notify_failure(ec);
+            return;
+        }
+
+        std::lock_guard<std::mutex> lock{self->mutex_};
+        if (self->remote_ == nullptr)
+        {
+            log::error("Transaction::send_client_request_via_tunnel(): tunnel is closed", log::IntValue("id", self->id_));
             return;
         }
 
@@ -518,8 +567,10 @@ void Transaction::send_client_request_via_tunnel()
 
 void Transaction::send_server_response_via_tunnel()
 {
+    std::lock_guard<std::mutex> lock{mutex_};
     if (client_ == nullptr || remote_ == nullptr)
     {
+        log::error("Transaction::send_server_response_via_tunnel(): One end of the tunnel is closed", log::IntValue("id", id_));
         return;
     }
 
@@ -537,6 +588,13 @@ void Transaction::send_server_response_via_tunnel()
         {
             // finish abnormally.
             self->notify_failure(ec);
+            return;
+        }
+
+        std::lock_guard<std::mutex> lock{self->mutex_};
+        if (self->client_ == nullptr)
+        {
+            log::error("Transaction::send_server_response_via_tunnel(): tunnel is closed", log::IntValue("id", self->id_));
             return;
         }
 
@@ -570,12 +628,7 @@ void Transaction::complete_transaction()
 
 void Transaction::release_connections()
 {
-    if (! is_open_.exchange(false))
-    {
-        // We probably lost a race shutting down a TLS tunnel.
-        // See https://github.com/benjamin-bader/amanuensis/issues/45
-        return;
-    }
+    std::lock_guard<std::mutex> lock{mutex_};
 
     if (client_ != nullptr)
     {
