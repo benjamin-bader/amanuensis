@@ -2,6 +2,7 @@ set(PLATFORM_SOURCES )
 set(PLATFORM_LIBS )
 set(PLATFORM_PROPS )
 set(PLATFORM_COMPILE_DEFS )
+set(PLATFORM_EXE )
 if(APPLE)
     list(APPEND PLATFORM_SOURCES
         mac/MacLogSetup.cpp
@@ -47,9 +48,12 @@ elseif(WIN32)
     )
 
     list(APPEND PLATFORM_COMPILE_DEFS -D_WIN32_WINNT=${MIN_WINNT_VER})
+
+    set(PLATFORM_EXE "WIN32")
 endif()
 
 add_executable(amanuensis
+    ${PLATFORM_EXE}
     main.cpp
     resources.qrc
     LogSetup.cpp
@@ -84,6 +88,10 @@ set_target_properties(amanuensis
     OUTPUT_NAME Amanuensis
     ${PLATFORM_PROPS}
 )
+
+# INSTALLERS
+
+set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE.txt")
 
 if(APPLE)
     find_program(CODESIGN codesign REQUIRED)
@@ -129,3 +137,45 @@ if(APPLE)
     install(TARGETS amanuensis BUNDLE DESTINATION . COMPONENT RUNTIME)
     include(CPack)
 endif()
+
+if(WIN32)
+    find_program(WINDEPLOYQT windeployqt REQUIRED)
+    message(STATUS "my windeployqt is at: ${WINDEPLOYQT}")
+
+    add_custom_command(
+        TARGET amanuensis
+        POST_BUILD
+        COMMAND "${WINDEPLOYQT}" ARGS "$<TARGET_FILE:amanuensis>"
+    )
+
+    set(APP_DEPS_LIST_FILE "${CMAKE_CURRENT_BINARY_DIR}/deps.txt")
+    add_custom_command(
+        TARGET amanuensis
+        POST_BUILD
+        BYPRODUCTS "${APP_DEPS_LIST_FILE}"
+        COMMAND "${WINDEPLOYQT}" --dry-run --no-compiler-runtime --no-opengl-sw --list mapping "$<TARGET_FILE:amanuensis>" > "${APP_DEPS_LIST_FILE}"
+    )
+
+    install(CODE
+        "
+        file(READ \"${APP_DEPS_LIST_FILE}\" _file)
+        separate_arguments(_deps WINDOWS_COMMAND \"\${_file}\")
+        while(_deps)
+            list(GET _deps 0 _src)
+            list(GET _deps 1 _dst)
+            execute_process(COMMAND \"${CMAKE_COMMAND}\" -E copy \"\${_src}\" \"\${CMAKE_INSTALL_PREFIX}/bin/\${_dst}\")
+            list(REMOVE_AT _deps 0 1)
+        endwhile(_deps)
+        "
+    )
+
+    set(CPACK_GENERATOR WIX)
+    set(CPACK_WIX_PRODUCT_GUID "88867B21-52F5-4309-9AF8-9F118CC4C0E9")
+    set(CPACK_WIX_UPGRADE_GUID "164C3943-E4F9-4B7A-8025-98D755EEF869")
+    set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}/win/installer/logo.ico")
+    set(CPACK_WIX_PROGRAM_MENU_FOLDER .)
+
+    install(TARGETS amanuensis RUNTIME)
+
+    include(CPack)
+endif(WIN32)
