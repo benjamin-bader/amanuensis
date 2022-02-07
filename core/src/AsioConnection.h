@@ -37,23 +37,6 @@ template <typename ...Ts>
 inline constexpr bool always_false_v = false;
 
 template <typename Socket>
-void close_asio_socket(Socket& socket, std::error_code& ec)
-{
-    if constexpr(std::is_same_v<Socket, tcp_socket>)
-    {
-        socket.close(ec);
-    }
-    else if constexpr(std::is_same_v<Socket, ssl_socket>)
-    {
-        socket.shutdown(ec);
-    }
-    else
-    {
-        static_assert(always_false_v<Socket>);
-    }
-}
-
-template <typename Socket>
 class BaseConnection : public IConnection, public std::enable_shared_from_this<BaseConnection<Socket>>
 {
 public:
@@ -86,7 +69,18 @@ public:
 
         if (open_.exchange(false))
         {
-            close_asio_socket(socket_, ec);
+            if constexpr(std::is_same_v<Socket, tcp_socket>)
+            {
+                socket_.close(ec);
+            }
+            else if constexpr(std::is_same_v<Socket, ssl_socket>)
+            {
+                socket_.shutdown(ec);
+            }
+            else
+            {
+                static_assert(always_false_v<Socket>);
+            }
         }
     }
 
