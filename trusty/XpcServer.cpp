@@ -49,6 +49,7 @@ bool validate_xpc_message_or_connection(xpc_object_t message_or_connection)
     if (__builtin_available(macOS 12, *))
     {
         // This is handled natively by XPC
+        log::info("validate_xpc_message_or_connection: XPC handles this automatically per-message");
         return true;
     }
 
@@ -166,6 +167,8 @@ XpcServer::~XpcServer()
 
 void XpcServer::serve()
 {
+    log::info("Creating match service listener...");
+
     m_listener = xpc_connection_create_mach_service(m_machServiceName, dispatch_get_main_queue(), XPC_CONNECTION_MACH_SERVICE_LISTENER);
     if (m_listener == NULL)
     {
@@ -185,16 +188,23 @@ void XpcServer::serve()
                                          }
                                      });
 
+    log::info("Activating listener...");
     xpc_connection_activate(m_listener);
+
+    log::info("Server active!");
     dispatch_main();
 }
 
 void XpcServer::handleIncomingConnection(xpc_connection_t connection)
 {
+    log::info("Incoming connection, checking signature...");
     if (! isClientSignatureValid(connection))
     {
+        log::info("Client signature is NOT VALID, dropping the connection");
         return;
     }
+
+    log::info("Client signature is valid, establishing connection");
 
     ConnectionRecord* context = new ConnectionRecord;
     context->server = weak_from_this();
@@ -222,15 +232,18 @@ bool XpcServer::isClientSignatureValid(xpc_connection_t connection)
 {
     if (__builtin_available(macOS 12, *))
     {
+        log::info("Setting peer codesigning requirement", log::CStrValue("requirement", CODE_SIGNING_REQUIREMENT));
         return xpc_connection_set_peer_code_signing_requirement(connection, CODE_SIGNING_REQUIREMENT) != 0;
     }
 
     if (__builtin_available(macOS 11, *))
     {
         // We'll be manually validating per-message
+        log::info("Manually validating per-message");
         return true;
     }
 
+    log::info("Falling back to validate_xpc_message_or_connection");
     return validate_xpc_message_or_connection((xpc_object_t) connection);
 }
 

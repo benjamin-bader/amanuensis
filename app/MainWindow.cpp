@@ -48,7 +48,7 @@ MainWindow::MainWindow(QWidget *parent)
                        QCoreApplication::organizationName(),
                        QCoreApplication::applicationName());
 
-    int port = settings.value("Proxy/port", 9999).toInt();
+    int port = settings.value("Proxy/port", 9998).toInt();
 
     proxy = ProxyFactory::Create(port, this);
     proxy->enable();

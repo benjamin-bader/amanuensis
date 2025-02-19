@@ -163,6 +163,8 @@ def readPlistFromToolSection(toolPath, segmentName, sectionName):
                 bytes.append(int(hexStr, 16))
         plist = plistlib.readPlistFromString(bytearray(bytes))
     except:
+        type, value, traceback = sys.exc_info()
+        print('Error reading plist: %s' % value)
         raise CheckException("tool %s / %s section dump malformed (2)" % (segmentName, sectionName), toolPath)
 
     # Check the root of the property list.
